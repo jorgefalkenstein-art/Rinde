@@ -1,0 +1,681 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Costos de Producción</title>
+<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600;700;800&family=IBM+Plex+Mono:wght@400;600&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<style>
+:root{
+  --bg:#16130e;
+  --panel:#211c14;
+  --panel2:#2a241a;
+  --line:#3a3224;
+  --gold:#C8932A;
+  --gold-soft:#e0b86a;
+  --text:#f2ead8;
+  --muted:#9a8e74;
+  --green:#7fbf6a;
+  --red:#d96a5a;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--bg);color:var(--text);font-family:'Montserrat',sans-serif;min-height:100vh;padding-bottom:60px}
+.mono{font-family:'IBM Plex Mono',monospace}
+header{padding:22px 16px 14px;border-bottom:1px solid var(--line)}
+header h1{font-size:1.15rem;font-weight:800;letter-spacing:.12em;text-transform:uppercase}
+header h1 span{color:var(--gold)}
+header p{color:var(--muted);font-size:.78rem;margin-top:4px}
+.tabs{display:flex;border-bottom:1px solid var(--line);position:sticky;top:0;background:var(--bg);z-index:10;overflow-x:auto}
+.tab{flex:1;padding:13px 4px;text-align:center;font-weight:700;font-size:.62rem;letter-spacing:.03em;text-transform:uppercase;color:var(--muted);cursor:pointer;border:none;background:none;font-family:inherit;border-bottom:3px solid transparent;white-space:nowrap}
+.tab.active{color:var(--gold);border-bottom-color:var(--gold)}
+.tab:focus-visible{outline:2px solid var(--gold);outline-offset:-2px}
+main{padding:16px;max-width:760px;margin:0 auto}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:14px;margin-bottom:14px}
+.card h3{font-size:.95rem;font-weight:700;margin-bottom:2px}
+.row{display:flex;gap:8px;flex-wrap:wrap;align-items:flex-end}
+.field{flex:1;min-width:90px}
+.field label{display:block;font-size:.65rem;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);margin-bottom:4px;font-weight:600}
+input,select{width:100%;background:var(--panel2);border:1px solid var(--line);border-radius:8px;color:var(--text);padding:10px 9px;font-size:.9rem;font-family:'IBM Plex Mono',monospace}
+input:focus,select:focus{outline:2px solid var(--gold);outline-offset:-1px}
+select{font-family:'Montserrat',sans-serif}
+.btn{background:var(--gold);color:#1a1407;border:none;border-radius:8px;padding:11px 16px;font-weight:700;font-size:.82rem;letter-spacing:.04em;text-transform:uppercase;cursor:pointer;font-family:inherit}
+.btn:active{transform:scale(.97)}
+.btn.ghost{background:transparent;color:var(--gold);border:1px solid var(--gold)}
+.btn.sm{padding:7px 10px;font-size:.7rem}
+.btn:focus-visible{outline:2px solid var(--text);outline-offset:2px}
+.ing-item{display:flex;justify-content:space-between;align-items:center;padding:11px 4px;border-bottom:1px solid var(--line);gap:8px;flex-wrap:wrap}
+.ing-item:last-child{border-bottom:none}
+.ing-name{font-weight:600;font-size:.9rem}
+.ing-detail{color:var(--muted);font-size:.72rem;margin-top:2px}
+.ing-unit-cost{color:var(--gold-soft);font-size:.82rem;white-space:nowrap}
+.precio-edit{display:flex;align-items:center;gap:6px}
+.precio-edit input{width:96px;padding:7px 8px;font-size:.85rem}
+.cost-banner{background:linear-gradient(135deg,#2a2110,#211c14);border:1px solid var(--gold);border-radius:12px;padding:14px;display:flex;gap:10px;justify-content:space-around;text-align:center;margin-top:12px}
+.cost-banner .big{font-size:1.3rem;font-weight:700;color:var(--gold-soft)}
+.cost-banner .lbl{font-size:.62rem;text-transform:uppercase;letter-spacing:.1em;color:var(--muted);margin-top:3px;font-weight:600}
+.recipe-line{display:grid;grid-template-columns:1fr 76px 64px 34px;gap:6px;align-items:center;margin-bottom:6px}
+.recipe-line.pizza{display:grid;grid-template-columns:1fr 64px 64px 64px 34px}
+.recipe-head{display:grid;gap:6px;font-size:.6rem;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);font-weight:700;margin-bottom:4px}
+.recipe-head.emp{grid-template-columns:1fr 76px 64px 34px}
+.recipe-head.piz{grid-template-columns:1fr 64px 64px 64px 34px}
+.line-cost{color:var(--muted);font-size:.7rem;text-align:right;white-space:nowrap}
+.del{background:none;border:none;color:var(--red);font-size:1.1rem;cursor:pointer;padding:4px}
+.del.confirm{color:#fff;background:var(--red);border-radius:6px;font-size:.68rem;font-weight:700;font-family:'Montserrat',sans-serif;padding:6px 8px;white-space:nowrap}
+.empty{color:var(--muted);font-size:.82rem;text-align:center;padding:18px 8px}
+.prod-header{display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:10px}
+.badge{font-size:.6rem;text-transform:uppercase;letter-spacing:.08em;background:var(--panel2);border:1px solid var(--line);border-radius:99px;padding:4px 9px;color:var(--gold-soft);font-weight:700;white-space:nowrap}
+.badge.prep{color:var(--green);border-color:var(--green)}
+.toolbar{display:flex;gap:8px;margin-bottom:14px;flex-wrap:wrap}
+.hint{color:var(--muted);font-size:.72rem;margin-top:8px;line-height:1.45}
+.notice{background:#3a2a1a;border:1px solid var(--gold);border-radius:8px;padding:9px 12px;font-size:.78rem;color:var(--gold-soft);margin:8px 0;display:none}
+.notice.show{display:block}
+.rinde-row{display:flex;align-items:center;gap:8px;margin:8px 0 12px;flex-wrap:wrap}
+.rinde-row label{font-size:.72rem;color:var(--muted);font-weight:600}
+.rinde-row input{width:70px}
+.rinde-row select{width:auto;padding:8px}
+/* Rentabilidad */
+.cat-title{font-size:.7rem;text-transform:uppercase;letter-spacing:.12em;color:var(--gold);font-weight:800;margin:18px 0 8px;border-bottom:1px solid var(--line);padding-bottom:5px}
+.venta{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:11px;margin-bottom:9px}
+.venta-nombre{font-weight:600;font-size:.85rem;margin-bottom:7px}
+.venta-link{display:grid;grid-template-columns:1fr 56px 76px;gap:6px;margin-bottom:8px}
+.venta-stats{display:flex;gap:6px;flex-wrap:wrap;font-size:.72rem}
+.stat{background:var(--panel2);border-radius:6px;padding:5px 8px}
+.stat b{display:block;font-size:.56rem;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);font-weight:700;margin-bottom:1px}
+.stat.ok{color:var(--green)}
+.stat.bad{color:var(--red)}
+.stat.sug{color:var(--gold-soft)}
+@media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
+</style>
+</head>
+<body>
+
+<header>
+  <h1>Costos de <span>Producción</span></h1>
+  <p>Actualizá el precio de un ingrediente y todos los costos se recalculan solos.</p>
+</header>
+
+<div class="tabs" role="tablist">
+  <button class="tab active" data-tab="ingredientes" role="tab">Ingred.</button>
+  <button class="tab" data-tab="preparaciones" role="tab">Prepar.</button>
+  <button class="tab" data-tab="empanadas" role="tab">Empanadas</button>
+  <button class="tab" data-tab="pizzas" role="tab">Pizzas</button>
+  <button class="tab" data-tab="rentabilidad" role="tab">Rentabilidad</button>
+</div>
+
+<main>
+  <!-- ====== INGREDIENTES ====== -->
+  <section id="tab-ingredientes">
+    <div class="card">
+      <h3>Agregar ingrediente</h3>
+      <p class="hint" style="margin:4px 0 10px">Cargá el precio tal como lo comprás. Ej: Harina — $1.500 — 1 kg. Las bebidas van como "unidad".</p>
+      <div class="row">
+        <div class="field" style="flex:2;min-width:140px"><label>Nombre</label><input id="ing-nombre" placeholder="Harina 000"></div>
+        <div class="field"><label>Precio $</label><input id="ing-precio" type="number" inputmode="decimal" placeholder="1500"></div>
+        <div class="field"><label>Cantidad</label><input id="ing-cant" type="number" inputmode="decimal" placeholder="1"></div>
+        <div class="field"><label>Unidad</label>
+          <select id="ing-unidad">
+            <option value="kg">kg</option><option value="g">g</option>
+            <option value="l">litro</option><option value="ml">ml</option>
+            <option value="u">unidad</option>
+          </select>
+        </div>
+        <button class="btn" id="ing-add">Agregar</button>
+      </div>
+      <div class="notice" id="notice-ing">Completá nombre, precio y cantidad para agregar el ingrediente.</div>
+    </div>
+    <div class="card">
+      <h3 style="margin-bottom:4px">Lista de precios</h3>
+      <p class="hint" style="margin-bottom:8px">Cambiá el precio directamente en el campo y se recalcula todo.</p>
+      <div id="ing-list"></div>
+    </div>
+    <div class="toolbar">
+      <button class="btn ghost sm" id="btn-export">Exportar respaldo</button>
+      <button class="btn ghost sm" id="btn-import">Importar respaldo</button>
+      <input type="file" id="file-import" accept=".json" style="display:none">
+    </div>
+    <div class="notice" id="notice-import"></div>
+  </section>
+
+  <!-- ====== PREPARACIONES ====== -->
+  <section id="tab-preparaciones" hidden>
+    <div class="card" style="border-color:var(--green)">
+      <h3 style="color:var(--green)">¿Qué es una preparación?</h3>
+      <p class="hint">Algo que hacés en tanda y después usás en los productos: prepizzas, masa de empanadas, salsa, relleno. Cargás la receta de la tanda, indicás cuánto rinde, y el sistema calcula el costo por unidad (o por gramo). Después aparece como un ingrediente más en las recetas.</p>
+      <p class="hint" style="color:var(--gold-soft)">Ejemplo: "Prepizza grande" → 1000 g de harina + levadura + agua... rinde <b>4 unidades</b> → costo por prepizza.</p>
+    </div>
+    <div class="toolbar"><button class="btn" id="add-prep">+ Nueva preparación</button></div>
+    <div class="notice" id="notice-prep">Primero cargá ingredientes en la pestaña <b>Ingredientes</b>.</div>
+    <div id="prep-list"></div>
+  </section>
+
+  <!-- ====== EMPANADAS ====== -->
+  <section id="tab-empanadas" hidden>
+    <div class="toolbar"><button class="btn" id="add-empanada">+ Nueva empanada</button></div>
+    <div class="notice" id="notice-emp">Primero cargá ingredientes en la pestaña <b>Ingredientes</b>.</div>
+    <div id="emp-list"></div>
+  </section>
+
+  <!-- ====== PIZZAS ====== -->
+  <section id="tab-pizzas" hidden>
+    <div class="toolbar"><button class="btn" id="add-pizza">+ Nueva pizza</button></div>
+    <div class="notice" id="notice-piz">Primero cargá ingredientes en la pestaña <b>Ingredientes</b>.</div>
+    <div id="piz-list"></div>
+  </section>
+
+  <!-- ====== RENTABILIDAD ====== -->
+  <section id="tab-rentabilidad" hidden>
+    <div class="card">
+      <h3>Importar carta de Pedix</h3>
+      <p class="hint" style="margin:4px 0 10px">Subí el Excel exportado desde Pedix (Productos). La app trae los precios de venta y los compara con tus costos. Pedix no maneja costos — esta pestaña es ese complemento. Al reimportar un Excel nuevo, los vínculos que ya armaste se conservan (se reconocen por el ID de Pedix).</p>
+      <div class="toolbar" style="margin-bottom:0">
+        <button class="btn" id="btn-xlsx">Importar Excel</button>
+        <input type="file" id="file-xlsx" accept=".xlsx,.xls" style="display:none">
+      </div>
+      <div class="notice" id="notice-xlsx"></div>
+    </div>
+    <div class="card">
+      <div class="row">
+        <div class="field"><label>Margen objetivo % (sobre venta)</label>
+          <input id="margen-obj" type="number" inputmode="decimal" value="60"></div>
+      </div>
+      <p class="hint">El precio sugerido se calcula para que el costo represente el (100 − margen)% del precio. Ej: margen 60% → costo $4.000 → sugerido $10.000. Se redondea hacia arriba a la centena. El margen mostrado se calcula sobre la <b>Oferta</b> si existe, si no sobre el Precio.</p>
+    </div>
+    <div id="ventas-list"><div class="empty">Importá el Excel de Pedix para empezar.</div></div>
+  </section>
+</main>
+
+<script>
+/* ================= DATA ================= */
+const LS_KEY = 'costosProduccionV1';
+let state = { ingredientes: [], preparaciones: [], productos: [], ventas: [], margenObj: 60 };
+try {
+  const s = localStorage.getItem(LS_KEY);
+  if (s) state = Object.assign({ingredientes:[],preparaciones:[],productos:[],ventas:[],margenObj:60}, JSON.parse(s));
+} catch(e){}
+function save(){ try { localStorage.setItem(LS_KEY, JSON.stringify(state)); } catch(e){} }
+const uid = () => Math.random().toString(36).slice(2,9);
+const fmt = n => isFinite(n) ? '$' + n.toLocaleString('es-AR',{minimumFractionDigits:0, maximumFractionDigits:2}) : '—';
+const esc = s => String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/"/g,'&quot;');
+
+function aviso(id, msg){
+  const el = document.getElementById(id);
+  if (msg) el.textContent = msg;
+  el.classList.add('show');
+  setTimeout(()=>el.classList.remove('show'), 4000);
+}
+
+/* Unidad base: g, ml o u */
+const BASE = { kg:{b:'g',f:1000}, g:{b:'g',f:1}, l:{b:'ml',f:1000}, ml:{b:'ml',f:1}, u:{b:'u',f:1} };
+const ingById  = id => state.ingredientes.find(i=>i.id===id);
+const prepById = id => state.preparaciones.find(p=>p.id===id);
+const prodById = id => state.productos.find(p=>p.id===id);
+function costoBase(ing){ const c = BASE[ing.unidad]; return ing.precio / (ing.cantidad * c.f); }
+function baseDe(ing){ return BASE[ing.unidad].b; }
+
+function costoPrepTotal(prep){
+  let total = 0;
+  for (const it of (prep.items||[])){
+    const ing = ingById(it.ingId);
+    if (!ing || !it.cant) continue;
+    total += costoBase(ing) * Number(it.cant);
+  }
+  return total;
+}
+function costoPrepBase(prep){ const r = Number(prep.rinde); return r > 0 ? costoPrepTotal(prep) / r : 0; }
+
+function refCostoBase(ref){
+  if (!ref) return null;
+  if (ref.startsWith('p:')){ const p = prepById(ref.slice(2)); return p ? costoPrepBase(p) : null; }
+  const i = ingById(ref); return i ? costoBase(i) : null;
+}
+function refUnidad(ref){
+  if (!ref) return '';
+  if (ref.startsWith('p:')){ const p = prepById(ref.slice(2)); return p ? p.rindeUnidad : ''; }
+  const i = ingById(ref); return i ? baseDe(i) : '';
+}
+function costoItems(items){
+  let total = 0;
+  for (const it of (items||[])){
+    const c = refCostoBase(it.ingId);
+    if (c === null || !it.cant) continue;
+    total += c * Number(it.cant);
+  }
+  return total;
+}
+function costoEmpUnidad(p){ const t = costoItems(p.items); return p.rinde>0 ? t/p.rinde : 0; }
+function costoPizza(p, variante){
+  return costoItems((p.itemsP||[]).map(i=>({ingId:i.ingId, cant: variante==='chica'?i.chica:i.grande})));
+}
+function costoEmpPromedio(){
+  const emps = state.productos.filter(p=>p.tipo==='empanada');
+  if (!emps.length) return null;
+  const cs = emps.map(costoEmpUnidad).filter(c=>c>0);
+  return cs.length ? cs.reduce((a,b)=>a+b,0)/cs.length : null;
+}
+
+/* Costo de un vínculo de venta: e:ID (empanada/u), eprom, pc:ID, pg:ID, p:ID (prep), i:ID (ingrediente) */
+function costoVinculo(ref){
+  if (!ref) return null;
+  if (ref === 'eprom') return costoEmpPromedio();
+  const [k, id] = [ref.slice(0, ref.indexOf(':')), ref.slice(ref.indexOf(':')+1)];
+  if (k==='e'){ const p = prodById(id); return p ? costoEmpUnidad(p) : null; }
+  if (k==='pc'){ const p = prodById(id); return p ? costoPizza(p,'chica') : null; }
+  if (k==='pg'){ const p = prodById(id); return p ? costoPizza(p,'grande') : null; }
+  if (k==='p'){ const p = prepById(id); return p ? costoPrepBase(p) : null; }
+  if (k==='i'){ const i = ingById(id); return i ? costoBase(i) : null; }
+  return null;
+}
+
+/* ================= TABS ================= */
+document.querySelectorAll('.tab').forEach(t => t.onclick = () => {
+  document.querySelectorAll('.tab').forEach(x=>x.classList.remove('active'));
+  t.classList.add('active');
+  ['ingredientes','preparaciones','empanadas','pizzas','rentabilidad'].forEach(n =>
+    document.getElementById('tab-'+n).hidden = (n !== t.dataset.tab));
+});
+
+/* ================= INGREDIENTES ================= */
+function renderIngredientes(){
+  const box = document.getElementById('ing-list');
+  if (!state.ingredientes.length){ box.innerHTML = '<div class="empty">Todavía no hay ingredientes. Agregá el primero arriba.</div>'; return; }
+  box.innerHTML = state.ingredientes.map(ing => `
+    <div class="ing-item">
+      <div style="flex:1;min-width:120px">
+        <div class="ing-name">${esc(ing.nombre)}</div>
+        <div class="ing-detail">por ${ing.cantidad} ${ing.unidad} · <span class="ing-unit-cost mono">${fmt(costoBase(ing))}/${baseDe(ing)}</span></div>
+      </div>
+      <div class="precio-edit">
+        <span class="mono" style="color:var(--muted)">$</span>
+        <input class="mono" type="number" inputmode="decimal" value="${ing.precio}"
+          onchange="setPrecio('${ing.id}',this.value)">
+        <button class="del" onclick="delIng(this,'${ing.id}')" aria-label="Eliminar">✕</button>
+      </div>
+    </div>`).join('');
+}
+document.getElementById('ing-add').onclick = () => {
+  const nombre = document.getElementById('ing-nombre').value.trim();
+  const precio = parseFloat(document.getElementById('ing-precio').value);
+  const cantidad = parseFloat(document.getElementById('ing-cant').value);
+  const unidad = document.getElementById('ing-unidad').value;
+  if (!nombre || !(precio>0) || !(cantidad>0)){ aviso('notice-ing'); return; }
+  state.ingredientes.push({id:uid(), nombre, precio, cantidad, unidad});
+  ['ing-nombre','ing-precio','ing-cant'].forEach(i=>document.getElementById(i).value='');
+  save(); renderAll();
+};
+window.setPrecio = (id,v) => {
+  const p = parseFloat(v);
+  if (!(p>0)) { renderAll(); return; }
+  ingById(id).precio = p; save(); renderAll();
+};
+function armarConfirm(btn){
+  btn.classList.add('confirm');
+  btn.textContent = '¿Borrar?';
+  setTimeout(()=>{ btn.classList.remove('confirm'); btn.textContent = '✕'; }, 2500);
+}
+window.delIng = (btn,id) => {
+  if (!btn.classList.contains('confirm')){ armarConfirm(btn); return; }
+  state.ingredientes = state.ingredientes.filter(i=>i.id!==id);
+  save(); renderAll();
+};
+
+/* ================= SELECTOR ================= */
+function selectRef(prodId, idx, tipo, current, soloIngredientes){
+  const optsIng = state.ingredientes.map(i =>
+    `<option value="${i.id}" ${i.id===current?'selected':''}>${esc(i.nombre)} (${baseDe(i)})</option>`).join('');
+  let optsPrep = '';
+  if (!soloIngredientes && state.preparaciones.length){
+    optsPrep = '<optgroup label="── Preparaciones ──">' + state.preparaciones.map(p =>
+      `<option value="p:${p.id}" ${'p:'+p.id===current?'selected':''}>★ ${esc(p.nombre)} (${p.rindeUnidad})</option>`).join('') + '</optgroup>';
+  }
+  return `<select onchange="setItem('${prodId}',${idx},'${tipo}','ingId',this.value)">
+    <option value="">— elegir —</option><optgroup label="── Ingredientes ──">${optsIng}</optgroup>${optsPrep}</select>`;
+}
+
+/* ================= PREPARACIONES ================= */
+function renderPreparaciones(){
+  const box = document.getElementById('prep-list');
+  if (!state.preparaciones.length){ box.innerHTML = '<div class="empty">Creá tu primera preparación con el botón de arriba. Ej: Prepizza grande, Masa de empanadas, Salsa.</div>'; return; }
+  box.innerHTML = state.preparaciones.map(p => {
+    p.items = p.items || [];
+    const total = costoPrepTotal(p);
+    const porBase = costoPrepBase(p);
+    const uLbl = {u:'unidad', g:'gramo', ml:'ml'}[p.rindeUnidad];
+    const lineas = p.items.map((it,idx) => {
+      const c = refCostoBase(it.ingId);
+      const lineCost = (c!==null && it.cant) ? fmt(c*it.cant) : '—';
+      return `
+      <div class="recipe-line">
+        ${selectRef(p.id, idx, 'prep', it.ingId, true)}
+        <input class="mono" type="number" inputmode="decimal" placeholder="0" value="${it.cant||''}"
+          onchange="setItem('${p.id}',${idx},'prep','cant',this.value)">
+        <span class="line-cost mono">${lineCost}</span>
+        <button class="del" onclick="delItem('${p.id}',${idx},'prep')" aria-label="Quitar">✕</button>
+      </div>`;
+    }).join('');
+    return `<div class="card">
+      <div class="prod-header">
+        <input style="font-weight:700;font-family:Montserrat;font-size:.95rem;flex:1" value="${esc(p.nombre)}"
+          onchange="renameProd('${p.id}',this.value,'prep')">
+        <span class="badge prep">Preparación</span>
+        <button class="del" onclick="delProd(this,'${p.id}','prep')" aria-label="Eliminar">✕</button>
+      </div>
+      <div class="recipe-head emp"><span>Ingrediente</span><span>Cantidad</span><span>Costo</span><span></span></div>
+      ${lineas || '<div class="empty">Sin ingredientes aún. Tocá "+ Ingrediente".</div>'}
+      <button class="btn ghost sm" onclick="addItem('${p.id}','prep')">+ Ingrediente</button>
+      <div class="rinde-row">
+        <label>La tanda rinde</label>
+        <input class="mono" type="number" inputmode="decimal" value="${p.rinde}"
+          onchange="setPrepRinde('${p.id}','rinde',this.value)">
+        <select onchange="setPrepRinde('${p.id}','rindeUnidad',this.value)">
+          <option value="u" ${p.rindeUnidad==='u'?'selected':''}>unidades</option>
+          <option value="g" ${p.rindeUnidad==='g'?'selected':''}>gramos</option>
+          <option value="ml" ${p.rindeUnidad==='ml'?'selected':''}>ml</option>
+        </select>
+      </div>
+      <div class="cost-banner" style="border-color:var(--green)">
+        <div><div class="big mono">${fmt(total)}</div><div class="lbl">tanda completa</div></div>
+        <div><div class="big mono">${fmt(porBase)}</div><div class="lbl">por ${uLbl}</div></div>
+      </div>
+    </div>`;
+  }).join('');
+}
+document.getElementById('add-prep').onclick = () => {
+  if (!state.ingredientes.length){ aviso('notice-prep'); return; }
+  state.preparaciones.push({id:uid(), nombre:'Preparación nueva', rinde:1, rindeUnidad:'u', items:[]});
+  save(); renderAll();
+};
+window.setPrepRinde = (id,field,v) => {
+  const p = prepById(id);
+  if (field==='rinde'){ const n = parseFloat(v); p.rinde = n>0?n:1; }
+  else p.rindeUnidad = v;
+  save(); renderAll();
+};
+
+/* ================= EMPANADAS ================= */
+function renderEmpanadas(){
+  const box = document.getElementById('emp-list');
+  const emps = state.productos.filter(p=>p.tipo==='empanada');
+  if (!emps.length){ box.innerHTML = '<div class="empty">Creá tu primera empanada con el botón de arriba.</div>'; return; }
+  box.innerHTML = emps.map(p => {
+    p.items = p.items || [];
+    const costoReceta = costoItems(p.items);
+    const porU = p.rinde > 0 ? costoReceta / p.rinde : 0;
+    const lineas = p.items.map((it,idx) => {
+      const c = refCostoBase(it.ingId);
+      const lineCost = (c!==null && it.cant) ? fmt(c*it.cant) : '—';
+      return `
+      <div class="recipe-line">
+        ${selectRef(p.id, idx, 'items', it.ingId)}
+        <input class="mono" type="number" inputmode="decimal" placeholder="0" value="${it.cant||''}"
+          onchange="setItem('${p.id}',${idx},'items','cant',this.value)">
+        <span class="line-cost mono">${lineCost}</span>
+        <button class="del" onclick="delItem('${p.id}',${idx},'items')" aria-label="Quitar">✕</button>
+      </div>`;
+    }).join('');
+    return `<div class="card">
+      <div class="prod-header">
+        <input style="font-weight:700;font-family:Montserrat;font-size:.95rem;flex:1" value="${esc(p.nombre)}"
+          onchange="renameProd('${p.id}',this.value)">
+        <span class="badge">Empanada</span>
+        <button class="del" onclick="delProd(this,'${p.id}')" aria-label="Eliminar receta">✕</button>
+      </div>
+      <div class="rinde-row">
+        <label>La receta rinde</label>
+        <input class="mono" type="number" inputmode="numeric" value="${p.rinde}"
+          onchange="setRinde('${p.id}',this.value)">
+        <label>unidades</label>
+      </div>
+      <div class="recipe-head emp"><span>Ingrediente / preparación</span><span>Cantidad</span><span>Costo</span><span></span></div>
+      ${lineas || '<div class="empty">Sin ingredientes aún. Tocá "+ Ingrediente".</div>'}
+      <button class="btn ghost sm" onclick="addItem('${p.id}','items')">+ Ingrediente</button>
+      <div class="cost-banner">
+        <div><div class="big mono">${fmt(porU)}</div><div class="lbl">por unidad</div></div>
+        <div><div class="big mono">${fmt(porU*12)}</div><div class="lbl">por docena</div></div>
+        <div><div class="big mono">${fmt(costoReceta)}</div><div class="lbl">receta (${p.rinde}u)</div></div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+/* ================= PIZZAS ================= */
+function renderPizzas(){
+  const box = document.getElementById('piz-list');
+  const pzs = state.productos.filter(p=>p.tipo==='pizza');
+  if (!pzs.length){ box.innerHTML = '<div class="empty">Creá tu primera pizza con el botón de arriba.</div>'; return; }
+  box.innerHTML = pzs.map(p => {
+    p.itemsP = p.itemsP || [];
+    const costoCh = costoPizza(p,'chica');
+    const costoGr = costoPizza(p,'grande');
+    const lineas = p.itemsP.map((it,idx) => {
+      const c = refCostoBase(it.ingId);
+      const lineCost = (c!==null && (it.chica||it.grande))
+        ? fmt(c*(Number(it.chica)||0)) + ' / ' + fmt(c*(Number(it.grande)||0)) : '—';
+      return `
+      <div class="recipe-line pizza">
+        ${selectRef(p.id, idx, 'itemsP', it.ingId)}
+        <input class="mono" type="number" inputmode="decimal" placeholder="chica" value="${it.chica||''}"
+          onchange="setItem('${p.id}',${idx},'itemsP','chica',this.value)">
+        <input class="mono" type="number" inputmode="decimal" placeholder="grande" value="${it.grande||''}"
+          onchange="setItem('${p.id}',${idx},'itemsP','grande',this.value)">
+        <span class="line-cost mono" style="font-size:.62rem">${lineCost}</span>
+        <button class="del" onclick="delItem('${p.id}',${idx},'itemsP')" aria-label="Quitar">✕</button>
+      </div>`;
+    }).join('');
+    return `<div class="card">
+      <div class="prod-header">
+        <input style="font-weight:700;font-family:Montserrat;font-size:.95rem;flex:1" value="${esc(p.nombre)}"
+          onchange="renameProd('${p.id}',this.value)">
+        <span class="badge">Pizza</span>
+        <button class="del" onclick="delProd(this,'${p.id}')" aria-label="Eliminar receta">✕</button>
+      </div>
+      <div class="recipe-head piz"><span>Ingrediente / preparación</span><span>Chica</span><span>Grande</span><span>Costo ch/gr</span><span></span></div>
+      ${lineas || '<div class="empty">Sin ingredientes aún. Tocá "+ Ingrediente".</div>'}
+      <button class="btn ghost sm" onclick="addItem('${p.id}','itemsP')">+ Ingrediente</button>
+      <div class="cost-banner">
+        <div><div class="big mono">${fmt(costoCh)}</div><div class="lbl">pizza chica</div></div>
+        <div><div class="big mono">${fmt(costoGr)}</div><div class="lbl">pizza grande</div></div>
+      </div>
+      <p class="hint">Para usar la prepizza: elegí ★ Prepizza y poné 1 en la columna que corresponda.</p>
+    </div>`;
+  }).join('');
+}
+
+/* ================= ACCIONES COMUNES ================= */
+document.getElementById('add-empanada').onclick = () => {
+  state.productos.push({id:uid(), tipo:'empanada', nombre:'Empanada nueva', rinde:12, items:[]});
+  save(); renderAll();
+};
+document.getElementById('add-pizza').onclick = () => {
+  state.productos.push({id:uid(), tipo:'pizza', nombre:'Pizza nueva', itemsP:[]});
+  save(); renderAll();
+};
+function holderDe(id, key){ return key==='prep' ? prepById(id) : prodById(id); }
+window.renameProd = (id,v,key) => { holderDe(id,key).nombre = v.trim()||'Sin nombre'; save(); renderRentabilidad(); };
+window.delProd = (btn,id,key) => {
+  if (!btn.classList.contains('confirm')){ armarConfirm(btn); return; }
+  if (key==='prep'){
+    state.preparaciones = state.preparaciones.filter(p=>p.id!==id);
+    state.productos.forEach(pr => {
+      (pr.items||[]).forEach(i=>{ if(i.ingId==='p:'+id) i.ingId=''; });
+      (pr.itemsP||[]).forEach(i=>{ if(i.ingId==='p:'+id) i.ingId=''; });
+    });
+  } else {
+    state.productos = state.productos.filter(p=>p.id!==id);
+  }
+  save(); renderAll();
+};
+window.setRinde = (id,v) => { const n = parseInt(v); prodById(id).rinde = n>0?n:12; save(); renderAll(); };
+window.addItem = (id,key) => {
+  if (!state.ingredientes.length){
+    aviso(key==='itemsP' ? 'notice-piz' : key==='prep' ? 'notice-prep' : 'notice-emp');
+    return;
+  }
+  const h = holderDe(id, key);
+  const arr = key==='prep' ? 'items' : key;
+  h[arr] = h[arr]||[];
+  h[arr].push(key==='itemsP' ? {ingId:'',chica:'',grande:''} : {ingId:'',cant:''});
+  save(); renderAll();
+};
+window.setItem = (id,idx,key,field,v) => {
+  const h = holderDe(id, key);
+  const arr = key==='prep' ? 'items' : key;
+  h[arr][idx][field] = (field==='ingId') ? v : parseFloat(v)||0;
+  save(); renderAll();
+};
+window.delItem = (id,idx,key) => {
+  const h = holderDe(id, key);
+  const arr = key==='prep' ? 'items' : key;
+  h[arr].splice(idx,1); save(); renderAll();
+};
+
+/* ================= RENTABILIDAD ================= */
+function opcionesVinculo(current){
+  const emps = state.productos.filter(p=>p.tipo==='empanada');
+  const pzs  = state.productos.filter(p=>p.tipo==='pizza');
+  let html = '<option value="">— sin vincular —</option>';
+  if (emps.length){
+    html += '<optgroup label="Empanadas (costo por unidad)">';
+    html += `<option value="eprom" ${current==='eprom'?'selected':''}>Promedio de todas las empanadas</option>`;
+    html += emps.map(p=>`<option value="e:${p.id}" ${'e:'+p.id===current?'selected':''}>${esc(p.nombre)}</option>`).join('');
+    html += '</optgroup>';
+  }
+  if (pzs.length){
+    html += '<optgroup label="Pizzas">';
+    html += pzs.map(p=>
+      `<option value="pg:${p.id}" ${'pg:'+p.id===current?'selected':''}>${esc(p.nombre)} — grande</option>`+
+      `<option value="pc:${p.id}" ${'pc:'+p.id===current?'selected':''}>${esc(p.nombre)} — chica</option>`).join('');
+    html += '</optgroup>';
+  }
+  if (state.preparaciones.length){
+    html += '<optgroup label="Preparaciones">';
+    html += state.preparaciones.map(p=>`<option value="p:${p.id}" ${'p:'+p.id===current?'selected':''}>★ ${esc(p.nombre)}</option>`).join('');
+    html += '</optgroup>';
+  }
+  if (state.ingredientes.length){
+    html += '<optgroup label="Ingredientes (bebidas, etc.)">';
+    html += state.ingredientes.map(i=>`<option value="i:${i.id}" ${'i:'+i.id===current?'selected':''}>${esc(i.nombre)}</option>`).join('');
+    html += '</optgroup>';
+  }
+  return html;
+}
+
+function renderRentabilidad(){
+  const box = document.getElementById('ventas-list');
+  document.getElementById('margen-obj').value = state.margenObj;
+  if (!state.ventas.length){ box.innerHTML = '<div class="empty">Importá el Excel de Pedix para empezar.</div>'; return; }
+  const margen = Number(state.margenObj)||0;
+  const grupos = {};
+  state.ventas.forEach(v => { (grupos[v.categoria||'Sin categoría'] = grupos[v.categoria||'Sin categoría']||[]).push(v); });
+  box.innerHTML = Object.entries(grupos).map(([cat, items]) => {
+    const filas = items.map(v => {
+      const cBase = costoVinculo(v.ref);
+      const costo = (cBase!==null) ? cBase*(Number(v.mult)||1) + (Number(v.extra)||0) : null;
+      const venta = (v.oferta && v.oferta>0) ? v.oferta : v.precio;
+      let stats = '<span class="stat"><b>Costo</b>Vinculá una receta</span>';
+      if (costo!==null){
+        const gan = venta - costo;
+        const pct = venta>0 ? gan/venta*100 : 0;
+        const ok = pct >= margen;
+        const sug = margen<100 ? Math.ceil((costo/(1-margen/100))/100)*100 : 0;
+        stats = `
+          <span class="stat"><b>Costo</b><span class="mono">${fmt(costo)}</span></span>
+          <span class="stat"><b>Venta</b><span class="mono">${fmt(venta)}</span>${v.oferta?'<span style="color:var(--muted)"> (oferta)</span>':''}</span>
+          <span class="stat ${ok?'ok':'bad'}"><b>Ganancia</b><span class="mono">${fmt(gan)} · ${pct.toFixed(0)}%</span></span>
+          <span class="stat sug"><b>Sugerido (${margen}%)</b><span class="mono">${fmt(sug)}</span></span>`;
+      }
+      return `<div class="venta">
+        <div class="venta-nombre">${esc(v.nombre)}</div>
+        <div class="venta-link">
+          <select onchange="setVenta('${v.id}','ref',this.value)">${opcionesVinculo(v.ref)}</select>
+          <input class="mono" type="number" inputmode="decimal" title="Cantidad" value="${v.mult||1}"
+            onchange="setVenta('${v.id}','mult',this.value)">
+          <input class="mono" type="number" inputmode="decimal" placeholder="+ extra $" title="Costo extra (packaging, etc.)" value="${v.extra||''}"
+            onchange="setVenta('${v.id}','extra',this.value)">
+        </div>
+        <div class="venta-stats">${stats}</div>
+      </div>`;
+    }).join('');
+    return `<div class="cat-title">${esc(cat)}</div>${filas}`;
+  }).join('');
+}
+window.setVenta = (id,field,v) => {
+  const venta = state.ventas.find(x=>x.id===id);
+  if (!venta) return;
+  venta[field] = (field==='ref') ? v : (parseFloat(v)||0);
+  if (field==='mult' && !(venta.mult>0)) venta.mult = 1;
+  save(); renderRentabilidad();
+};
+document.getElementById('margen-obj').onchange = e => {
+  const m = parseFloat(e.target.value);
+  state.margenObj = (m>=0 && m<100) ? m : 60;
+  save(); renderRentabilidad();
+};
+
+/* Importar Excel de Pedix */
+document.getElementById('btn-xlsx').onclick = () => document.getElementById('file-xlsx').click();
+document.getElementById('file-xlsx').onchange = e => {
+  const f = e.target.files[0]; if (!f) return;
+  const r = new FileReader();
+  r.onload = () => {
+    try {
+      const wb = XLSX.read(r.result, {type:'array'});
+      const sheetName = wb.SheetNames.includes('Productos') ? 'Productos' : wb.SheetNames[0];
+      const rows = XLSX.utils.sheet_to_json(wb.Sheets[sheetName], {defval:null});
+      let nuevos = 0, actualizados = 0;
+      const idsExcel = new Set();
+      for (const row of rows){
+        const pid = row['ID']; if (!pid) continue;
+        idsExcel.add(String(pid));
+        const datos = {
+          pedixId: String(pid),
+          nombre: String(row['Nombre']||'').trim(),
+          categoria: String(row['Categoría']||row['Categoria']||'').trim(),
+          precio: Number(row['Precio'])||0,
+          oferta: Number(row['Oferta'])||0
+        };
+        const exist = state.ventas.find(v=>v.pedixId===datos.pedixId);
+        if (exist){ Object.assign(exist, datos); actualizados++; }
+        else { state.ventas.push(Object.assign({id:uid(), ref:'', mult:1, extra:0}, datos)); nuevos++; }
+      }
+      /* quitar productos que ya no están en la carta */
+      const antes = state.ventas.length;
+      state.ventas = state.ventas.filter(v=>idsExcel.has(v.pedixId));
+      const quitados = antes - state.ventas.length;
+      save(); renderRentabilidad();
+      aviso('notice-xlsx', `Importado: ${nuevos} nuevos, ${actualizados} actualizados${quitados?', '+quitados+' quitados':''}. Los vínculos se conservaron.`);
+    } catch(err){ aviso('notice-xlsx','No pude leer el archivo. ¿Es el Excel exportado de Pedix?'); }
+  };
+  r.readAsArrayBuffer(f);
+  e.target.value = '';
+};
+
+/* ================= RESPALDO ================= */
+document.getElementById('btn-export').onclick = () => {
+  const blob = new Blob([JSON.stringify(state,null,2)],{type:'application/json'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'costos-respaldo.json';
+  a.click();
+};
+document.getElementById('btn-import').onclick = () => document.getElementById('file-import').click();
+document.getElementById('file-import').onchange = e => {
+  const f = e.target.files[0]; if (!f) return;
+  const r = new FileReader();
+  r.onload = () => {
+    try {
+      const data = JSON.parse(r.result);
+      if (!data.ingredientes || !data.productos) throw 0;
+      state = Object.assign({ingredientes:[],preparaciones:[],productos:[],ventas:[],margenObj:60}, data);
+      save(); renderAll();
+      aviso('notice-import','Respaldo importado correctamente.');
+    } catch { aviso('notice-import','El archivo no es un respaldo válido.'); }
+  };
+  r.readAsText(f);
+};
+
+function renderAll(){ renderIngredientes(); renderPreparaciones(); renderEmpanadas(); renderPizzas(); renderRentabilidad(); }
+renderAll();
+</script>
+</body>
+</html>
