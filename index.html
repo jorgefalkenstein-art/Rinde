@@ -167,6 +167,32 @@ select{font-family:'Montserrat',sans-serif;font-weight:500}
 @keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}
 
 @media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
+
+/* ===== Producción ===== */
+.vinc-row{display:grid;grid-template-columns:1fr 1.3fr;gap:8px;align-items:center;padding:8px 2px;border-bottom:1px solid var(--line)}
+.vinc-row:last-child{border-bottom:none}
+.vinc-row .vinc-nombre{font-weight:600;font-size:.85rem}
+.dia-block{margin-bottom:16px}
+.dia-block h4{font-size:.8rem;text-transform:uppercase;letter-spacing:.06em;color:var(--red);font-weight:800;margin-bottom:8px;padding-bottom:5px;border-bottom:2px solid var(--red-soft)}
+.obj-row{display:grid;grid-template-columns:1fr 70px;gap:8px;align-items:center;padding:6px 2px}
+.obj-row input{padding:8px 9px;font-size:.85rem}
+table.prod-tabla{width:100%;border-collapse:collapse;font-size:.82rem}
+table.prod-tabla th{text-align:left;font-size:.62rem;text-transform:uppercase;letter-spacing:.05em;color:var(--ink-soft);font-weight:700;padding:6px 4px;border-bottom:2px solid var(--line)}
+table.prod-tabla td{padding:7px 4px;border-bottom:1px solid var(--line);vertical-align:middle}
+table.prod-tabla input{padding:6px 7px;font-size:.82rem;width:100%}
+.resumen-mes-banner{display:flex;gap:8px;flex-wrap:wrap;justify-content:space-around;text-align:center;margin-bottom:12px}
+.resumen-mes-banner .stat{flex:1;min-width:100px}
+.prod-item-row{display:flex;justify-content:space-between;align-items:baseline;padding:8px 2px;border-bottom:1px solid var(--line);font-size:.82rem;gap:8px}
+.prod-item-row:last-child{border-bottom:none}
+.prod-item-row .pin{color:var(--ink-soft);font-size:.72rem}
+
+#print-area{display:none}
+@media print{
+  body *{visibility:hidden}
+  #print-area, #print-area *{visibility:visible}
+  #print-area{display:block;position:absolute;top:0;left:0;width:100%;padding:20px}
+  .topbar, .sidebar, .scrim{display:none!important}
+}
 </style>
 </head>
 <body>
@@ -189,6 +215,7 @@ select{font-family:'Montserrat',sans-serif;font-weight:500}
     <button data-tab="empanadas"><span class="ico">🥟</span> Empanadas</button>
     <button data-tab="pizzas"><span class="ico">🍕</span> Pizzas</button>
     <button data-tab="rentabilidad"><span class="ico">💰</span> Rentabilidad</button>
+    <button data-tab="produccion"><span class="ico">🏭</span> Producción</button>
     <button data-tab="proyecciones"><span class="ico">📈</span> Proyecciones</button>
   </nav>
   <div class="sidebar-foot">
@@ -296,6 +323,58 @@ select{font-family:'Montserrat',sans-serif;font-weight:500}
     <div id="ventas-list"><div class="empty">Importá el Excel de Pedix para empezar.</div></div>
   </section>
 
+  <!-- PRODUCCIÓN -->
+  <section id="tab-produccion" hidden>
+    <div class="page-title">Producción</div>
+    <div class="page-sub">Importá el informe mensual completo de Pedix (el que se descarga a fin de mes) para calcular cuánto producir de cada sabor por día de la semana, y la ganancia real del mes — incluso dentro de las docenas mixtas.</div>
+
+    <div class="card">
+      <h3 style="margin-bottom:8px">Importar informe mensual</h3>
+      <p class="hint" style="margin-top:0;margin-bottom:12px">Subí el Excel con las solapas <b>Pedidos</b> y <b>Detalle de productos</b> (el informe completo del mes, no la carta). Desarma automáticamente las docenas y promos en sus sabores reales.</p>
+      <button class="btn" id="btn-prod-xlsx">Importar informe del mes</button>
+      <input type="file" id="file-prod-xlsx" accept=".xlsx,.xls" style="display:none">
+      <div class="notice" id="notice-prod-xlsx"></div>
+    </div>
+
+    <div class="card" id="card-vincular" style="display:none">
+      <h3 style="margin-bottom:4px">Vincular sabores sin costo</h3>
+      <p class="hint" style="margin-top:0;margin-bottom:10px">Estos nombres aparecieron en el informe pero todavía no están vinculados a una receta de Rinde. Vinculalos una vez — se recuerda para los próximos meses.</p>
+      <div id="vincular-list"></div>
+      <button class="btn" id="btn-recalcular" style="margin-top:10px">Recalcular con estos vínculos</button>
+    </div>
+
+    <div class="card" id="card-rentabilidad-real" style="display:none">
+      <h3 style="margin-bottom:10px">Ganancia real del mes</h3>
+      <div id="prod-resumen-mes"></div>
+      <div id="prod-detalle-productos" style="margin-top:12px"></div>
+    </div>
+
+    <div class="card">
+      <h3 style="margin-bottom:3px">Objetivos de producción</h3>
+      <p class="hint" style="margin-top:0;margin-bottom:10px">Calculados automáticamente al importar (máximo vendido ese día de la semana en el mes, redondeado hacia arriba al múltiplo de 6). Podés ajustarlos a mano.</p>
+      <div id="prod-objetivos"><div class="empty">Importá un informe mensual para calcular los objetivos.</div></div>
+    </div>
+
+    <div class="card">
+      <div class="prod-header" style="margin-bottom:10px">
+        <h3 style="flex:1">Hoja de producción</h3>
+        <button class="btn ghost sm" id="btn-imprimir-prod">🖨 Imprimir</button>
+      </div>
+      <div class="field" style="margin-bottom:12px"><label>Día a producir</label>
+        <select id="prod-dia-select">
+          <option value="miercoles">Miércoles</option>
+          <option value="jueves">Jueves</option>
+          <option value="viernes">Viernes</option>
+          <option value="sabado">Sábado</option>
+          <option value="domingo">Domingo</option>
+          <option value="lunes">Lunes</option>
+          <option value="martes">Martes</option>
+        </select>
+      </div>
+      <div id="prod-hoja"></div>
+    </div>
+  </section>
+
   <!-- PROYECCIONES -->
   <section id="tab-proyecciones" hidden>
     <div class="page-title">Proyecciones</div>
@@ -343,15 +422,29 @@ select{font-family:'Montserrat',sans-serif;font-weight:500}
   </section>
 </main>
 
+<div id="print-area"></div>
+
 <script>
 
 /* ================= DATA ================= */
 const LS_KEY = 'costosProduccionV1';
 const PROYECCION_DEFAULT = {costoHora:0, horas:0, luz:0, gas:0, monotributo:0, iibbPct:0, otros:0, items:[]};
-let state = { ingredientes: [], preparaciones: [], productos: [], ventas: [], margenObj: 60, proyeccion: Object.assign({},PROYECCION_DEFAULT) };
+const PRODUCCION_DEFAULT = {vinculos:{}, objetivos:{}, historico:[], ultimoImport:null, registro:{}};
+const ESTADO_DEFAULT = {ingredientes:[],preparaciones:[],productos:[],ventas:[],margenObj:60,proyeccion:null,produccion:null};
+function estadoBase(datos){
+  const base = Object.assign({}, ESTADO_DEFAULT, datos);
+  base.proyeccion = Object.assign({}, PROYECCION_DEFAULT, datos && datos.proyeccion || {});
+  base.produccion = Object.assign({}, PRODUCCION_DEFAULT, datos && datos.produccion || {});
+  base.produccion.vinculos = Object.assign({}, PRODUCCION_DEFAULT.vinculos, (datos && datos.produccion && datos.produccion.vinculos) || {});
+  base.produccion.objetivos = Object.assign({}, PRODUCCION_DEFAULT.objetivos, (datos && datos.produccion && datos.produccion.objetivos) || {});
+  base.produccion.registro = Object.assign({}, PRODUCCION_DEFAULT.registro, (datos && datos.produccion && datos.produccion.registro) || {});
+  base.produccion.historico = (datos && datos.produccion && datos.produccion.historico) || [];
+  return base;
+}
+let state = estadoBase({});
 try {
   const s = localStorage.getItem(LS_KEY);
-  if (s) state = Object.assign({ingredientes:[],preparaciones:[],productos:[],ventas:[],margenObj:60,proyeccion:Object.assign({},PROYECCION_DEFAULT)}, JSON.parse(s));
+  if (s) state = estadoBase(JSON.parse(s));
 } catch(e){}
 
 /* ====== SINCRONIZACIÓN CON LA NUBE (Supabase) ====== */
@@ -398,7 +491,7 @@ async function cargarNube(){
     const { data, error } = await sb.from('app_data').select('data').eq('id', ROW_ID).maybeSingle();
     if (error) throw error;
     if (data && data.data){
-      state = Object.assign({ingredientes:[],preparaciones:[],productos:[],ventas:[],margenObj:60,proyeccion:Object.assign({},PROYECCION_DEFAULT)}, data.data);
+      state = estadoBase(data.data);
       try { localStorage.setItem(LS_KEY, JSON.stringify(state)); } catch(e){}
       renderAll();
       setBadge('ok','Sincronizado');
@@ -503,7 +596,7 @@ function cerrarMenu(){ sidebar.classList.remove('open'); scrim.classList.remove(
 document.getElementById('hamb').onclick = abrirMenu;
 scrim.onclick = cerrarMenu;
 
-const SECCIONES = {ingredientes:'Ingredientes', preparaciones:'Preparaciones', empanadas:'Empanadas', pizzas:'Pizzas', rentabilidad:'Rentabilidad', proyecciones:'Proyecciones'};
+const SECCIONES = {ingredientes:'Ingredientes', preparaciones:'Preparaciones', empanadas:'Empanadas', pizzas:'Pizzas', rentabilidad:'Rentabilidad', produccion:'Producción', proyecciones:'Proyecciones'};
 document.querySelectorAll('#nav button').forEach(t => t.onclick = () => {
   document.querySelectorAll('#nav button').forEach(x=>x.classList.remove('active'));
   t.classList.add('active');
@@ -1138,7 +1231,7 @@ document.getElementById('file-import').onchange = e => {
     try {
       const data = JSON.parse(r.result);
       if (!data.ingredientes || !data.productos) throw 0;
-      state = Object.assign({ingredientes:[],preparaciones:[],productos:[],ventas:[],margenObj:60,proyeccion:Object.assign({},PROYECCION_DEFAULT)}, data);
+      state = estadoBase(data);
       save(); renderAll();
       aviso('notice-import','Respaldo importado correctamente.');
     } catch { aviso('notice-import','El archivo no es un respaldo válido.'); }
@@ -1146,7 +1239,335 @@ document.getElementById('file-import').onchange = e => {
   r.readAsText(f);
 };
 
-function renderAll(){ renderIngredientes(); renderPreparaciones(); renderEmpanadas(); renderPizzas(); renderRentabilidad(); renderProyecciones(); }
+/* ================= PRODUCCIÓN ================= */
+const DIAS_SEMANA = ['domingo','lunes','martes','miercoles','jueves','viernes','sabado'];
+const DIA_LABEL = {domingo:'Domingo',lunes:'Lunes',martes:'Martes',miercoles:'Miércoles',jueves:'Jueves',viernes:'Viernes',sabado:'Sábado'};
+
+/* Lee una hoja tipo informe Pedix: fila 1 = título de la hoja, fila 2 = encabezados, resto = datos */
+function leerHojaInforme(wb, nombreHoja){
+  const ws = wb.Sheets[nombreHoja];
+  if (!ws) return [];
+  const arr = XLSX.utils.sheet_to_json(ws, {header:1, defval:null});
+  let headerIdx = arr.findIndex(r => r && r.filter(c=>c!==null && c!=='').length > 2);
+  if (headerIdx === -1) headerIdx = 0;
+  const headers = arr[headerIdx];
+  const rows = [];
+  for (let i=headerIdx+1;i<arr.length;i++){
+    const r = arr[i];
+    if (!r || r.every(c=>c===null || c==='')) continue;
+    const obj = {};
+    headers.forEach((h,idx)=>{ if(h) obj[h] = r[idx]; });
+    rows.push(obj);
+  }
+  return rows;
+}
+
+/* Desarma el texto "Detalles" de una docena/promo en sus sabores: "- 3x Burguer: $0,00" -> {nombre:'Burguer', cant:3} */
+function parseDesgloseDocena(texto){
+  const out = [];
+  if (!texto) return out;
+  const regex = /-\s*(\d+)\s*x\s*([^:]+):/gi;
+  let m;
+  while ((m = regex.exec(String(texto))) !== null){
+    const cant = parseInt(m[1]);
+    const nombre = m[2].trim();
+    if (cant>0 && nombre) out.push({nombre, cant});
+  }
+  return out;
+}
+
+function fechaDe(v){
+  if (v instanceof Date) return isNaN(v) ? null : v;
+  if (typeof v === 'number'){ const d = XLSX.SSF.parse_date_code(v); return d ? new Date(d.y,d.m-1,d.d) : null; }
+  if (typeof v === 'string'){ const d = new Date(v); return isNaN(d) ? null : d; }
+  return null;
+}
+
+let prodUltimoAnalisis = null; // {mes, ventas:[{nombre,cantidad,ingreso,diaSemana,fechaIso}]}
+
+document.getElementById('btn-prod-xlsx').onclick = () => document.getElementById('file-prod-xlsx').click();
+document.getElementById('file-prod-xlsx').onchange = e => {
+  const f = e.target.files[0]; if (!f) return;
+  const r = new FileReader();
+  r.onload = () => {
+    try {
+      const wb = XLSX.read(r.result, {type:'array'});
+      if (!wb.SheetNames.includes('Pedidos') || !wb.SheetNames.includes('Detalle de productos')){
+        aviso('notice-prod-xlsx','No encuentro las solapas "Pedidos" y "Detalle de productos". ¿Es el informe mensual completo (no la carta)?');
+        return;
+      }
+      const pedidos = leerHojaInforme(wb, 'Pedidos');
+      const detalle = leerHojaInforme(wb, 'Detalle de productos');
+      const fechaPorCodigo = {};
+      pedidos.forEach(p => { const cod = p['Código']; if (cod) fechaPorCodigo[cod] = fechaDe(p['Fecha']); });
+
+      const ventasUnbundled = [];
+      detalle.forEach(row => {
+        const codigo = row['Código'];
+        const categoria = String(row['Categoría']||'');
+        const producto = String(row['Producto']||'').trim();
+        const cantidad = Number(row['Cantidad'])||0;
+        const total = Number(row['Total'])||0;
+        const detalles = row['Detalles'];
+        const fecha = fechaPorCodigo[codigo];
+        const diaSemana = fecha ? DIAS_SEMANA[fecha.getDay()] : null;
+        const fechaIso = fecha ? fecha.toISOString().slice(0,10) : null;
+        if (/gaseosa|cerveza/i.test(categoria)) return; // bebidas no van a producción
+
+        const desglose = parseDesgloseDocena(detalles);
+        if (desglose.length){
+          const totalUnid = desglose.reduce((a,b)=>a+b.cant,0) || 1;
+          desglose.forEach(d => {
+            ventasUnbundled.push({nombre:d.nombre, cantidad:d.cant, ingreso: total*(d.cant/totalUnid), diaSemana, fechaIso});
+          });
+        } else if (producto && cantidad>0){
+          ventasUnbundled.push({nombre:producto, cantidad, ingreso: total, diaSemana, fechaIso});
+        }
+      });
+
+      if (!ventasUnbundled.length){
+        aviso('notice-prod-xlsx','No encontré líneas de venta para procesar en ese archivo.');
+        return;
+      }
+
+      const fechasValidas = ventasUnbundled.map(v=>v.fechaIso).filter(Boolean).sort();
+      const mes = fechasValidas.length ? fechasValidas[Math.floor(fechasValidas.length/2)].slice(0,7) : 'sin-fecha';
+      prodUltimoAnalisis = {mes, ventas: ventasUnbundled};
+      state.produccion.ultimoImport = prodUltimoAnalisis;
+      save();
+      procesarAnalisisProduccion();
+      aviso('notice-prod-xlsx', `Informe procesado: ${ventasUnbundled.length} líneas de venta (mes ${mes}).`);
+    } catch(err){
+      console.error(err);
+      aviso('notice-prod-xlsx','No pude leer el archivo. ¿Es el informe mensual exportado de Pedix?');
+    }
+  };
+  r.readAsArrayBuffer(f);
+  e.target.value = '';
+};
+
+/* Nombres de sabores/productos del último análisis que no tienen vínculo a una receta de Rinde */
+function nombresSinVincular(){
+  if (!prodUltimoAnalisis) return [];
+  const vistos = new Set();
+  const faltantes = [];
+  prodUltimoAnalisis.ventas.forEach(v => {
+    if (vistos.has(v.nombre)) return;
+    vistos.add(v.nombre);
+    if (!state.produccion.vinculos[v.nombre]) faltantes.push(v.nombre);
+  });
+  return faltantes;
+}
+
+function renderVincular(){
+  const card = document.getElementById('card-vincular');
+  const faltan = nombresSinVincular();
+  if (!prodUltimoAnalisis || !faltan.length){ card.style.display = 'none'; return; }
+  card.style.display = 'block';
+  document.getElementById('vincular-list').innerHTML = faltan.map(nombre => `
+    <div class="vinc-row">
+      <span class="vinc-nombre">${esc(nombre)}</span>
+      <select onchange="setVinculoProduccion('${esc(nombre).replace(/'/g,"\\'")}',this.value)">${opcionesVinculo('')}</select>
+    </div>`).join('');
+}
+window.setVinculoProduccion = (nombre, ref) => {
+  if (ref) state.produccion.vinculos[nombre] = ref;
+  else delete state.produccion.vinculos[nombre];
+  save(); renderVincular();
+};
+document.getElementById('btn-recalcular').onclick = () => { procesarAnalisisProduccion(); };
+
+/* Calcula objetivos por día de semana + ganancia real del mes, a partir del último análisis */
+function procesarAnalisisProduccion(){
+  if (!prodUltimoAnalisis) return;
+  const ventas = prodUltimoAnalisis.ventas;
+
+  /* Objetivos: máximo por fecha, agrupado por día de semana, redondeado al múltiplo de 6 */
+  const porFecha = {};
+  ventas.forEach(v => {
+    if (!v.fechaIso) return;
+    porFecha[v.fechaIso] = porFecha[v.fechaIso] || {};
+    porFecha[v.fechaIso][v.nombre] = (porFecha[v.fechaIso][v.nombre]||0) + v.cantidad;
+  });
+  const maxPorDia = {};
+  Object.entries(porFecha).forEach(([fechaIso, sabores]) => {
+    const dia = DIAS_SEMANA[new Date(fechaIso+'T12:00:00').getDay()];
+    maxPorDia[dia] = maxPorDia[dia] || {};
+    Object.entries(sabores).forEach(([nombre,cant]) => {
+      maxPorDia[dia][nombre] = Math.max(maxPorDia[dia][nombre]||0, cant);
+    });
+  });
+  const objetivos = {};
+  Object.entries(maxPorDia).forEach(([dia,sabores]) => {
+    objetivos[dia] = {};
+    Object.entries(sabores).forEach(([nombre,max]) => { objetivos[dia][nombre] = Math.ceil(max/6)*6; });
+  });
+  state.produccion.objetivos = objetivos;
+
+  /* Ganancia real: usa el costo de la receta vinculada, no un % uniforme */
+  let ingresoTotal = 0, costoTotal = 0, sinVincularCant = 0;
+  const porProducto = {};
+  ventas.forEach(v => {
+    ingresoTotal += v.ingreso;
+    const ref = state.produccion.vinculos[v.nombre];
+    const costoUnit = ref ? costoVinculo(ref) : null;
+    const costoLinea = (costoUnit!==null) ? costoUnit*v.cantidad : 0;
+    if (costoUnit===null) sinVincularCant += v.cantidad;
+    costoTotal += costoLinea;
+    porProducto[v.nombre] = porProducto[v.nombre] || {cant:0, ingreso:0, costo:0, vinculado: !!ref};
+    porProducto[v.nombre].cant += v.cantidad;
+    porProducto[v.nombre].ingreso += v.ingreso;
+    porProducto[v.nombre].costo += costoLinea;
+  });
+  const entrada = {
+    mes: prodUltimoAnalisis.mes, ingresoTotal, costoTotal,
+    gananciaTotal: ingresoTotal-costoTotal, porProducto, sinVincularCant
+  };
+  state.produccion.historico = state.produccion.historico.filter(h=>h.mes!==entrada.mes);
+  state.produccion.historico.push(entrada);
+  state.produccion.historico.sort((a,b)=>a.mes<b.mes?1:-1);
+
+  save(); renderProduccion();
+}
+
+function renderObjetivos(){
+  const box = document.getElementById('prod-objetivos');
+  const obj = state.produccion.objetivos;
+  const dias = Object.keys(obj).sort((a,b)=>DIAS_SEMANA.indexOf(a)-DIAS_SEMANA.indexOf(b));
+  if (!dias.length){ box.innerHTML = '<div class="empty">Importá un informe mensual para calcular los objetivos.</div>'; return; }
+  box.innerHTML = dias.map(dia => {
+    const sabores = Object.entries(obj[dia]).sort((a,b)=>a[0].localeCompare(b[0],'es'));
+    return `<div class="dia-block">
+      <h4>${DIA_LABEL[dia]}</h4>
+      ${sabores.map(([nombre,val]) => `
+        <div class="obj-row">
+          <span>${esc(nombre)}</span>
+          <input class="mono" type="number" inputmode="numeric" value="${val}" onchange="setObjetivo('${dia}','${esc(nombre).replace(/'/g,"\\'")}',this.value)">
+        </div>`).join('')}
+    </div>`;
+  }).join('');
+}
+window.setObjetivo = (dia,nombre,v) => {
+  const n = Math.max(0, parseInt(v)||0);
+  state.produccion.objetivos[dia][nombre] = n;
+  save(); renderObjetivos();
+};
+
+function renderRentabilidadReal(){
+  const card = document.getElementById('card-rentabilidad-real');
+  const hist = state.produccion.historico;
+  if (!hist.length){ card.style.display='none'; return; }
+  card.style.display = 'block';
+  const ultimo = hist[0];
+  const margen = ultimo.ingresoTotal>0 ? (ultimo.gananciaTotal/ultimo.ingresoTotal*100) : 0;
+  const resumen = document.getElementById('prod-resumen-mes');
+  resumen.innerHTML = `
+    <p class="hint" style="margin-top:0;margin-bottom:10px">Mes <b>${ultimo.mes}</b> — costo real por sabor dentro de cada docena, no un % promedio.</p>
+    <div class="resumen-mes-banner">
+      <div class="stat"><div class="cost-banner" style="margin:0"><div><div class="big mono">${fmt(ultimo.ingresoTotal)}</div><div class="lbl">Ingreso</div></div></div></div>
+      <div class="stat"><div class="cost-banner" style="margin:0"><div><div class="big mono">${fmt(ultimo.costoTotal)}</div><div class="lbl">Costo real</div></div></div></div>
+      <div class="stat"><div class="cost-banner green" style="margin:0"><div><div class="big mono">${fmt(ultimo.gananciaTotal)}</div><div class="lbl">Ganancia · ${margen.toFixed(0)}%</div></div></div></div>
+    </div>
+    ${ultimo.sinVincularCant>0 ? `<div class="notice show" style="margin-bottom:10px">Hay ${ultimo.sinVincularCant} unidades vendidas sin vincular a una receta: su costo no está incluido arriba. Vinculalas para un cálculo exacto.</div>` : ''}
+    ${hist.length>1 ? `<p class="hint">Meses anteriores: ${hist.slice(1).map(h=>`${h.mes} (${fmt(h.gananciaTotal)})`).join(' · ')}</p>` : ''}
+  `;
+  const detalle = document.getElementById('prod-detalle-productos');
+  const items = Object.entries(ultimo.porProducto).sort((a,b)=>b[1].ingreso-a[1].ingreso);
+  detalle.innerHTML = items.map(([nombre,d]) => {
+    const g = d.ingreso - d.costo;
+    const pct = d.ingreso>0 ? (g/d.ingreso*100) : 0;
+    return `<div class="prod-item-row">
+      <span>${esc(nombre)} <span class="pin">× ${d.cant}</span>${!d.vinculado?' <span class="pin" style="color:var(--red)">sin vincular</span>':''}</span>
+      <span class="mono">${fmt(g)} ${d.vinculado?('· '+pct.toFixed(0)+'%'):''}</span>
+    </div>`;
+  }).join('');
+}
+
+/* Hoja de producción imprimible por día */
+function fechaProximoDia(diaSemana){
+  const hoy = new Date();
+  const objetivo = DIAS_SEMANA.indexOf(diaSemana);
+  const diff = (objetivo - hoy.getDay() + 7) % 7;
+  const f = new Date(hoy); f.setDate(hoy.getDate()+diff);
+  return f.toISOString().slice(0,10);
+}
+function renderHojaProduccion(){
+  const dia = document.getElementById('prod-dia-select').value;
+  const fechaIso = fechaProximoDia(dia);
+  const sabores = Object.entries(state.produccion.objetivos[dia]||{}).sort((a,b)=>a[0].localeCompare(b[0],'es'));
+  const box = document.getElementById('prod-hoja');
+  if (!sabores.length){
+    box.innerHTML = `<div class="empty">Todavía no hay objetivos para ${DIA_LABEL[dia]}. Importá un informe mensual.</div>`;
+    document.getElementById('print-area').innerHTML = '';
+    return;
+  }
+  state.produccion.registro[fechaIso] = state.produccion.registro[fechaIso] || {};
+  const reg = state.produccion.registro[fechaIso];
+  box.innerHTML = `
+    <table class="prod-tabla">
+      <thead><tr><th>Sabor</th><th>Objetivo</th><th>Stock inicial</th><th>Producir</th><th>Producido</th></tr></thead>
+      <tbody>
+        ${sabores.map(([nombre,obj]) => {
+          const r = reg[nombre] || {stockInicial:0, producido:0};
+          const producir = Math.max(0, obj - (Number(r.stockInicial)||0));
+          return `<tr>
+            <td>${esc(nombre)}</td>
+            <td class="mono">${obj}</td>
+            <td><input class="mono" type="number" inputmode="numeric" value="${r.stockInicial||''}" onchange="setRegistroProd('${fechaIso}','${esc(nombre).replace(/'/g,"\\'")}','stockInicial',this.value)"></td>
+            <td class="mono">${producir}</td>
+            <td><input class="mono" type="number" inputmode="numeric" value="${r.producido||''}" onchange="setRegistroProd('${fechaIso}','${esc(nombre).replace(/'/g,"\\'")}','producido',this.value)"></td>
+          </tr>`;
+        }).join('')}
+      </tbody>
+    </table>`;
+  renderPrintArea(dia, fechaIso, sabores, reg);
+}
+function renderPrintArea(dia, fechaIso, sabores, reg){
+  document.getElementById('print-area').innerHTML = `
+    <h2 style="font-family:Montserrat,sans-serif;margin-bottom:4px">Producción — ${DIA_LABEL[dia]} ${fechaIso}</h2>
+    <table style="width:100%;border-collapse:collapse;font-family:Montserrat,sans-serif;font-size:14px;margin-top:10px">
+      <thead><tr>
+        <th style="text-align:left;border-bottom:2px solid #000;padding:6px 4px">Sabor</th>
+        <th style="text-align:left;border-bottom:2px solid #000;padding:6px 4px">Objetivo</th>
+        <th style="text-align:left;border-bottom:2px solid #000;padding:6px 4px">Stock inicial</th>
+        <th style="text-align:left;border-bottom:2px solid #000;padding:6px 4px">Producir</th>
+        <th style="text-align:left;border-bottom:2px solid #000;padding:6px 4px">Producido</th>
+        <th style="text-align:left;border-bottom:2px solid #000;padding:6px 4px">OK</th>
+      </tr></thead>
+      <tbody>
+        ${sabores.map(([nombre,obj]) => {
+          const r = reg[nombre] || {stockInicial:0};
+          const producir = Math.max(0, obj - (Number(r.stockInicial)||0));
+          return `<tr>
+            <td style="border-bottom:1px solid #ccc;padding:6px 4px">${esc(nombre)}</td>
+            <td style="border-bottom:1px solid #ccc;padding:6px 4px">${obj}</td>
+            <td style="border-bottom:1px solid #ccc;padding:6px 4px">${r.stockInicial||0}</td>
+            <td style="border-bottom:1px solid #ccc;padding:6px 4px">${producir}</td>
+            <td style="border-bottom:1px solid #ccc;padding:6px 4px">________</td>
+            <td style="border-bottom:1px solid #ccc;padding:6px 4px">☐</td>
+          </tr>`;
+        }).join('')}
+      </tbody>
+    </table>`;
+}
+window.setRegistroProd = (fechaIso, nombre, campo, v) => {
+  state.produccion.registro[fechaIso] = state.produccion.registro[fechaIso] || {};
+  state.produccion.registro[fechaIso][nombre] = state.produccion.registro[fechaIso][nombre] || {stockInicial:0, producido:0};
+  state.produccion.registro[fechaIso][nombre][campo] = Math.max(0, parseInt(v)||0);
+  save(); renderHojaProduccion();
+};
+document.getElementById('prod-dia-select').onchange = renderHojaProduccion;
+document.getElementById('btn-imprimir-prod').onclick = () => { renderHojaProduccion(); setTimeout(()=>window.print(), 80); };
+
+function renderProduccion(){
+  prodUltimoAnalisis = state.produccion.ultimoImport;
+  renderVincular();
+  renderRentabilidadReal();
+  renderObjetivos();
+  renderHojaProduccion();
+}
+
+function renderAll(){ renderIngredientes(); renderPreparaciones(); renderEmpanadas(); renderPizzas(); renderRentabilidad(); renderProduccion(); renderProyecciones(); }
 renderAll();
 cargarNube();
 
@@ -1164,7 +1585,7 @@ async function recargarDesdeNube(){
     const { data, error } = await sb.from('app_data').select('data').eq('id', ROW_ID).maybeSingle();
     if (error) throw error;
     if (data && data.data){
-      state = Object.assign({ingredientes:[],preparaciones:[],productos:[],ventas:[],margenObj:60,proyeccion:Object.assign({},PROYECCION_DEFAULT)}, data.data);
+      state = estadoBase(data.data);
       try { localStorage.setItem(LS_KEY, JSON.stringify(state)); } catch(e){}
       renderAll();
       setBadge('ok','Sincronizado');
