@@ -30,7 +30,7 @@
   --shadow:0 1px 3px rgba(0,0,0,.08),0 1px 2px rgba(0,0,0,.04);
 }
 *{box-sizing:border-box;margin:0;padding:0}
-body{background:var(--bg);color:var(--ink);font-family:'Montserrat',sans-serif;min-height:100vh}
+body{background:var(--bg);color:var(--ink);font-family:'Montserrat',sans-serif;min-height:100vh;overflow-x:hidden;max-width:100vw}
 .mono{font-family:'IBM Plex Mono',monospace}
 
 /* ===== Topbar ===== */
@@ -185,9 +185,12 @@ select{font-family:'Montserrat',sans-serif;font-weight:500}
 .obj-row{display:grid;grid-template-columns:1fr 70px;gap:8px;align-items:center;padding:6px 2px}
 .obj-row input{padding:8px 9px;font-size:.85rem}
 table.prod-tabla{width:100%;border-collapse:collapse;font-size:.82rem}
-table.prod-tabla th{text-align:left;font-size:.62rem;text-transform:uppercase;letter-spacing:.05em;color:var(--ink-soft);font-weight:700;padding:6px 4px;border-bottom:2px solid var(--line)}
+table.prod-tabla th{text-align:left;font-size:.62rem;text-transform:uppercase;letter-spacing:.05em;color:var(--ink-soft);font-weight:700;padding:6px 4px;border-bottom:2px solid var(--line);white-space:nowrap}
 table.prod-tabla td{padding:7px 4px;border-bottom:1px solid var(--line);vertical-align:middle}
-table.prod-tabla input{padding:6px 7px;font-size:.82rem;width:100%}
+table.prod-tabla td:first-child{min-width:92px}
+table.prod-tabla input{padding:6px 5px;font-size:.82rem;width:56px;max-width:100%}
+.tabla-scroll{overflow-x:auto;-webkit-overflow-scrolling:touch;margin:0 -16px;padding:0 16px}
+.tabla-scroll table.prod-tabla{min-width:460px}
 .resumen-mes-banner{display:flex;gap:8px;flex-wrap:wrap;justify-content:space-around;text-align:center;margin-bottom:12px}
 .resumen-mes-banner .stat{flex:1;min-width:100px}
 .prod-item-row{display:flex;justify-content:space-between;align-items:baseline;padding:8px 2px;border-bottom:1px solid var(--line);font-size:.82rem;gap:8px}
@@ -1979,6 +1982,7 @@ function renderHojaProduccion(){
     state.produccion.registro[fechaIso] = state.produccion.registro[fechaIso] || {};
     const reg = state.produccion.registro[fechaIso];
     box.innerHTML = `
+      <div class="tabla-scroll">
       <table class="prod-tabla">
         <thead><tr><th>Sabor</th><th>Objetivo</th><th>Stock inicial</th><th>Producir</th><th>Producido</th></tr></thead>
         <tbody>
@@ -1994,7 +1998,8 @@ function renderHojaProduccion(){
             </tr>`;
           }).join('')}
         </tbody>
-      </table>`;
+      </table>
+      </div>`;
     renderPrintArea(dia, fechaIso, 'empanadas', sabores, reg, null);
   } else if (prodTipoActual === 'pizzas'){
     hint.textContent = 'Las pizzas se arman al pedido. Esto muestra cuántas se esperan de cada sabor y el mínimo de masas/insumos que conviene tener preparados para cubrir esa demanda.';
@@ -2031,6 +2036,7 @@ function renderHojaProduccion(){
     state.produccion.registro[fechaIso] = state.produccion.registro[fechaIso] || {};
     const reg = state.produccion.registro[fechaIso];
     box.innerHTML = `
+      <div class="tabla-scroll">
       <table class="prod-tabla">
         <thead><tr><th>Bebida</th><th>Objetivo</th><th>Stock actual</th><th>Reponer</th><th>Repuesto</th></tr></thead>
         <tbody>
@@ -2046,7 +2052,8 @@ function renderHojaProduccion(){
             </tr>`;
           }).join('')}
         </tbody>
-      </table>`;
+      </table>
+      </div>`;
     renderPrintArea(dia, fechaIso, 'bebidas', sabores, reg, null);
   }
 }
@@ -2081,7 +2088,7 @@ function renderPrintArea(dia, fechaIso, tipo, sabores, reg, insumosList){
             return `<tr>
               <td style="border-bottom:1px solid #ccc;padding:6px 4px">${esc(etiquetaDe(clave))}</td>
               <td style="border-bottom:1px solid #ccc;padding:6px 4px">${obj}</td>
-              <td style="border-bottom:1px solid #ccc;padding:6px 4px">${r.stockInicial||0}</td>
+              <td style="border-bottom:1px solid #ccc;padding:6px 4px">________</td>
               <td style="border-bottom:1px solid #ccc;padding:6px 4px">${producir}</td>
               <td style="border-bottom:1px solid #ccc;padding:6px 4px">________</td>
               <td style="border-bottom:1px solid #ccc;padding:6px 4px">☐</td>
