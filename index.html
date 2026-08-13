@@ -430,7 +430,7 @@ table.prod-tabla input{padding:6px 7px;font-size:.82rem;width:100%}
 /* ================= DATA ================= */
 const LS_KEY = 'costosProduccionV1';
 const PROYECCION_DEFAULT = {costoHora:0, horas:0, luz:0, gas:0, monotributo:0, iibbPct:0, otros:0, items:[]};
-const PRODUCCION_DEFAULT = {vinculos:{}, objetivos:{}, historico:[], ultimoImport:null, registro:{}};
+const PRODUCCION_DEFAULT = {vinculos:{}, objetivos:{}, historico:[], ultimoImport:null, registro:{}, etiquetas:{}};
 const ESTADO_DEFAULT = {ingredientes:[],preparaciones:[],productos:[],ventas:[],margenObj:60,proyeccion:null,produccion:null};
 function estadoBase(datos){
   const base = Object.assign({}, ESTADO_DEFAULT, datos);
@@ -439,8 +439,20 @@ function estadoBase(datos){
   base.produccion.vinculos = Object.assign({}, PRODUCCION_DEFAULT.vinculos, (datos && datos.produccion && datos.produccion.vinculos) || {});
   base.produccion.objetivos = Object.assign({}, PRODUCCION_DEFAULT.objetivos, (datos && datos.produccion && datos.produccion.objetivos) || {});
   base.produccion.registro = Object.assign({}, PRODUCCION_DEFAULT.registro, (datos && datos.produccion && datos.produccion.registro) || {});
+  base.produccion.etiquetas = Object.assign({}, PRODUCCION_DEFAULT.etiquetas, (datos && datos.produccion && datos.produccion.etiquetas) || {});
   base.produccion.historico = (datos && datos.produccion && datos.produccion.historico) || [];
+  migrarClavesVinculos(base.produccion);
   return base;
+}
+/* Migración: vínculos guardados con una versión vieja (nombre crudo, sin normalizar) pasan a la clave normalizada nueva */
+function migrarClavesVinculos(prod){
+  const nuevos = {};
+  Object.entries(prod.vinculos).forEach(([k,v]) => {
+    const nk = normalizar(k);
+    if (!nuevos[nk]) nuevos[nk] = v;
+    if (!prod.etiquetas[nk]) prod.etiquetas[nk] = k;
+  });
+  prod.vinculos = nuevos;
 }
 let state = estadoBase({});
 try {
@@ -1284,7 +1296,23 @@ function fechaDe(v){
   return null;
 }
 
-let prodUltimoAnalisis = null; // {mes, ventas:[{nombre,cantidad,ingreso,diaSemana,fechaIso}]}
+/* Clave de agrupación insensible a mayúsculas/tildes/espacios, para que "Jamon y Queso" y "Jamón y Queso" sean lo mismo */
+function normalizar(s){
+  return String(s||'').trim().toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/\s+/g,' ');
+}
+/* Entre dos variantes del mismo nombre, preferir la que tiene tildes/ñ (más "correcta") como etiqueta visible */
+function mejorEtiqueta(actual, nueva){
+  if (!actual) return nueva;
+  const tieneAcentos = s => /[áéíóúñÁÉÍÓÚÑ]/.test(s);
+  if (tieneAcentos(nueva) && !tieneAcentos(actual)) return nueva;
+  return actual;
+}
+function registrarEtiqueta(clave, nombreVisible){
+  state.produccion.etiquetas[clave] = mejorEtiqueta(state.produccion.etiquetas[clave], nombreVisible);
+}
+function etiquetaDe(clave){ return state.produccion.etiquetas[clave] || clave; }
+
+let prodUltimoAnalisis = null; // {mes, ventas:[{nombre,clave,cantidad,ingreso,diaSemana,fechaIso}]}
 
 document.getElementById('btn-prod-xlsx').onclick = () => document.getElementById('file-prod-xlsx').click();
 document.getElementById('file-prod-xlsx').onchange = e => {
@@ -1307,6 +1335,7 @@ document.getElementById('file-prod-xlsx').onchange = e => {
         const codigo = row['Código'];
         const categoria = String(row['Categoría']||'');
         const producto = String(row['Producto']||'').trim();
+        const presentacion = String(row['Presentación']||'').replace(/^pizza\s*/i,'').trim();
         const cantidad = Number(row['Cantidad'])||0;
         const total = Number(row['Total'])||0;
         const detalles = row['Detalles'];
@@ -1319,10 +1348,15 @@ document.getElementById('file-prod-xlsx').onchange = e => {
         if (desglose.length){
           const totalUnid = desglose.reduce((a,b)=>a+b.cant,0) || 1;
           desglose.forEach(d => {
-            ventasUnbundled.push({nombre:d.nombre, cantidad:d.cant, ingreso: total*(d.cant/totalUnid), diaSemana, fechaIso});
+            const clave = normalizar(d.nombre);
+            registrarEtiqueta(clave, d.nombre);
+            ventasUnbundled.push({nombre:d.nombre, clave, cantidad:d.cant, ingreso: total*(d.cant/totalUnid), diaSemana, fechaIso});
           });
         } else if (producto && cantidad>0){
-          ventasUnbundled.push({nombre:producto, cantidad, ingreso: total, diaSemana, fechaIso});
+          const nombreCompleto = presentacion ? `${producto} (${presentacion})` : producto;
+          const clave = normalizar(nombreCompleto);
+          registrarEtiqueta(clave, nombreCompleto);
+          ventasUnbundled.push({nombre:nombreCompleto, clave, cantidad, ingreso: total, diaSemana, fechaIso});
         }
       });
 
@@ -1347,19 +1381,6 @@ document.getElementById('file-prod-xlsx').onchange = e => {
   e.target.value = '';
 };
 
-/* Nombres de sabores/productos del último análisis que no tienen vínculo a una receta de Rinde */
-function nombresSinVincular(){
-  if (!prodUltimoAnalisis) return [];
-  const vistos = new Set();
-  const faltantes = [];
-  prodUltimoAnalisis.ventas.forEach(v => {
-    if (vistos.has(v.nombre)) return;
-    vistos.add(v.nombre);
-    if (!state.produccion.vinculos[v.nombre]) faltantes.push(v.nombre);
-  });
-  return faltantes;
-}
-
 function renderVincular(){
   const card = document.getElementById('card-vincular');
   if (!prodUltimoAnalisis){ card.style.display = 'none'; return; }
@@ -1368,28 +1389,28 @@ function renderVincular(){
   const vistos = new Set();
   const todos = [];
   prodUltimoAnalisis.ventas.forEach(v => {
-    if (vistos.has(v.nombre)) return;
-    vistos.add(v.nombre);
-    todos.push(v.nombre);
+    if (vistos.has(v.clave)) return;
+    vistos.add(v.clave);
+    todos.push(v.clave);
   });
-  todos.sort((a,b)=>a.localeCompare(b,'es'));
-  const faltan = todos.filter(n => !state.produccion.vinculos[n]).length;
+  todos.sort((a,b)=>etiquetaDe(a).localeCompare(etiquetaDe(b),'es'));
+  const faltan = todos.filter(c => !state.produccion.vinculos[c]).length;
 
   document.getElementById('vincular-count').textContent = faltan
     ? `${faltan} de ${todos.length} sin vincular`
     : `${todos.length} vinculados — revisá o corregí cualquiera`;
 
-  document.getElementById('vincular-list').innerHTML = todos.map(nombre => {
-    const actual = state.produccion.vinculos[nombre] || '';
+  document.getElementById('vincular-list').innerHTML = todos.map(clave => {
+    const actual = state.produccion.vinculos[clave] || '';
     return `<div class="vinc-row">
-      <span class="vinc-nombre">${esc(nombre)}${!actual ? ' <span style="color:var(--red)">●</span>' : ''}</span>
-      <select onchange="setVinculoProduccion('${esc(nombre).replace(/'/g,"\\'")}',this.value)">${opcionesVinculo(actual)}</select>
+      <span class="vinc-nombre">${esc(etiquetaDe(clave))}${!actual ? ' <span style="color:var(--red)">●</span>' : ''}</span>
+      <select onchange="setVinculoProduccion('${clave}',this.value)">${opcionesVinculo(actual)}</select>
     </div>`;
   }).join('');
 }
-window.setVinculoProduccion = (nombre, ref) => {
-  if (ref) state.produccion.vinculos[nombre] = ref;
-  else delete state.produccion.vinculos[nombre];
+window.setVinculoProduccion = (clave, ref) => {
+  if (ref) state.produccion.vinculos[clave] = ref;
+  else delete state.produccion.vinculos[clave];
   save(); renderVincular();
 };
 document.getElementById('btn-recalcular').onclick = () => { procesarAnalisisProduccion(); };
@@ -1404,14 +1425,14 @@ function procesarAnalisisProduccion(){
   ventas.forEach(v => {
     if (!v.fechaIso) return;
     porFecha[v.fechaIso] = porFecha[v.fechaIso] || {};
-    porFecha[v.fechaIso][v.nombre] = (porFecha[v.fechaIso][v.nombre]||0) + v.cantidad;
+    porFecha[v.fechaIso][v.clave] = (porFecha[v.fechaIso][v.clave]||0) + v.cantidad;
   });
   const maxPorDia = {};
   Object.entries(porFecha).forEach(([fechaIso, sabores]) => {
     const dia = DIAS_SEMANA[new Date(fechaIso+'T12:00:00').getDay()];
     maxPorDia[dia] = maxPorDia[dia] || {};
-    Object.entries(sabores).forEach(([nombre,cant]) => {
-      maxPorDia[dia][nombre] = Math.max(maxPorDia[dia][nombre]||0, cant);
+    Object.entries(sabores).forEach(([clave,cant]) => {
+      maxPorDia[dia][clave] = Math.max(maxPorDia[dia][clave]||0, cant);
     });
   });
   const objetivos = {};
@@ -1426,15 +1447,15 @@ function procesarAnalisisProduccion(){
   const porProducto = {};
   ventas.forEach(v => {
     ingresoTotal += v.ingreso;
-    const ref = state.produccion.vinculos[v.nombre];
+    const ref = state.produccion.vinculos[v.clave];
     const costoUnit = ref ? costoVinculo(ref) : null;
     const costoLinea = (costoUnit!==null) ? costoUnit*v.cantidad : 0;
     if (costoUnit===null) sinVincularCant += v.cantidad;
     costoTotal += costoLinea;
-    porProducto[v.nombre] = porProducto[v.nombre] || {cant:0, ingreso:0, costo:0, vinculado: !!ref};
-    porProducto[v.nombre].cant += v.cantidad;
-    porProducto[v.nombre].ingreso += v.ingreso;
-    porProducto[v.nombre].costo += costoLinea;
+    porProducto[v.clave] = porProducto[v.clave] || {cant:0, ingreso:0, costo:0, vinculado: !!ref};
+    porProducto[v.clave].cant += v.cantidad;
+    porProducto[v.clave].ingreso += v.ingreso;
+    porProducto[v.clave].costo += costoLinea;
   });
   const entrada = {
     mes: prodUltimoAnalisis.mes, ingresoTotal, costoTotal,
@@ -1453,20 +1474,20 @@ function renderObjetivos(){
   const dias = Object.keys(obj).sort((a,b)=>DIAS_SEMANA.indexOf(a)-DIAS_SEMANA.indexOf(b));
   if (!dias.length){ box.innerHTML = '<div class="empty">Importá un informe mensual para calcular los objetivos.</div>'; return; }
   box.innerHTML = dias.map(dia => {
-    const sabores = Object.entries(obj[dia]).sort((a,b)=>a[0].localeCompare(b[0],'es'));
+    const sabores = Object.entries(obj[dia]).sort((a,b)=>etiquetaDe(a[0]).localeCompare(etiquetaDe(b[0]),'es'));
     return `<div class="dia-block">
       <h4>${DIA_LABEL[dia]}</h4>
-      ${sabores.map(([nombre,val]) => `
+      ${sabores.map(([clave,val]) => `
         <div class="obj-row">
-          <span>${esc(nombre)}</span>
-          <input class="mono" type="number" inputmode="numeric" value="${val}" onchange="setObjetivo('${dia}','${esc(nombre).replace(/'/g,"\\'")}',this.value)">
+          <span>${esc(etiquetaDe(clave))}</span>
+          <input class="mono" type="number" inputmode="numeric" value="${val}" onchange="setObjetivo('${dia}','${clave}',this.value)">
         </div>`).join('')}
     </div>`;
   }).join('');
 }
-window.setObjetivo = (dia,nombre,v) => {
+window.setObjetivo = (dia,clave,v) => {
   const n = Math.max(0, parseInt(v)||0);
-  state.produccion.objetivos[dia][nombre] = n;
+  state.produccion.objetivos[dia][clave] = n;
   save(); renderObjetivos();
 };
 
@@ -1490,11 +1511,11 @@ function renderRentabilidadReal(){
   `;
   const detalle = document.getElementById('prod-detalle-productos');
   const items = Object.entries(ultimo.porProducto).sort((a,b)=>b[1].ingreso-a[1].ingreso);
-  detalle.innerHTML = items.map(([nombre,d]) => {
+  detalle.innerHTML = items.map(([clave,d]) => {
     const g = d.ingreso - d.costo;
     const pct = d.ingreso>0 ? (g/d.ingreso*100) : 0;
     return `<div class="prod-item-row">
-      <span>${esc(nombre)} <span class="pin">× ${d.cant}</span>${!d.vinculado?' <span class="pin" style="color:var(--red)">sin vincular</span>':''}</span>
+      <span>${esc(etiquetaDe(clave))} <span class="pin">× ${d.cant}</span>${!d.vinculado?' <span class="pin" style="color:var(--red)">sin vincular</span>':''}</span>
       <span class="mono">${fmt(g)} ${d.vinculado?('· '+pct.toFixed(0)+'%'):''}</span>
     </div>`;
   }).join('');
@@ -1511,7 +1532,7 @@ function fechaProximoDia(diaSemana){
 function renderHojaProduccion(){
   const dia = document.getElementById('prod-dia-select').value;
   const fechaIso = fechaProximoDia(dia);
-  const sabores = Object.entries(state.produccion.objetivos[dia]||{}).sort((a,b)=>a[0].localeCompare(b[0],'es'));
+  const sabores = Object.entries(state.produccion.objetivos[dia]||{}).sort((a,b)=>etiquetaDe(a[0]).localeCompare(etiquetaDe(b[0]),'es'));
   const box = document.getElementById('prod-hoja');
   if (!sabores.length){
     box.innerHTML = `<div class="empty">Todavía no hay objetivos para ${DIA_LABEL[dia]}. Importá un informe mensual.</div>`;
@@ -1524,15 +1545,15 @@ function renderHojaProduccion(){
     <table class="prod-tabla">
       <thead><tr><th>Sabor</th><th>Objetivo</th><th>Stock inicial</th><th>Producir</th><th>Producido</th></tr></thead>
       <tbody>
-        ${sabores.map(([nombre,obj]) => {
-          const r = reg[nombre] || {stockInicial:0, producido:0};
+        ${sabores.map(([clave,obj]) => {
+          const r = reg[clave] || {stockInicial:0, producido:0};
           const producir = Math.max(0, obj - (Number(r.stockInicial)||0));
           return `<tr>
-            <td>${esc(nombre)}</td>
+            <td>${esc(etiquetaDe(clave))}</td>
             <td class="mono">${obj}</td>
-            <td><input class="mono" type="number" inputmode="numeric" value="${r.stockInicial||''}" onchange="setRegistroProd('${fechaIso}','${esc(nombre).replace(/'/g,"\\'")}','stockInicial',this.value)"></td>
+            <td><input class="mono" type="number" inputmode="numeric" value="${r.stockInicial||''}" onchange="setRegistroProd('${fechaIso}','${clave}','stockInicial',this.value)"></td>
             <td class="mono">${producir}</td>
-            <td><input class="mono" type="number" inputmode="numeric" value="${r.producido||''}" onchange="setRegistroProd('${fechaIso}','${esc(nombre).replace(/'/g,"\\'")}','producido',this.value)"></td>
+            <td><input class="mono" type="number" inputmode="numeric" value="${r.producido||''}" onchange="setRegistroProd('${fechaIso}','${clave}','producido',this.value)"></td>
           </tr>`;
         }).join('')}
       </tbody>
@@ -1552,11 +1573,11 @@ function renderPrintArea(dia, fechaIso, sabores, reg){
         <th style="text-align:left;border-bottom:2px solid #000;padding:6px 4px">OK</th>
       </tr></thead>
       <tbody>
-        ${sabores.map(([nombre,obj]) => {
-          const r = reg[nombre] || {stockInicial:0};
+        ${sabores.map(([clave,obj]) => {
+          const r = reg[clave] || {stockInicial:0};
           const producir = Math.max(0, obj - (Number(r.stockInicial)||0));
           return `<tr>
-            <td style="border-bottom:1px solid #ccc;padding:6px 4px">${esc(nombre)}</td>
+            <td style="border-bottom:1px solid #ccc;padding:6px 4px">${esc(etiquetaDe(clave))}</td>
             <td style="border-bottom:1px solid #ccc;padding:6px 4px">${obj}</td>
             <td style="border-bottom:1px solid #ccc;padding:6px 4px">${r.stockInicial||0}</td>
             <td style="border-bottom:1px solid #ccc;padding:6px 4px">${producir}</td>
@@ -1567,10 +1588,10 @@ function renderPrintArea(dia, fechaIso, sabores, reg){
       </tbody>
     </table>`;
 }
-window.setRegistroProd = (fechaIso, nombre, campo, v) => {
+window.setRegistroProd = (fechaIso, clave, campo, v) => {
   state.produccion.registro[fechaIso] = state.produccion.registro[fechaIso] || {};
-  state.produccion.registro[fechaIso][nombre] = state.produccion.registro[fechaIso][nombre] || {stockInicial:0, producido:0};
-  state.produccion.registro[fechaIso][nombre][campo] = Math.max(0, parseInt(v)||0);
+  state.produccion.registro[fechaIso][clave] = state.produccion.registro[fechaIso][clave] || {stockInicial:0, producido:0};
+  state.produccion.registro[fechaIso][clave][campo] = Math.max(0, parseInt(v)||0);
   save(); renderHojaProduccion();
 };
 document.getElementById('prod-dia-select').onchange = renderHojaProduccion;
