@@ -337,8 +337,9 @@ table.prod-tabla input{padding:6px 7px;font-size:.82rem;width:100%}
     </div>
 
     <div class="card" id="card-vincular" style="display:none">
-      <h3 style="margin-bottom:4px">Vincular sabores sin costo</h3>
-      <p class="hint" style="margin-top:0;margin-bottom:10px">Estos nombres aparecieron en el informe pero todavía no están vinculados a una receta de Rinde. Vinculalos una vez — se recuerda para los próximos meses.</p>
+      <h3 style="margin-bottom:4px">Vincular sabores</h3>
+      <p class="hint" style="margin-top:0;margin-bottom:6px">Elegí a qué receta de Rinde corresponde cada nombre que aparece en el informe. Se guarda para siempre — podés volver a cambiar cualquiera cuando quieras, el punto rojo marca los que faltan.</p>
+      <p class="count-tag" id="vincular-count"></p>
       <div id="vincular-list"></div>
       <button class="btn" id="btn-recalcular" style="margin-top:10px">Recalcular con estos vínculos</button>
     </div>
@@ -1361,14 +1362,30 @@ function nombresSinVincular(){
 
 function renderVincular(){
   const card = document.getElementById('card-vincular');
-  const faltan = nombresSinVincular();
-  if (!prodUltimoAnalisis || !faltan.length){ card.style.display = 'none'; return; }
+  if (!prodUltimoAnalisis){ card.style.display = 'none'; return; }
   card.style.display = 'block';
-  document.getElementById('vincular-list').innerHTML = faltan.map(nombre => `
-    <div class="vinc-row">
-      <span class="vinc-nombre">${esc(nombre)}</span>
-      <select onchange="setVinculoProduccion('${esc(nombre).replace(/'/g,"\\'")}',this.value)">${opcionesVinculo('')}</select>
-    </div>`).join('');
+
+  const vistos = new Set();
+  const todos = [];
+  prodUltimoAnalisis.ventas.forEach(v => {
+    if (vistos.has(v.nombre)) return;
+    vistos.add(v.nombre);
+    todos.push(v.nombre);
+  });
+  todos.sort((a,b)=>a.localeCompare(b,'es'));
+  const faltan = todos.filter(n => !state.produccion.vinculos[n]).length;
+
+  document.getElementById('vincular-count').textContent = faltan
+    ? `${faltan} de ${todos.length} sin vincular`
+    : `${todos.length} vinculados — revisá o corregí cualquiera`;
+
+  document.getElementById('vincular-list').innerHTML = todos.map(nombre => {
+    const actual = state.produccion.vinculos[nombre] || '';
+    return `<div class="vinc-row">
+      <span class="vinc-nombre">${esc(nombre)}${!actual ? ' <span style="color:var(--red)">●</span>' : ''}</span>
+      <select onchange="setVinculoProduccion('${esc(nombre).replace(/'/g,"\\'")}',this.value)">${opcionesVinculo(actual)}</select>
+    </div>`;
+  }).join('');
 }
 window.setVinculoProduccion = (nombre, ref) => {
   if (ref) state.produccion.vinculos[nombre] = ref;
