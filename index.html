@@ -212,10 +212,17 @@ table.prod-tabla input{padding:6px 5px;font-size:.82rem;width:56px;max-width:100
 .membrete .mtxt h1{font-size:20px;font-weight:900;margin:0;color:#1a1a1d;font-family:Montserrat,sans-serif}
 .membrete .mtxt p{font-size:12px;color:#6b6b72;margin:2px 0 0;font-family:Montserrat,sans-serif}
 @media print{
-  @page{ size:A4; margin:14mm; }
+  @page{ size:A4 landscape; margin:10mm; }
   body *{visibility:hidden}
   #print-area, #print-area *{visibility:visible}
   #print-area{display:block;position:absolute;top:0;left:0;width:100%;padding:0}
+  #print-area table{font-size:11px!important}
+  #print-area th, #print-area td{padding:4px 5px!important}
+  #print-area .membrete{margin-bottom:8px!important;padding-bottom:8px!important;gap:10px!important}
+  #print-area .membrete img{height:38px!important}
+  #print-area .membrete h1{font-size:15px!important}
+  #print-area .membrete p{font-size:10px!important}
+  #print-area p{margin:8px 0 3px!important;font-size:11px!important}
   .topbar, .sidebar, .scrim{display:none!important}
 }
 </style>
