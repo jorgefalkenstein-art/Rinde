@@ -356,38 +356,53 @@ table.prod-tabla input{padding:6px 7px;font-size:.82rem;width:100%}
   <!-- PRODUCCIÓN -->
   <section id="tab-produccion" hidden>
     <div class="page-title">Producción</div>
-    <div class="page-sub">Importá el informe mensual completo de Pedix (el que se descarga a fin de mes) para calcular cuánto producir de cada sabor por día de la semana, y la ganancia real del mes — incluso dentro de las docenas mixtas.</div>
+    <div class="page-sub">Hoja del día, siempre primero. El resto (importar, vincular, objetivos, ganancia) está en las pestañas de arriba.</div>
 
-    <div class="card">
-      <h3 style="margin-bottom:8px">Importar informe mensual</h3>
-      <p class="hint" style="margin-top:0;margin-bottom:12px">Subí el Excel con las solapas <b>Pedidos</b> y <b>Detalle de productos</b> (el informe completo del mes, no la carta). Desarma automáticamente las docenas y promos en sus sabores reales.</p>
-      <button class="btn" id="btn-prod-xlsx">Importar informe del mes</button>
-      <input type="file" id="file-prod-xlsx" accept=".xlsx,.xls" style="display:none">
-      <div class="notice" id="notice-prod-xlsx"></div>
+    <div class="tipo-toggle" id="prod-subtabs">
+      <button class="tt-btn active" data-sub="hoja">📋 Hoja</button>
+      <button class="tt-btn" data-sub="objetivos">🎯 Objetivos</button>
+      <button class="tt-btn" data-sub="ganancia">💰 Ganancia</button>
+      <button class="tt-btn" data-sub="importar">⬆️ Importar</button>
     </div>
 
-    <div class="card" id="card-vincular" style="display:none">
-      <h3 style="margin-bottom:4px">Vincular sabores</h3>
-      <p class="hint" style="margin-top:0;margin-bottom:6px">Elegí a qué receta de Rinde corresponde cada nombre que aparece en el informe. Se guarda para siempre, el punto rojo marca los que faltan.</p>
-      <p class="count-tag" id="vincular-count"></p>
-      <div class="search-box" style="margin-bottom:10px"><input id="vincular-search" placeholder="Buscar sabor..." autocomplete="off"></div>
-      <div id="vincular-list"></div>
-      <button class="btn" id="btn-recalcular" style="margin-top:10px">Recalcular con estos vínculos</button>
+    <div id="prod-sub-importar" hidden>
+      <div class="card">
+        <h3 style="margin-bottom:8px">Importar informe mensual</h3>
+        <p class="hint" style="margin-top:0;margin-bottom:12px">Subí el Excel con las solapas <b>Pedidos</b> y <b>Detalle de productos</b> (el informe completo del mes, no la carta). Desarma automáticamente las docenas y promos en sus sabores reales.</p>
+        <button class="btn" id="btn-prod-xlsx">Importar informe del mes</button>
+        <input type="file" id="file-prod-xlsx" accept=".xlsx,.xls" style="display:none">
+        <div class="notice" id="notice-prod-xlsx"></div>
+      </div>
+
+      <div class="card" id="card-vincular" style="display:none">
+        <h3 style="margin-bottom:4px">Vincular sabores</h3>
+        <p class="hint" style="margin-top:0;margin-bottom:6px">Elegí a qué receta de Rinde corresponde cada nombre que aparece en el informe. Se guarda para siempre, el punto rojo marca los que faltan.</p>
+        <p class="count-tag" id="vincular-count"></p>
+        <div class="search-box" style="margin-bottom:10px"><input id="vincular-search" placeholder="Buscar sabor..." autocomplete="off"></div>
+        <div id="vincular-list"></div>
+        <button class="btn" id="btn-recalcular" style="margin-top:10px">Recalcular con estos vínculos</button>
+      </div>
     </div>
 
-    <div class="card" id="card-rentabilidad-real" style="display:none">
-      <h3 style="margin-bottom:10px">Ganancia real del mes</h3>
-      <div id="prod-resumen-mes"></div>
-      <div id="prod-detalle-productos" style="margin-top:12px"></div>
+    <div id="prod-sub-ganancia" hidden>
+      <div class="card" id="card-rentabilidad-real" style="display:none">
+        <h3 style="margin-bottom:10px">Ganancia real del mes</h3>
+        <div id="prod-resumen-mes"></div>
+        <div id="prod-detalle-productos" style="margin-top:12px"></div>
+      </div>
+      <div class="empty" id="ganancia-vacio">Importá un informe mensual (pestaña Importar) para ver la ganancia real.</div>
     </div>
 
-    <div class="card">
-      <h3 style="margin-bottom:3px">Objetivos de producción</h3>
-      <p class="hint" style="margin-top:0;margin-bottom:10px">Calculados automáticamente al importar. Podés ajustarlos a mano.</p>
-      <div class="day-tabs" id="obj-day-tabs"></div>
-      <div id="prod-objetivos"><div class="empty">Importá un informe mensual para calcular los objetivos.</div></div>
+    <div id="prod-sub-objetivos" hidden>
+      <div class="card">
+        <h3 style="margin-bottom:3px">Objetivos de producción</h3>
+        <p class="hint" style="margin-top:0;margin-bottom:10px">Calculados automáticamente al importar. Podés ajustarlos a mano.</p>
+        <div class="day-tabs" id="obj-day-tabs"></div>
+        <div id="prod-objetivos"><div class="empty">Importá un informe mensual para calcular los objetivos.</div></div>
+      </div>
     </div>
 
+    <div id="prod-sub-hoja">
     <div class="card">
       <div class="prod-header" style="margin-bottom:10px">
         <h3 style="flex:1">Hoja de producción</h3>
@@ -415,6 +430,7 @@ table.prod-tabla input{padding:6px 7px;font-size:.82rem;width:100%}
         <button class="btn ghost sm" id="btn-compartir-prod">📤 Compartir</button>
       </div>
       <div class="notice" id="notice-compartir-prod"></div>
+    </div>
     </div>
   </section>
 
@@ -1920,6 +1936,16 @@ function insumosNecesariosPizzas(objetivosDia){
   });
   return totales;
 }
+/* true si a esta receta le falta cargar ingredientes para el tamaño (chica/grande) vinculado */
+function pizzaSinRecetaCompleta(clave){
+  const ref = state.produccion.vinculos[clave];
+  if (!ref) return true;
+  const variante = ref.startsWith('pg:') ? 'grande' : 'chica';
+  const prod = prodById(ref.slice(3));
+  if (!prod) return true;
+  const items = prod.itemsP || [];
+  return !items.some(it => it.ingId && Number(variante==='chica'?it.chica:it.grande) > 0);
+}
 function formatoCantidad(valor, unidadBase){
   if (unidadBase==='g' && valor>=1000) return (valor/1000).toLocaleString('es-AR',{maximumFractionDigits:2})+' kg';
   if (unidadBase==='ml' && valor>=1000) return (valor/1000).toLocaleString('es-AR',{maximumFractionDigits:2})+' l';
@@ -1980,12 +2006,14 @@ function renderHojaProduccion(){
     }
     const insumos = insumosNecesariosPizzas(objetivosDia);
     const insumosList = Object.entries(insumos).sort((a,b)=>nombreRef(a[0]).localeCompare(nombreRef(b[0]),'es'));
+    const incompletas = sabores.filter(([clave])=>pizzaSinRecetaCompleta(clave));
     box.innerHTML = `
       <p class="hint" style="margin-top:0;font-weight:700;color:var(--ink)">Pizzas esperadas</p>
       <table class="prod-tabla" style="margin-bottom:16px">
         <thead><tr><th>Sabor</th><th>Cantidad</th></tr></thead>
-        <tbody>${sabores.map(([clave,obj]) => `<tr><td>${esc(etiquetaDe(clave))}</td><td class="mono">${obj}</td></tr>`).join('')}</tbody>
+        <tbody>${sabores.map(([clave,obj]) => `<tr><td>${esc(etiquetaDe(clave))}${pizzaSinRecetaCompleta(clave)?' <span title="Sin ingredientes cargados para este tamaño en Pizzas" style="color:var(--red)">⚠</span>':''}</td><td class="mono">${obj}</td></tr>`).join('')}</tbody>
       </table>
+      ${incompletas.length ? `<div class="notice show" style="margin-bottom:14px">⚠ ${incompletas.length} sabor(es) marcados no tienen ingredientes cargados para ese tamaño en la pestaña <b>Pizzas</b> (columna chica/grande vacía) — por eso no aportan a los insumos de abajo y el total no cierra con la cantidad esperada. Sabores: ${incompletas.map(([c])=>esc(etiquetaDe(c))).join(', ')}.</div>` : ''}
       <p class="hint" style="margin-top:0;font-weight:700;color:var(--ink)">Insumos mínimos necesarios</p>
       ${insumosList.length ? insumosList.map(([ref,cant]) => `
         <div class="insumo-row"><span>${nombreRef(ref)}</span><span class="in-cant mono">${formatoCantidad(cant, refUnidad(ref))}</span></div>
@@ -2134,7 +2162,16 @@ function renderProduccion(){
   renderRentabilidadReal();
   renderObjetivos();
   renderHojaProduccion();
+  document.getElementById('ganancia-vacio').style.display = state.produccion.historico.length ? 'none' : 'block';
 }
+const PROD_SUBTABS = ['hoja','objetivos','ganancia','importar'];
+document.querySelectorAll('#prod-subtabs .tt-btn').forEach(btn => btn.onclick = () => {
+  document.querySelectorAll('#prod-subtabs .tt-btn').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+  const sub = btn.dataset.sub;
+  PROD_SUBTABS.forEach(s => document.getElementById('prod-sub-'+s).hidden = (s !== sub));
+  window.scrollTo({top:0, behavior:'instant'});
+});
 
 function renderAll(){ renderIngredientes(); renderPreparaciones(); renderEmpanadas(); renderPizzas(); renderRentabilidad(); renderProduccion(); renderPersonal(); renderProyecciones(); }
 renderAll();
