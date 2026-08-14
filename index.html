@@ -2021,38 +2021,45 @@ function procesarAnalisisProduccion(){
   if (!prodUltimoAnalisis) return;
   const ventas = prodUltimoAnalisis.ventas;
 
-  /* Objetivos: máximo por fecha, agrupado por día de semana, redondeado al múltiplo de 6 (para asegurar stock).
-     Promedios: promedio por fecha, sin redondear (para proyectar ingresos de forma realista). */
+  /* Objetivos: para empanadas, máximo por fecha redondeado a múltiplo de 6 (asegurar stock congelado).
+     Para pizzas/bebidas: PROMEDIO real por día de semana (se arman/reponen al momento, no tiene sentido
+     sumar el pico independiente de cada sabor — eso arma un día "Frankenstein" que nunca pasó). */
   const porFecha = {};
   ventas.forEach(v => {
     if (!v.fechaIso) return;
     porFecha[v.fechaIso] = porFecha[v.fechaIso] || {};
     porFecha[v.fechaIso][v.clave] = (porFecha[v.fechaIso][v.clave]||0) + v.cantidad;
   });
-  const maxPorDia = {}, sumaPorDia = {}, countPorDia = {};
+  const maxPorDia = {}, sumaPorDia = {}, diasPorSemana = {};
+  Object.keys(porFecha).forEach(fechaIso => {
+    const dia = DIAS_SEMANA[new Date(fechaIso+'T12:00:00').getDay()];
+    diasPorSemana[dia] = (diasPorSemana[dia]||0) + 1; // mismo denominador para todos los sabores de ese día
+  });
   Object.entries(porFecha).forEach(([fechaIso, sabores]) => {
     const dia = DIAS_SEMANA[new Date(fechaIso+'T12:00:00').getDay()];
     maxPorDia[dia] = maxPorDia[dia] || {};
     sumaPorDia[dia] = sumaPorDia[dia] || {};
-    countPorDia[dia] = countPorDia[dia] || {};
     Object.entries(sabores).forEach(([clave,cant]) => {
       maxPorDia[dia][clave] = Math.max(maxPorDia[dia][clave]||0, cant);
       sumaPorDia[dia][clave] = (sumaPorDia[dia][clave]||0) + cant;
-      countPorDia[dia][clave] = (countPorDia[dia][clave]||0) + 1;
     });
   });
-  const objetivos = {}, promedios = {};
+  const promedios = {};
+  Object.entries(sumaPorDia).forEach(([dia,sabores]) => {
+    promedios[dia] = {};
+    Object.entries(sabores).forEach(([clave,suma]) => { promedios[dia][clave] = suma/(diasPorSemana[dia]||1); });
+  });
+  const objetivos = {};
   Object.entries(maxPorDia).forEach(([dia,sabores]) => {
     objetivos[dia] = {};
     Object.entries(sabores).forEach(([clave,max]) => {
-      /* El redondeo a múltiplo de 6 es para producir empanadas en bandeja: no aplica a pizzas
-         (se arman al pedido) ni a bebidas (se repone lo que falta, sin mínimo de lote). */
-      objetivos[dia][clave] = claveEsEmpanada(clave) ? Math.ceil(max/6)*6 : Math.round(max);
+      if (claveEsEmpanada(clave)){
+        objetivos[dia][clave] = Math.ceil(max/6)*6; // bandeja de producción
+      } else {
+        const prom = (promedios[dia] && promedios[dia][clave]) || 0;
+        objetivos[dia][clave] = Math.round(prom); // día típico real, sin piso mínimo artificial
+      }
     });
-  });
-  Object.entries(sumaPorDia).forEach(([dia,sabores]) => {
-    promedios[dia] = {};
-    Object.entries(sabores).forEach(([clave,suma]) => { promedios[dia][clave] = suma/countPorDia[dia][clave]; });
   });
   state.produccion.objetivos = objetivos;
   state.produccion.promedios = promedios;
@@ -2259,7 +2266,7 @@ function renderHojaProduccion(){
     renderPrintArea(dia, fechaIso, 'empanadas', sabores, reg, null);
   } else if (prodTipoActual === 'pizzas'){
     hint.textContent = 'Las pizzas se arman al pedido. Esto muestra cuántas se esperan de cada sabor y el mínimo de masas/insumos que conviene tener preparados para cubrir esa demanda.';
-    const sabores = Object.entries(objetivosDia).filter(([clave])=>claveEsPizza(clave)).sort((a,b)=>etiquetaDe(a[0]).localeCompare(etiquetaDe(b[0]),'es'));
+    const sabores = Object.entries(objetivosDia).filter(([clave,obj])=>claveEsPizza(clave)&&obj>0).sort((a,b)=>etiquetaDe(a[0]).localeCompare(etiquetaDe(b[0]),'es'));
     if (!sabores.length){
       box.innerHTML = `<div class="empty">No hay objetivos de pizzas para ${DIA_LABEL[dia]}, o los sabores todavía no están vinculados a una receta de pizza.</div>`;
       document.getElementById('print-area').innerHTML = '';
@@ -2284,7 +2291,7 @@ function renderHojaProduccion(){
     renderPrintArea(dia, fechaIso, 'pizzas', sabores, null, insumosList);
   } else {
     hint.textContent = 'Las bebidas no se producen, se reponen. Cargá cuánto tenés en stock y calculá cuánto falta reponer para cubrir la venta esperada de ese día.';
-    const sabores = Object.entries(objetivosDia).filter(([clave])=>claveEsBebida(clave)).sort((a,b)=>etiquetaDe(a[0]).localeCompare(etiquetaDe(b[0]),'es'));
+    const sabores = Object.entries(objetivosDia).filter(([clave,obj])=>claveEsBebida(clave)&&obj>0).sort((a,b)=>etiquetaDe(a[0]).localeCompare(etiquetaDe(b[0]),'es'));
     if (!sabores.length){
       box.innerHTML = `<div class="empty">No hay objetivos de bebidas para ${DIA_LABEL[dia]}. Importá un informe mensual que las incluya.</div>`;
       document.getElementById('print-area').innerHTML = '';
