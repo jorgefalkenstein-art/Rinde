@@ -53,7 +53,9 @@ body{background:var(--bg);color:var(--ink);font-family:'Montserrat',sans-serif;m
 .sidebar-head .sub{font-size:.66rem;opacity:.85;font-weight:600;margin-top:2px;text-transform:uppercase;letter-spacing:.06em}
 .nav{padding:10px 0;flex:1;overflow-y:auto}
 .nav button{width:100%;display:flex;align-items:center;gap:14px;padding:15px 20px;border:none;background:none;font-family:inherit;font-size:.95rem;font-weight:600;color:var(--ink);cursor:pointer;text-align:left;border-left:4px solid transparent}
-.nav button .ico{width:22px;text-align:center;font-size:1.1rem}
+.nav button .ico{width:22px;text-align:center;font-size:1.1rem;display:inline-flex;align-items:center;justify-content:center}
+.ico svg{width:18px;height:18px;display:block;flex-shrink:0}
+.nav-group-toggle .ico{width:22px;display:inline-flex;align-items:center;justify-content:center}
 .nav button:hover{background:var(--bg)}
 .nav button.active{color:var(--red);border-left-color:var(--red);background:var(--red-soft);font-weight:800}
 .nav button:focus-visible{outline:2px solid var(--red);outline-offset:-2px}
@@ -144,7 +146,7 @@ select{font-family:'Montserrat',sans-serif;font-weight:500}
 .notice.show{display:block}
 .search-box{position:relative;margin-bottom:12px}
 .search-box input{padding-left:38px}
-.search-box::before{content:"🔍";position:absolute;left:12px;top:50%;transform:translateY(-50%);font-size:.9rem;opacity:.5}
+.search-box::before{content:"";position:absolute;left:12px;top:50%;transform:translate(0,-50%);width:15px;height:15px;opacity:.45;background:currentColor;-webkit-mask:url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="black" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>') center/contain no-repeat;mask:url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="black" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>') center/contain no-repeat}
 .ing-actions{display:flex;gap:10px;margin-bottom:14px}
 .ing-actions .btn{width:auto;flex:1}
 .add-panel{display:none}
@@ -242,21 +244,21 @@ table.prod-tabla input{padding:6px 5px;font-size:.82rem;width:56px;max-width:100
     <div><div style="font-weight:900;font-size:1.3rem">Rinde</div><div class="sub">Costos y márgenes</div></div>
   </div>
   <nav class="nav" id="nav">
-    <button data-tab="ingredientes" class="active"><span class="ico">📦</span> Ingredientes</button>
-    <button data-tab="preparaciones"><span class="ico">🌾</span> Preparaciones</button>
+    <button data-tab="ingredientes" class="active"><span class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 8v13H3V8"/><path d="M1 3h22v5H1z"/><path d="M10 12h4"/></svg></span> Ingredientes</button>
+    <button data-tab="preparaciones"><span class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22V8"/><path d="M9 8c0-2.2 1.3-4 3-4s3 1.8 3 4-1.3 3-3 3-3-1-3-3Z"/><path d="M7 12.5c0-1.4.8-2.8 2-2.8M17 12.5c0-1.4-.8-2.8-2-2.8"/><path d="M6 16.5c0-1.4.8-2.8 2-2.8M18 16.5c0-1.4-.8-2.8-2-2.8"/></svg></span> Preparaciones</button>
     <div class="nav-group">
       <button class="nav-group-toggle" id="toggle-productos" type="button">
-        <span class="ico">🍽️</span> Productos <span class="chev">▾</span>
+        <span class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 2v6a2 2 0 0 0 4 0V2"/><path d="M8 10v12"/><path d="M17 2c-1.7 0-3 2.2-3 5.5S15.3 13 17 13"/><path d="M17 2v20"/></svg></span> Productos <span class="chev">▾</span>
       </button>
       <div class="nav-subitems open" id="productos-sub">
-        <button data-tab="empanadas"><span class="ico">🥟</span> Empanadas</button>
-        <button data-tab="pizzas"><span class="ico">🍕</span> Pizzas</button>
+        <button data-tab="empanadas"><span class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12h18a9 9 0 0 1-18 0Z"/><path d="M7 12c0-1 .4-1.8.8-2.3M12 12c0-1.3.4-2.3.8-2.8M17 12c0-1-.4-1.8-.8-2.3"/></svg></span> Empanadas</button>
+        <button data-tab="pizzas"><span class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 6 12 22 22 6a20 20 0 0 0-20 0Z"/><circle cx="9" cy="10" r=".7" fill="currentColor" stroke="none"/><circle cx="14.5" cy="11.5" r=".7" fill="currentColor" stroke="none"/><circle cx="11" cy="15" r=".7" fill="currentColor" stroke="none"/></svg></span> Pizzas</button>
       </div>
     </div>
-    <button data-tab="rentabilidad"><span class="ico">💰</span> Precios sugeridos</button>
-    <button data-tab="produccion"><span class="ico">🏭</span> Producción</button>
-    <button data-tab="personal"><span class="ico">🧑‍🍳</span> Personal</button>
-    <button data-tab="proyecciones"><span class="ico">📈</span> Proyecciones</button>
+    <button data-tab="rentabilidad"><span class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg></span> Precios sugeridos</button>
+    <button data-tab="produccion"><span class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 21V10l6 4v-4l6 4V7l6 4v10H3Z"/><path d="M3 21h18"/></svg></span> Producción</button>
+    <button data-tab="personal"><span class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg></span> Personal</button>
+    <button data-tab="proyecciones"><span class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/></svg></span> Proyecciones</button>
   </nav>
   <div class="sidebar-foot">
     <div style="display:flex;flex-direction:column;gap:8px;margin-bottom:12px">
@@ -277,7 +279,7 @@ table.prod-tabla input{padding:6px 5px;font-size:.82rem;width:56px;max-width:100
 
     <div class="ing-actions">
       <button class="btn" id="toggle-add">+ Agregar</button>
-      <button class="btn ghost" id="toggle-search">🔍 Buscar</button>
+      <button class="btn ghost" id="toggle-search"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="width:15px;height:15px;vertical-align:-2px;margin-right:4px"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>Buscar</button>
     </div>
 
     <div class="card add-panel" id="add-panel">
@@ -369,10 +371,10 @@ table.prod-tabla input{padding:6px 5px;font-size:.82rem;width:56px;max-width:100
     <div class="page-sub">Hoja del día, siempre primero. El resto (importar, vincular, objetivos, ganancia) está en las pestañas de arriba.</div>
 
     <div class="tipo-toggle" id="prod-subtabs">
-      <button class="tt-btn active" data-sub="hoja">📋 Hoja</button>
-      <button class="tt-btn" data-sub="objetivos">🎯 Objetivos</button>
-      <button class="tt-btn" data-sub="ganancia">💰 Ganancia</button>
-      <button class="tt-btn" data-sub="importar">⬆️ Importar</button>
+      <button class="tt-btn active" data-sub="hoja">Hoja</button>
+      <button class="tt-btn" data-sub="objetivos">Objetivos</button>
+      <button class="tt-btn" data-sub="ganancia">Ganancia</button>
+      <button class="tt-btn" data-sub="importar">Importar</button>
     </div>
 
     <div id="prod-sub-importar" hidden>
@@ -418,9 +420,9 @@ table.prod-tabla input{padding:6px 5px;font-size:.82rem;width:56px;max-width:100
         <h3 style="flex:1">Hoja de producción</h3>
       </div>
       <div class="tipo-toggle" id="prod-tipo-toggle">
-        <button class="tt-btn active" data-tipo="empanadas">🥟 Empanadas</button>
-        <button class="tt-btn" data-tipo="pizzas">🍕 Pizzas (insumos)</button>
-        <button class="tt-btn" data-tipo="bebidas">🥤 Bebidas</button>
+        <button class="tt-btn active" data-tipo="empanadas">Empanadas</button>
+        <button class="tt-btn" data-tipo="pizzas">Pizzas (insumos)</button>
+        <button class="tt-btn" data-tipo="bebidas">Bebidas</button>
       </div>
       <p class="hint" id="prod-tipo-hint" style="margin-bottom:12px"></p>
       <div class="field" style="margin-bottom:12px"><label>Día a producir</label>
@@ -436,8 +438,8 @@ table.prod-tabla input{padding:6px 5px;font-size:.82rem;width:56px;max-width:100
       </div>
       <div id="prod-hoja"></div>
       <div class="btn-row" style="margin-top:14px">
-        <button class="btn ghost sm" id="btn-imprimir-prod">🖨 Imprimir</button>
-        <button class="btn ghost sm" id="btn-compartir-prod">📤 Compartir</button>
+        <button class="btn ghost sm" id="btn-imprimir-prod"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:14px;height:14px;vertical-align:-2px;margin-right:4px"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>Imprimir</button>
+        <button class="btn ghost sm" id="btn-compartir-prod"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:14px;height:14px;vertical-align:-2px;margin-right:4px"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.6" y1="13.5" x2="15.4" y2="17.5"/><line x1="15.4" y1="6.5" x2="8.6" y2="10.5"/></svg>Compartir</button>
       </div>
       <div class="notice" id="notice-compartir-prod"></div>
     </div>
@@ -496,48 +498,64 @@ table.prod-tabla input{padding:6px 5px;font-size:.82rem;width:56px;max-width:100
     <div class="page-title">Proyecciones</div>
     <div class="page-sub">Estimá ingresos y ganancia neta de un período. La mano de obra se calcula sola desde Personal.</div>
 
-    <div class="card">
-      <h3 style="margin-bottom:8px">Período</h3>
-      <div class="grid2">
-        <div class="field"><label>Desde</label><input type="date" id="proy-desde"></div>
-        <div class="field"><label>Hasta</label><input type="date" id="proy-hasta"></div>
+    <div class="tipo-toggle" id="proy-subtabs">
+      <button class="tt-btn active" data-sub="resumen">Resumen</button>
+      <button class="tt-btn" data-sub="obra">Mano de obra</button>
+      <button class="tt-btn" data-sub="gastos">Gastos</button>
+      <button class="tt-btn" data-sub="productos">Productos</button>
+    </div>
+
+    <div id="proy-sub-resumen">
+      <div class="card">
+        <h3 style="margin-bottom:8px">Período</h3>
+        <div class="grid2">
+          <div class="field"><label>Desde</label><input type="date" id="proy-desde"></div>
+          <div class="field"><label>Hasta</label><input type="date" id="proy-hasta"></div>
+        </div>
+        <p class="hint">Arranca en la semana actual por default. Cambialo para simular otro período — se usa acá y en Producción.</p>
       </div>
-      <p class="hint">Este rango se usa para calcular la mano de obra automática y para autocompletar productos desde Producción.</p>
-    </div>
-
-    <div class="card">
-      <h3 style="margin-bottom:8px">Mano de obra</h3>
-      <div id="proy-mano-obra-resumen"></div>
-      <p class="hint">Sale de las horas cargadas en <b>Personal</b> dentro del período de arriba, multiplicadas por el valor hora de cada empleado.</p>
-    </div>
-
-    <div class="card">
-      <h3 style="margin-bottom:8px">Gastos fijos e impuestos</h3>
-      <p class="hint" style="margin-top:0;margin-bottom:10px">Agregá cada gasto por separado (Luz, Gas, Monotributo, Alquiler, etc.), con la misma periodicidad que el rango de arriba.</p>
-      <div id="proy-gastos-list"></div>
-      <div class="grid-add" style="margin-top:10px">
-        <input id="gasto-nuevo-nombre" placeholder="Nombre del gasto">
-        <input id="gasto-nuevo-monto" type="number" inputmode="decimal" placeholder="Monto $">
+      <div class="card">
+        <h3 style="margin-bottom:10px">Resultado proyectado</h3>
+        <div id="proy-resultado"></div>
       </div>
-      <button class="btn ghost sm" id="btn-add-gasto" style="margin-top:8px">+ Gasto</button>
-      <div class="field" style="margin-top:14px"><label>Ingresos Brutos %</label>
-        <input id="proy-iibb" type="number" inputmode="decimal" placeholder="0"></div>
-      <p class="hint">Ingresos Brutos se calcula como % sobre el ingreso proyectado (así se ajusta solo si vendés más o menos).</p>
     </div>
 
-    <div class="card">
-      <h3 style="margin-bottom:3px">Productos a vender</h3>
-      <p class="hint" style="margin-top:0;margin-bottom:10px">Elegí cada producto, cuánto lo vas a vender y a qué precio. O autocompletá desde los objetivos ya cargados en Producción para el período de arriba.</p>
-      <button class="btn ghost sm" id="btn-autocompletar-proy" style="margin-bottom:12px">↺ Autocompletar desde Producción</button>
-      <div id="proy-items"></div>
-      <button class="btn ghost sm" id="proy-add-item" style="margin-top:10px">+ Producto</button>
-      <div class="notice" id="notice-proy">Primero cargá ingredientes y productos en las otras secciones.</div>
+    <div id="proy-sub-obra" hidden>
+      <div class="card">
+        <h3 style="margin-bottom:8px">Mano de obra</h3>
+        <div id="proy-mano-obra-resumen"></div>
+        <p class="hint">Sale de las horas cargadas en <b>Personal</b> dentro del período elegido en Resumen, multiplicadas por el valor hora de cada empleado.</p>
+      </div>
     </div>
 
-    <div class="card">
-      <h3 style="margin-bottom:10px">Resultado proyectado</h3>
-      <div id="proy-resultado"></div>
+    <div id="proy-sub-gastos" hidden>
+      <div class="card">
+        <h3 style="margin-bottom:8px">Gastos fijos e impuestos</h3>
+        <p class="hint" style="margin-top:0;margin-bottom:10px">Agregá cada gasto por separado (Luz, Gas, Monotributo, Alquiler, etc.), con la misma periodicidad que el período elegido en Resumen.</p>
+        <div id="proy-gastos-list"></div>
+        <div class="grid-add" style="margin-top:10px">
+          <input id="gasto-nuevo-nombre" placeholder="Nombre del gasto">
+          <input id="gasto-nuevo-monto" type="number" inputmode="decimal" placeholder="Monto $">
+        </div>
+        <button class="btn ghost sm" id="btn-add-gasto" style="margin-top:8px">+ Gasto</button>
+        <div class="field" style="margin-top:14px"><label>Ingresos Brutos %</label>
+          <input id="proy-iibb" type="number" inputmode="decimal" placeholder="0"></div>
+        <p class="hint">Ingresos Brutos se calcula como % sobre el ingreso proyectado (así se ajusta solo si vendés más o menos).</p>
+      </div>
     </div>
+
+    <div id="proy-sub-productos" hidden>
+      <div class="card">
+        <h3 style="margin-bottom:3px">Productos a vender</h3>
+        <p class="hint" style="margin-top:0;margin-bottom:10px">Es la lista de qué pensás vender en el período, para proyectar el ingreso. Autocompletala desde los objetivos de Producción, o armala vos.</p>
+        <button class="btn ghost sm" id="btn-autocompletar-proy" style="margin-bottom:12px">↺ Autocompletar desde Producción</button>
+        <div class="count-tag" id="proy-items-count"></div>
+        <div id="proy-items"></div>
+        <button class="btn ghost sm" id="proy-add-item" style="margin-top:10px">+ Producto</button>
+        <div class="notice" id="notice-proy">Primero cargá ingredientes y productos en las otras secciones.</div>
+      </div>
+    </div>
+
   </section>
 </main>
 
@@ -1428,6 +1446,20 @@ function costoLineaProy(it){
   if (c === null) return null;
   return c*(Number(it.mult)||1) + (Number(it.extra)||0);
 }
+function labelVinculo(ref){
+  if (!ref) return '(sin vincular)';
+  if (ref==='eprom') return 'Promedio empanadas';
+  const idx2 = ref.indexOf(':');
+  const tipo = ref.slice(0,idx2), id = ref.slice(idx2+1);
+  if (tipo==='e'){ const p = prodById(id); return p ? p.nombre : '?'; }
+  if (tipo==='pg'){ const p = prodById(id); return p ? p.nombre+' (grande)' : '?'; }
+  if (tipo==='pc'){ const p = prodById(id); return p ? p.nombre+' (chica)' : '?'; }
+  if (tipo==='p'){ const p = prepById(id); return p ? '★ '+p.nombre : '?'; }
+  if (tipo==='i'){ const i = ingById(id); return i ? i.nombre : '?'; }
+  return '?';
+}
+let proyItemExpandido = null;
+window.toggleProyItem = idx => { proyItemExpandido = (proyItemExpandido===idx) ? null : idx; renderProyecciones(); };
 function contarDiasSemanaEnRango(desde, hasta){
   const counts = {}; DIAS_SEMANA.forEach(d=>counts[d]=0);
   if (!desde || !hasta) return counts;
@@ -1441,8 +1473,10 @@ function contarDiasSemanaEnRango(desde, hasta){
   }
   return counts;
 }
-document.getElementById('proy-desde').onchange = () => { save(); renderProyecciones(); };
-document.getElementById('proy-hasta').onchange = () => { save(); renderProyecciones(); };
+document.getElementById('proy-desde').onchange = () => { if(document.activeElement.id!=='proy-desde'){ save(); renderProyecciones(); } };
+document.getElementById('proy-hasta').onchange = () => { if(document.activeElement.id!=='proy-hasta'){ save(); renderProyecciones(); } };
+document.getElementById('proy-desde').onblur = () => { save(); renderProyecciones(); };
+document.getElementById('proy-hasta').onblur = () => { save(); renderProyecciones(); };
 document.getElementById('btn-autocompletar-proy').onclick = () => {
   const desde = document.getElementById('proy-desde').value;
   const hasta = document.getElementById('proy-hasta').value;
@@ -1503,13 +1537,19 @@ window.delGasto = id => {
 
 function renderProyecciones(){
   const py = state.proyeccion;
-  document.getElementById('proy-desde').value = py.desde || '';
-  document.getElementById('proy-hasta').value = py.hasta || '';
+  if (!py.desde && !py.hasta){
+    const auto = rangoPeriodo('semana');
+    py.desde = auto.desde; py.hasta = auto.hasta;
+  }
+  const inpDesde = document.getElementById('proy-desde');
+  const inpHasta = document.getElementById('proy-hasta');
+  if (document.activeElement !== inpDesde) inpDesde.value = py.desde || '';
+  if (document.activeElement !== inpHasta) inpHasta.value = py.hasta || '';
   document.getElementById('proy-iibb').value = py.iibbPct || '';
 
-  const desde = document.getElementById('proy-desde').value;
-  const hasta = document.getElementById('proy-hasta').value;
-  py.desde = desde; py.hasta = hasta;
+  const desde = inpDesde.value;
+  const hasta = inpHasta.value;
+  if (document.activeElement !== inpDesde && document.activeElement !== inpHasta){ py.desde = desde; py.hasta = hasta; }
 
   const mo = calcularManoObraPeriodo(desde, hasta);
   const filasMO = Object.values(mo.porEmpleado).sort((a,b)=>b.costo-a.costo);
@@ -1521,12 +1561,20 @@ function renderProyecciones(){
   renderGastos();
 
   const box = document.getElementById('proy-items');
+  document.getElementById('proy-items-count').textContent = py.items.length ? `${py.items.length} productos` : '';
   if (!py.items.length){
     box.innerHTML = '<div class="empty">Todavía no agregaste productos. Tocá "+ Producto" o autocompletá desde Producción.</div>';
   } else {
     box.innerHTML = py.items.map((it,idx) => {
       const cLinea = costoLineaProy(it);
       const ingresoLinea = (Number(it.precio)||0) * (Number(it.cant)||0);
+      const expandido = proyItemExpandido === idx;
+      if (!expandido){
+        return `<div class="prod-item-row" style="cursor:pointer" onclick="toggleProyItem(${idx})">
+          <span>${esc(labelVinculo(it.ref))} <span class="pin">× ${it.cant||0} · ${fmt(it.precio||0)} c/u</span></span>
+          <span class="mono">${fmt(ingresoLinea)}</span>
+        </div>`;
+      }
       return `<div class="venta">
         <div class="venta-link">
           <select onchange="setProyItem(${idx},'ref',this.value)">${opcionesVinculo(it.ref)}</select>
@@ -1548,7 +1596,10 @@ function renderProyecciones(){
           <span class="stat"><b>Ingreso línea</b><span class="mono">${fmt(ingresoLinea)}</span></span>
           <span class="stat ${cLinea!==null?'ok':'bad'}"><b>Costo línea</b><span class="mono">${cLinea!==null?fmt(cLinea*(Number(it.cant)||0)):'—'}</span></span>
         </div>
-        <button class="del" onclick="delProyItem(${idx})" style="margin-top:6px" aria-label="Quitar">✕ Quitar</button>
+        <div class="act-row">
+          <button class="btn done sm" onclick="toggleProyItem(${idx})">Listo</button>
+          <button class="del" onclick="delProyItem(${idx})" style="margin-left:auto" aria-label="Quitar">✕ Quitar</button>
+        </div>
       </div>`;
     }).join('');
   }
@@ -2184,6 +2235,14 @@ document.querySelectorAll('#prod-subtabs .tt-btn').forEach(btn => btn.onclick = 
   btn.classList.add('active');
   const sub = btn.dataset.sub;
   PROD_SUBTABS.forEach(s => document.getElementById('prod-sub-'+s).hidden = (s !== sub));
+  window.scrollTo({top:0, behavior:'instant'});
+});
+const PROY_SUBTABS = ['resumen','obra','gastos','productos'];
+document.querySelectorAll('#proy-subtabs .tt-btn').forEach(btn => btn.onclick = () => {
+  document.querySelectorAll('#proy-subtabs .tt-btn').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+  const sub = btn.dataset.sub;
+  PROY_SUBTABS.forEach(s => document.getElementById('proy-sub-'+s).hidden = (s !== sub));
   window.scrollTo({top:0, behavior:'instant'});
 });
 
