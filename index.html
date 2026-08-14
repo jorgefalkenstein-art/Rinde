@@ -405,6 +405,7 @@ table.prod-tabla input{padding:6px 5px;font-size:.82rem;width:56px;max-width:100
     <div id="prod-sub-ganancia" hidden>
       <div class="card" id="card-rentabilidad-real" style="display:none">
         <h3 style="margin-bottom:10px">Ganancia real del mes</h3>
+        <div class="day-tabs" id="mes-tabs"></div>
         <div id="prod-resumen-mes"></div>
       </div>
       <div class="card" id="card-ganancia-neta" style="display:none">
@@ -2104,11 +2105,12 @@ function procesarAnalisisProduccion(){
   });
   const entrada = {
     mes: prodUltimoAnalisis.mes, ingresoTotal, costoTotal,
-    gananciaTotal: ingresoTotal-costoTotal, porProducto, sinVincularCant
+    gananciaTotal: ingresoTotal-costoTotal, porProducto, sinVincularCant,
+    importadoEn: Date.now()
   };
   state.produccion.historico = state.produccion.historico.filter(h=>h.mes!==entrada.mes);
   state.produccion.historico.push(entrada);
-  state.produccion.historico.sort((a,b)=>a.mes<b.mes?1:-1);
+  state.produccion.historico.sort((a,b)=>(b.importadoEn||0)-(a.importadoEn||0));
 
   save(); renderProduccion();
 }
@@ -2237,6 +2239,7 @@ document.getElementById('btn-add-equipo').onclick = () => {
   save(); renderEquipos();
 };
 
+let mesGananciaSeleccionado = null;
 function renderRentabilidadReal(){
   const card = document.getElementById('card-rentabilidad-real');
   const cardNeta = document.getElementById('card-ganancia-neta');
@@ -2245,7 +2248,12 @@ function renderRentabilidadReal(){
   const hist = state.produccion.historico;
   if (!hist.length){ card.style.display='none'; cardNeta.style.display='none'; cardReserva.style.display='none'; cardDetalle.style.display='none'; return; }
   card.style.display = 'block'; cardNeta.style.display = 'block'; cardReserva.style.display = 'block'; cardDetalle.style.display = 'block';
-  const ultimo = hist[0];
+
+  if (!mesGananciaSeleccionado || !hist.find(h=>h.mes===mesGananciaSeleccionado)) mesGananciaSeleccionado = hist[0].mes;
+  const tabs = document.getElementById('mes-tabs');
+  tabs.innerHTML = hist.map(h => `<button class="${h.mes===mesGananciaSeleccionado?'active':''}" onclick="setMesGanancia('${h.mes}')">${h.mes}</button>`).join('');
+
+  const ultimo = hist.find(h=>h.mes===mesGananciaSeleccionado) || hist[0];
   const margen = ultimo.ingresoTotal>0 ? (ultimo.gananciaTotal/ultimo.ingresoTotal*100) : 0;
   const resumen = document.getElementById('prod-resumen-mes');
   resumen.innerHTML = `
@@ -2256,7 +2264,7 @@ function renderRentabilidadReal(){
       <div class="stat"><div class="cost-banner green" style="margin:0"><div><div class="big mono">${fmt(ultimo.gananciaTotal)}</div><div class="lbl">Ganancia bruta · ${margen.toFixed(0)}%</div></div></div></div>
     </div>
     ${ultimo.sinVincularCant>0 ? `<div class="notice show" style="margin-bottom:10px">Hay ${ultimo.sinVincularCant} unidades vendidas sin vincular a una receta: su costo no está incluido arriba. Vinculalas para un cálculo exacto.</div>` : ''}
-    ${hist.length>1 ? `<p class="hint">Meses anteriores: ${hist.slice(1).map(h=>`${h.mes} (${fmt(h.gananciaTotal)})`).join(' · ')}</p>` : ''}
+    <button class="btn ghost sm" onclick="borrarMesHistorico('${ultimo.mes}')" style="margin-top:6px">✕ Borrar este mes del historial</button>
   `;
 
   /* Ganancia neta real: ingredientes (ya calculado) - mano de obra real de ese mes (Personal) - gastos fijos actuales (Proyecciones) */
@@ -2314,6 +2322,12 @@ function renderRentabilidadReal(){
     </div>`;
   }).join('');
 }
+window.setMesGanancia = mes => { mesGananciaSeleccionado = mes; renderRentabilidadReal(); };
+window.borrarMesHistorico = mes => {
+  state.produccion.historico = state.produccion.historico.filter(h=>h.mes!==mes);
+  mesGananciaSeleccionado = null;
+  save(); renderRentabilidadReal();
+};
 
 /* Hoja de producción imprimible por día */
 function fechaProximoDia(diaSemana){
