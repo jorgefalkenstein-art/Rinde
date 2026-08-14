@@ -1827,7 +1827,7 @@ document.getElementById('file-prod-xlsx').onchange = e => {
         const diaSemana = fecha ? DIAS_SEMANA[fecha.getDay()] : null;
         const fechaIso = fecha ? fecha.toISOString().slice(0,10) : null;
         const esBebida = /gaseosa|cerveza/i.test(categoria);
-        const esDocenaEmpanadas = /docena/i.test(categoria);
+        const esDocenaEmpanadas = /docena/i.test(categoria) || /docena/i.test(producto);
 
         const desglose = esDocenaEmpanadas ? parseDesgloseDocena(detalles) : [];
         if (desglose.length){
