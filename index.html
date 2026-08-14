@@ -547,7 +547,7 @@ table.prod-tabla input{padding:6px 5px;font-size:.82rem;width:56px;max-width:100
     <div id="proy-sub-productos" hidden>
       <div class="card">
         <h3 style="margin-bottom:3px">Productos a vender</h3>
-        <p class="hint" style="margin-top:0;margin-bottom:10px">Es la lista de qué pensás vender en el período, para proyectar el ingreso. Autocompletala desde los objetivos de Producción, o armala vos.</p>
+        <p class="hint" style="margin-top:0;margin-bottom:10px">Es la lista de qué pensás vender en el período, para proyectar el ingreso. Autocompletala usando el <b>promedio real</b> de ventas de Producción (no el máximo — el máximo es para asegurar stock, no para proyectar ingresos), o armala vos.</p>
         <button class="btn ghost sm" id="btn-autocompletar-proy" style="margin-bottom:12px">↺ Autocompletar desde Producción</button>
         <div class="count-tag" id="proy-items-count"></div>
         <div id="proy-items"></div>
@@ -578,7 +578,7 @@ function migrarGastosViejos(proy){
     if (Number(monto) > 0) proy.gastos.push({id:uid(), nombre, monto:Number(monto)});
   });
 }
-const PRODUCCION_DEFAULT = {vinculos:{}, objetivos:{}, historico:[], ultimoImport:null, registro:{}, etiquetas:{}, origenes:{}};
+const PRODUCCION_DEFAULT = {vinculos:{}, objetivos:{}, promedios:{}, extras:{}, historico:[], ultimoImport:null, registro:{}, etiquetas:{}, origenes:{}};
 const PERSONAL_DEFAULT = {empleados:[], turnos:[]};
 const ESTADO_DEFAULT = {ingredientes:[],preparaciones:[],productos:[],ventas:[],margenObj:60,proyeccion:null,produccion:null,personal:null};
 function estadoBase(datos){
@@ -593,6 +593,8 @@ function estadoBase(datos){
   migrarGastosViejos(base.proyeccion);
   base.produccion.vinculos = Object.assign({}, PRODUCCION_DEFAULT.vinculos, (datos && datos.produccion && datos.produccion.vinculos) || {});
   base.produccion.objetivos = Object.assign({}, PRODUCCION_DEFAULT.objetivos, (datos && datos.produccion && datos.produccion.objetivos) || {});
+  base.produccion.promedios = Object.assign({}, PRODUCCION_DEFAULT.promedios, (datos && datos.produccion && datos.produccion.promedios) || {});
+  base.produccion.extras = Object.assign({}, PRODUCCION_DEFAULT.extras, (datos && datos.produccion && datos.produccion.extras) || {});
   base.produccion.registro = Object.assign({}, PRODUCCION_DEFAULT.registro, (datos && datos.produccion && datos.produccion.registro) || {});
   base.produccion.etiquetas = Object.assign({}, PRODUCCION_DEFAULT.etiquetas, (datos && datos.produccion && datos.produccion.etiquetas) || {});
   base.produccion.origenes = Object.assign({}, PRODUCCION_DEFAULT.origenes, (datos && datos.produccion && datos.produccion.origenes) || {});
@@ -1519,8 +1521,9 @@ function autocompletarDesdeProduccion(mostrarAviso){
   const hasta = document.getElementById('proy-hasta').value;
   if (!desde || !hasta){ if(mostrarAviso) aviso('notice-proy','Elegí primero el rango Desde/Hasta, arriba de todo.'); return; }
   const counts = contarDiasSemanaEnRango(desde, hasta);
+  const fuente = Object.keys(state.produccion.promedios||{}).length ? state.produccion.promedios : state.produccion.objetivos;
   const totales = {};
-  Object.entries(state.produccion.objetivos||{}).forEach(([dia,sabores]) => {
+  Object.entries(fuente||{}).forEach(([dia,sabores]) => {
     const n = counts[dia]||0;
     if (!n) return;
     Object.entries(sabores).forEach(([clave,obj]) => { totales[clave] = (totales[clave]||0) + obj*n; });
@@ -1532,7 +1535,8 @@ function autocompletarDesdeProduccion(mostrarAviso){
     if (!ref || !cant) return;
     const precio = precioEstimadoParaProyeccion(ref, clave);
     if (!precio) sinPrecio++;
-    nuevosItems.push({ref, mult:1, extra:0, precio, cant});
+    const extra = Number(state.produccion.extras[clave])||0;
+    nuevosItems.push({ref, mult:1, extra, precio, cant: Math.round(cant)});
   });
   if (!nuevosItems.length){ if(mostrarAviso) aviso('notice-proy','No encontré objetivos de producción vinculados para ese rango.'); return; }
   state.proyeccion.items = nuevosItems;
@@ -1890,12 +1894,19 @@ function renderVincular(){
   document.getElementById('vincular-list').innerHTML = (lista.length ? lista : ['__nada__']).map(clave => {
     if (clave==='__nada__') return '<div class="empty">Ningún sabor coincide con la búsqueda.</div>';
     const actual = state.produccion.vinculos[clave] || '';
-    return `<div class="vinc-row">
+    const extra = state.produccion.extras[clave] || '';
+    return `<div class="vinc-row" style="grid-template-columns:1fr 1.3fr">
       <span class="vinc-nombre">${esc(etiquetaDe(clave))}${!actual ? ' <span style="color:var(--red)">●</span>' : ''}</span>
       <select onchange="setVinculoProduccion('${clave}',this.value)">${opcionesVinculo(actual)}</select>
+      <input class="mono" type="number" inputmode="decimal" placeholder="+ costo extra $ (ej: bebida del combo)" value="${extra}" style="grid-column:1/-1;margin-top:6px" onchange="setExtraProduccion('${clave}',this.value)">
     </div>`;
   }).join('');
 }
+window.setExtraProduccion = (clave, v) => {
+  const n = parseFloat(v)||0;
+  if (n>0) state.produccion.extras[clave] = n; else delete state.produccion.extras[clave];
+  save(); renderVincular();
+};
 document.getElementById('vincular-search').oninput = e => { vincularFiltro = e.target.value; renderVincular(); };
 window.setVinculoProduccion = (clave, ref) => {
   if (ref) state.produccion.vinculos[clave] = ref;
@@ -1909,35 +1920,47 @@ function procesarAnalisisProduccion(){
   if (!prodUltimoAnalisis) return;
   const ventas = prodUltimoAnalisis.ventas;
 
-  /* Objetivos: máximo por fecha, agrupado por día de semana, redondeado al múltiplo de 6 */
+  /* Objetivos: máximo por fecha, agrupado por día de semana, redondeado al múltiplo de 6 (para asegurar stock).
+     Promedios: promedio por fecha, sin redondear (para proyectar ingresos de forma realista). */
   const porFecha = {};
   ventas.forEach(v => {
     if (!v.fechaIso) return;
     porFecha[v.fechaIso] = porFecha[v.fechaIso] || {};
     porFecha[v.fechaIso][v.clave] = (porFecha[v.fechaIso][v.clave]||0) + v.cantidad;
   });
-  const maxPorDia = {};
+  const maxPorDia = {}, sumaPorDia = {}, countPorDia = {};
   Object.entries(porFecha).forEach(([fechaIso, sabores]) => {
     const dia = DIAS_SEMANA[new Date(fechaIso+'T12:00:00').getDay()];
     maxPorDia[dia] = maxPorDia[dia] || {};
+    sumaPorDia[dia] = sumaPorDia[dia] || {};
+    countPorDia[dia] = countPorDia[dia] || {};
     Object.entries(sabores).forEach(([clave,cant]) => {
       maxPorDia[dia][clave] = Math.max(maxPorDia[dia][clave]||0, cant);
+      sumaPorDia[dia][clave] = (sumaPorDia[dia][clave]||0) + cant;
+      countPorDia[dia][clave] = (countPorDia[dia][clave]||0) + 1;
     });
   });
-  const objetivos = {};
+  const objetivos = {}, promedios = {};
   Object.entries(maxPorDia).forEach(([dia,sabores]) => {
     objetivos[dia] = {};
     Object.entries(sabores).forEach(([nombre,max]) => { objetivos[dia][nombre] = Math.ceil(max/6)*6; });
   });
+  Object.entries(sumaPorDia).forEach(([dia,sabores]) => {
+    promedios[dia] = {};
+    Object.entries(sabores).forEach(([clave,suma]) => { promedios[dia][clave] = suma/countPorDia[dia][clave]; });
+  });
   state.produccion.objetivos = objetivos;
+  state.produccion.promedios = promedios;
 
-  /* Ganancia real: usa el costo de la receta vinculada, no un % uniforme */
+  /* Ganancia real: usa el costo de la receta vinculada + el extra por unidad (ej: bebida incluida en un combo) */
   let ingresoTotal = 0, costoTotal = 0, sinVincularCant = 0;
   const porProducto = {};
   ventas.forEach(v => {
     ingresoTotal += v.ingreso;
     const ref = state.produccion.vinculos[v.clave];
-    const costoUnit = ref ? costoVinculo(ref) : null;
+    const costoUnitBase = ref ? costoVinculo(ref) : null;
+    const extraUnit = Number(state.produccion.extras[v.clave])||0;
+    const costoUnit = (costoUnitBase!==null) ? costoUnitBase + extraUnit : null;
     const costoLinea = (costoUnit!==null) ? costoUnit*v.cantidad : 0;
     if (costoUnit===null) sinVincularCant += v.cantidad;
     costoTotal += costoLinea;
