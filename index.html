@@ -979,7 +979,7 @@ function renderPreparaciones(){
     return `<div class="card">
       <div class="prod-header">
         ${editando
-          ? `<input value="${esc(p.nombre)}" onchange="renameProd('${p.id}',this.value,'prep')">`
+          ? `<input value="${esc(p.nombre)}" placeholder="Nombre de la preparación" onchange="renameProd('${p.id}',this.value,'prep')">`
           : `<div style="font-weight:700;font-size:1rem;flex:1">${esc(p.nombre)}</div>`}
         <span class="badge prep">Preparación</span>
       </div>
@@ -999,7 +999,7 @@ window.toggleEdit = id => { editProd[id] = !editProd[id]; renderAll(); };
 document.getElementById('add-prep').onclick = () => {
   if (!state.ingredientes.length){ aviso('notice-prep'); return; }
   const nid = uid();
-  state.preparaciones.push({id:nid, nombre:'Preparación nueva', rinde:1, rindeUnidad:'u', items:[]});
+  state.preparaciones.push({id:nid, nombre:'', rinde:1, rindeUnidad:'u', items:[]});
   editProd[nid] = true;
   save(); renderAll();
 };
@@ -1059,7 +1059,7 @@ function renderEmpanadas(){
     return `<div class="card">
       <div class="prod-header">
         ${editando
-          ? `<input value="${esc(p.nombre)}" onchange="renameProd('${p.id}',this.value)">`
+          ? `<input value="${esc(p.nombre)}" placeholder="Sabor de la empanada" onchange="renameProd('${p.id}',this.value)">`
           : `<div style="font-weight:700;font-size:1rem;flex:1">${esc(p.nombre)}</div>`}
         <span class="badge">Empanada</span>
       </div>
@@ -1123,7 +1123,7 @@ function renderPizzas(){
     return `<div class="card">
       <div class="prod-header">
         ${editando
-          ? `<input value="${esc(p.nombre)}" onchange="renameProd('${p.id}',this.value)">`
+          ? `<input value="${esc(p.nombre)}" placeholder="Sabor de la pizza" onchange="renameProd('${p.id}',this.value)">`
           : `<div style="font-weight:700;font-size:1rem;flex:1">${esc(p.nombre)}</div>`}
         <span class="badge">Pizza</span>
       </div>
@@ -1142,13 +1142,13 @@ function renderPizzas(){
 /* ================= ACCIONES COMUNES ================= */
 document.getElementById('add-empanada').onclick = () => {
   const nid = uid();
-  state.productos.push({id:nid, tipo:'empanada', nombre:'Empanada nueva', rinde:12, items:[]});
+  state.productos.push({id:nid, tipo:'empanada', nombre:'', rinde:12, items:[]});
   editProd[nid] = true;
   save(); renderAll();
 };
 document.getElementById('add-pizza').onclick = () => {
   const nid = uid();
-  state.productos.push({id:nid, tipo:'pizza', nombre:'Pizza nueva', itemsP:[]});
+  state.productos.push({id:nid, tipo:'pizza', nombre:'', itemsP:[]});
   editProd[nid] = true;
   save(); renderAll();
 };
@@ -1426,7 +1426,7 @@ function renderEmpleados(){
   box.innerHTML = emps.map(e => {
     if (empEditando === e.id){
       return `<div class="ing-item" style="display:block">
-        <div class="field" style="margin-bottom:8px"><label>Nombre</label><input id="edit-emp-nom-${e.id}" value="${esc(e.nombre)}"></div>
+        <div class="field" style="margin-bottom:8px"><label>Nombre</label><input id="edit-emp-nom-${e.id}" value="${esc(e.nombre)}" placeholder="Nombre del empleado"></div>
         <div class="grid2" style="margin-bottom:8px">
           <div class="field"><label>Categoría</label><input id="edit-emp-cat-${e.id}" value="${esc(e.categoria||'')}" placeholder="Cocinero, ayudante..."></div>
           <div class="field"><label>Valor hora $</label><input id="edit-emp-vh-${e.id}" type="number" inputmode="decimal" value="${e.valorHora||''}"></div>
@@ -1472,7 +1472,7 @@ window.delEmpleado = (btn,id) => {
 };
 document.getElementById('btn-add-empleado').onclick = () => {
   const nid = uid();
-  state.personal.empleados.push({id:nid, nombre:'Nuevo empleado', categoria:'', valorHora:0});
+  state.personal.empleados.push({id:nid, nombre:'', categoria:'', valorHora:0});
   empEditando = nid;
   save(); renderEmpleados();
 };
@@ -2180,7 +2180,8 @@ let equipoEditando = null;
 function reservaMensualEquipo(e){
   const anios = Number(e.vidaUtilAnios)||0;
   if (anios<=0) return 0;
-  return (Number(e.valorReposicion)||0) / (anios*12);
+  const cant = Number(e.cantidad)||1;
+  return ((Number(e.valorReposicion)||0) / (anios*12)) * cant;
 }
 function totalReservaEquipos(){ return state.equipos.reduce((a,e)=>a+reservaMensualEquipo(e), 0); }
 function renderEquipos(){
@@ -2192,9 +2193,11 @@ function renderEquipos(){
         return `<div class="ing-item" style="display:block">
           <div class="field" style="margin-bottom:8px"><label>Nombre</label><input id="edit-eq-nom-${e.id}" value="${esc(e.nombre)}" placeholder="Horno rotativo"></div>
           <div class="grid2" style="margin-bottom:8px">
-            <div class="field"><label>Valor de reposición $</label><input id="edit-eq-val-${e.id}" type="number" inputmode="decimal" value="${e.valorReposicion||''}"></div>
+            <div class="field"><label>Valor de reposición $ (por unidad)</label><input id="edit-eq-val-${e.id}" type="number" inputmode="decimal" value="${e.valorReposicion||''}"></div>
             <div class="field"><label>Años de vida útil</label><input id="edit-eq-vu-${e.id}" type="number" inputmode="decimal" value="${e.vidaUtilAnios||''}"></div>
           </div>
+          <div class="field" style="margin-bottom:10px"><label>Cantidad de unidades iguales</label><input id="edit-eq-cant-${e.id}" type="number" inputmode="numeric" value="${e.cantidad||1}" placeholder="1"></div>
+          <p class="hint" style="margin-top:0;margin-bottom:10px">Si tenés varios iguales (ej: 4 freezers del mismo modelo y precio), cargalo una sola vez y poné la cantidad acá — no hace falta repetir la fila.</p>
           <div class="act-row">
             <button class="btn done sm" onclick="guardarEdicionEquipo('${e.id}')">Listo</button>
             <button class="btn edit sm" onclick="cancelarEdicionEquipo()">Cancelar</button>
@@ -2203,10 +2206,11 @@ function renderEquipos(){
         </div>`;
       }
       const reserva = reservaMensualEquipo(e);
+      const cant = Number(e.cantidad)||1;
       return `<div class="ing-item">
         <div style="flex:1;min-width:120px">
-          <div class="ing-name">${esc(e.nombre)}</div>
-          <div class="ing-detail">${fmt(e.valorReposicion||0)} · ${e.vidaUtilAnios||0} años · <span class="ing-unit-cost mono">${fmt(reserva)}/mes</span></div>
+          <div class="ing-name">${esc(e.nombre)}${cant>1?` <span style="color:var(--ink-soft);font-weight:600">× ${cant}</span>`:''}</div>
+          <div class="ing-detail">${fmt(e.valorReposicion||0)}${cant>1?' c/u':''} · ${e.vidaUtilAnios||0} años · <span class="ing-unit-cost mono">${fmt(reserva)}/mes</span></div>
         </div>
         <button class="btn edit sm" onclick="editarEquipo('${e.id}')">Editar</button>
       </div>`;
@@ -2222,9 +2226,10 @@ window.guardarEdicionEquipo = id => {
   const nombre = document.getElementById('edit-eq-nom-'+id).value.trim();
   const valorReposicion = parseFloat(document.getElementById('edit-eq-val-'+id).value)||0;
   const vidaUtilAnios = parseFloat(document.getElementById('edit-eq-vu-'+id).value)||0;
+  const cantidad = Math.max(1, parseInt(document.getElementById('edit-eq-cant-'+id).value)||1);
   if (!nombre) return;
   const e = state.equipos.find(x=>x.id===id);
-  Object.assign(e, {nombre, valorReposicion, vidaUtilAnios});
+  Object.assign(e, {nombre, valorReposicion, vidaUtilAnios, cantidad});
   equipoEditando = null; save(); renderEquipos(); renderRentabilidadReal();
 };
 window.delEquipo = (btn,id) => {
@@ -2234,7 +2239,7 @@ window.delEquipo = (btn,id) => {
 };
 document.getElementById('btn-add-equipo').onclick = () => {
   const nid = uid();
-  state.equipos.push({id:nid, nombre:'Equipo nuevo', valorReposicion:0, vidaUtilAnios:10});
+  state.equipos.push({id:nid, nombre:'', valorReposicion:0, vidaUtilAnios:10, cantidad:1});
   equipoEditando = nid;
   save(); renderEquipos();
 };
@@ -2638,16 +2643,25 @@ function renderAll(){ renderIngredientes(); renderPreparaciones(); renderEmpanad
 renderAll();
 cargarNube();
 
-/* Al volver a la app (cambiar de pestaña del navegador o reabrir), refresca desde la nube */
+/* Al volver a la app (cambiar de pestaña del navegador o reabrir), refresca desde la nube —
+   salvo que estés en medio de escribir algo, para no pisarte lo no guardado. */
+function hayEdicionEnCurso(){
+  const el = document.activeElement;
+  if (el && ['INPUT','SELECT','TEXTAREA'].includes(el.tagName)) return true;
+  if (ingEditando || empEditando || equipoEditando) return true;
+  if (typeof editProd !== 'undefined' && Object.values(editProd).some(Boolean)) return true;
+  return false;
+}
 let ultimaRecarga = Date.now();
 document.addEventListener('visibilitychange', () => {
-  if (!document.hidden && sb && syncListo && (Date.now()-ultimaRecarga > 4000)){
+  if (!document.hidden && sb && syncListo && (Date.now()-ultimaRecarga > 4000) && !hayEdicionEnCurso()){
     ultimaRecarga = Date.now();
     recargarDesdeNube();
   }
 });
 async function recargarDesdeNube(){
   if (!sb) return;
+  if (hayEdicionEnCurso()) return;
   try {
     const { data, error } = await sb.from('app_data').select('data').eq('id', ROW_ID).maybeSingle();
     if (error) throw error;
