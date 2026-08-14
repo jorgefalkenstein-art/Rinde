@@ -2044,7 +2044,11 @@ function procesarAnalisisProduccion(){
   const objetivos = {}, promedios = {};
   Object.entries(maxPorDia).forEach(([dia,sabores]) => {
     objetivos[dia] = {};
-    Object.entries(sabores).forEach(([nombre,max]) => { objetivos[dia][nombre] = Math.ceil(max/6)*6; });
+    Object.entries(sabores).forEach(([clave,max]) => {
+      /* El redondeo a múltiplo de 6 es para producir empanadas en bandeja: no aplica a pizzas
+         (se arman al pedido) ni a bebidas (se repone lo que falta, sin mínimo de lote). */
+      objetivos[dia][clave] = claveEsEmpanada(clave) ? Math.ceil(max/6)*6 : Math.round(max);
+    });
   });
   Object.entries(sumaPorDia).forEach(([dia,sabores]) => {
     promedios[dia] = {};
@@ -2159,6 +2163,21 @@ function claveEsPizza(clave){
   return !!ref && (ref.startsWith('pg:') || ref.startsWith('pc:'));
 }
 /* Suma los insumos (ingredientes / preparaciones como ★prepizza) que hacen falta para cubrir el objetivo de pizzas de un día */
+/* Agrupa las claves de pizza (Chica/Grande) por sabor base, para mostrarlas en una sola fila */
+function agruparSaboresPizza(sabores){
+  const grupos = {};
+  const orden = [];
+  sabores.forEach(([clave,obj]) => {
+    const etiqueta = etiquetaDe(clave);
+    const ref = state.produccion.vinculos[clave];
+    const esChica = ref && ref.startsWith('pc:');
+    const base = etiqueta.replace(/\s*\((Chica|Grande)\)\s*$/i, '');
+    if (!grupos[base]){ grupos[base] = {chica:null, grande:null}; orden.push(base); }
+    if (esChica) grupos[base].chica = (grupos[base].chica||0) + obj;
+    else grupos[base].grande = (grupos[base].grande||0) + obj;
+  });
+  return orden.map(base => [base, grupos[base]]);
+}
 function insumosNecesariosPizzas(objetivosDia){
   const totales = {};
   Object.entries(objetivosDia).forEach(([clave, cantidadObjetivo]) => {
@@ -2249,13 +2268,14 @@ function renderHojaProduccion(){
     const insumos = insumosNecesariosPizzas(objetivosDia);
     const insumosList = Object.entries(insumos).sort((a,b)=>nombreRef(a[0]).localeCompare(nombreRef(b[0]),'es'));
     const incompletas = sabores.filter(([clave])=>pizzaSinRecetaCompleta(clave));
+    const agrupadas = agruparSaboresPizza(sabores).sort((a,b)=>a[0].localeCompare(b[0],'es'));
     box.innerHTML = `
       <p class="hint" style="margin-top:0;font-weight:700;color:var(--ink)">Pizzas esperadas</p>
       <table class="prod-tabla" style="margin-bottom:16px">
-        <thead><tr><th>Sabor</th><th>Cantidad</th></tr></thead>
-        <tbody>${sabores.map(([clave,obj]) => `<tr><td>${esc(etiquetaDe(clave))}${pizzaSinRecetaCompleta(clave)?' <span title="Sin ingredientes cargados para este tamaño en Pizzas" style="color:var(--red)">⚠</span>':''}</td><td class="mono">${obj}</td></tr>`).join('')}</tbody>
+        <thead><tr><th>Sabor</th><th>Chica</th><th>Grande</th></tr></thead>
+        <tbody>${agrupadas.map(([base,g]) => `<tr><td>${esc(base)}</td><td class="mono">${g.chica!==null?g.chica:'—'}</td><td class="mono">${g.grande!==null?g.grande:'—'}</td></tr>`).join('')}</tbody>
       </table>
-      ${incompletas.length ? `<div class="notice show" style="margin-bottom:14px">⚠ ${incompletas.length} sabor(es) marcados no tienen ingredientes cargados para ese tamaño en la pestaña <b>Pizzas</b> (columna chica/grande vacía) — por eso no aportan a los insumos de abajo y el total no cierra con la cantidad esperada. Sabores: ${incompletas.map(([c])=>esc(etiquetaDe(c))).join(', ')}.</div>` : ''}
+      ${incompletas.length ? `<div class="notice show" style="margin-bottom:14px">⚠ ${incompletas.length} sabor(es) no tienen ingredientes cargados para ese tamaño en la pestaña <b>Pizzas</b> — por eso no aportan a los insumos de abajo. Sabores: ${incompletas.map(([c])=>esc(etiquetaDe(c))).join(', ')}.</div>` : ''}
       <p class="hint" style="margin-top:0;font-weight:700;color:var(--ink)">Insumos mínimos necesarios</p>
       ${insumosList.length ? insumosList.map(([ref,cant]) => `
         <div class="insumo-row"><span>${nombreRef(ref)}</span><span class="in-cant mono">${formatoCantidad(cant, refUnidad(ref))}</span></div>
@@ -2334,14 +2354,16 @@ function renderPrintArea(dia, fechaIso, tipo, sabores, reg, insumosList){
         </tbody>
       </table>`;
   } else {
+    const agrupadas = agruparSaboresPizza(sabores).sort((a,b)=>a[0].localeCompare(b[0],'es'));
     cuerpo = `
       <p style="font-family:Montserrat,sans-serif;font-weight:700;font-size:14px;margin:14px 0 4px">Pizzas esperadas</p>
       <table style="width:100%;border-collapse:collapse;font-family:Montserrat,sans-serif;font-size:14px">
         <thead><tr>
           <th style="text-align:left;border-bottom:2px solid #000;padding:6px 4px">Sabor</th>
-          <th style="text-align:left;border-bottom:2px solid #000;padding:6px 4px">Cantidad</th>
+          <th style="text-align:left;border-bottom:2px solid #000;padding:6px 4px">Chica</th>
+          <th style="text-align:left;border-bottom:2px solid #000;padding:6px 4px">Grande</th>
         </tr></thead>
-        <tbody>${sabores.map(([clave,obj]) => `<tr><td style="border-bottom:1px solid #ccc;padding:6px 4px">${esc(etiquetaDe(clave))}</td><td style="border-bottom:1px solid #ccc;padding:6px 4px">${obj}</td></tr>`).join('')}</tbody>
+        <tbody>${agrupadas.map(([base,g]) => `<tr><td style="border-bottom:1px solid #ccc;padding:6px 4px">${esc(base)}</td><td style="border-bottom:1px solid #ccc;padding:6px 4px">${g.chica!==null?g.chica:'—'}</td><td style="border-bottom:1px solid #ccc;padding:6px 4px">${g.grande!==null?g.grande:'—'}</td></tr>`).join('')}</tbody>
       </table>
       <p style="font-family:Montserrat,sans-serif;font-weight:700;font-size:14px;margin:16px 0 4px">Insumos mínimos necesarios</p>
       <table style="width:100%;border-collapse:collapse;font-family:Montserrat,sans-serif;font-size:14px">
