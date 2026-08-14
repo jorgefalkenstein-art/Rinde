@@ -349,7 +349,7 @@ table.prod-tabla input{padding:6px 5px;font-size:.82rem;width:56px;max-width:100
   <!-- RENTABILIDAD -->
   <section id="tab-rentabilidad" hidden>
     <div class="page-title">Precios sugeridos</div>
-    <div class="page-sub">Herramienta para decidir a qué precio vender: compará el costo de cada receta contra el precio de Pedix. Para ver la ganancia real de lo que ya vendiste, andá a Producción → Ganancia real del mes.</div>
+    <div class="page-sub">Herramienta para decidir a qué precio vender: compará el costo de cada receta contra el precio de Pedix. "Prom. real" es el precio promedio que efectivamente cobraste por unidad, mezclando ventas sueltas y la parte proporcional de docenas/promos, según el último informe importado en Producción.</div>
     <div class="card">
       <h3 style="margin-bottom:8px">Importar carta de Pedix</h3>
       <p class="hint" style="margin-top:0;margin-bottom:12px">Subí el Excel exportado desde Pedix (hoja Productos). Al reimportar uno nuevo, los vínculos que ya armaste se conservan (se reconocen por el ID de Pedix).</p>
@@ -568,7 +568,7 @@ const LOGO_TROPPO_B64 = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAARgAAADKC
 /* ================= DATA ================= */
 const LS_KEY = 'costosProduccionV1';
 const uid = () => Math.random().toString(36).slice(2,9);
-const PROYECCION_DEFAULT = {costoHora:0, horas:0, luz:0, gas:0, monotributo:0, iibbPct:0, otros:0, items:[], gastos:[], desde:'', hasta:''};
+const PROYECCION_DEFAULT = {costoHora:0, horas:0, luz:0, gas:0, monotributo:0, iibbPct:0, otros:0, items:[], gastos:[], desde:'', hasta:'', autoDesde:'', autoHasta:''};
 function migrarGastosViejos(proy){
   if (proy.gastos && proy.gastos.length) return; // ya migrado o cargado por el usuario
   const viejos = [
@@ -1192,6 +1192,19 @@ function opcionesVinculo(current){
   return html;
 }
 
+/* Precio promedio real de venta de todo lo vinculado a este ref (individual + parte proporcional de docenas/promos),
+   según el último informe mensual importado en Producción. */
+function precioPromedioRealDeRef(ref){
+  const hist = state.produccion.historico[0];
+  if (!hist || !ref) return null;
+  let cantTotal = 0, ingresoTotal = 0;
+  Object.entries(state.produccion.vinculos).forEach(([clave, r]) => {
+    if (r !== ref) return;
+    const d = hist.porProducto[clave];
+    if (d && d.cant > 0){ cantTotal += d.cant; ingresoTotal += d.ingreso; }
+  });
+  return cantTotal > 0 ? {precio: ingresoTotal/cantTotal, cant: cantTotal, mes: hist.mes} : null;
+}
 function renderRentabilidad(){
   const box = document.getElementById('ventas-list');
   document.getElementById('margen-obj').value = state.margenObj;
@@ -1210,11 +1223,13 @@ function renderRentabilidad(){
         const pct = venta>0 ? gan/venta*100 : 0;
         const ok = pct >= margen;
         const sug = margen<100 ? Math.ceil((costo/(1-margen/100))/100)*100 : 0;
+        const real = precioPromedioRealDeRef(v.ref);
         stats = `
           <span class="stat"><b>Costo</b><span class="mono">${fmt(costo)}</span></span>
           <span class="stat"><b>Venta</b><span class="mono">${fmt(venta)}</span>${v.oferta?'<span style="color:var(--muted)"> (oferta)</span>':''}</span>
           <span class="stat ${ok?'ok':'bad'}"><b>Ganancia</b><span class="mono">${fmt(gan)} · ${pct.toFixed(0)}%</span></span>
-          <span class="stat sug"><b>Sugerido (${margen}%)</b><span class="mono">${fmt(sug)}</span></span>`;
+          <span class="stat sug"><b>Sugerido (${margen}%)</b><span class="mono">${fmt(sug)}</span></span>
+          ${real ? `<span class="stat"><b>Prom. real (${real.mes})</b><span class="mono">${fmt(real.precio)}</span></span>` : ''}`;
       }
       return `<div class="venta">
         <div class="venta-nombre">${esc(v.nombre)}</div>
@@ -1473,14 +1488,36 @@ function contarDiasSemanaEnRango(desde, hasta){
   }
   return counts;
 }
-document.getElementById('proy-desde').onchange = () => { if(document.activeElement.id!=='proy-desde'){ save(); renderProyecciones(); } };
-document.getElementById('proy-hasta').onchange = () => { if(document.activeElement.id!=='proy-hasta'){ save(); renderProyecciones(); } };
-document.getElementById('proy-desde').onblur = () => { save(); renderProyecciones(); };
-document.getElementById('proy-hasta').onblur = () => { save(); renderProyecciones(); };
-document.getElementById('btn-autocompletar-proy').onclick = () => {
+function onCambioFechaProyeccion(){
+  save();
+  const py = state.proyeccion;
   const desde = document.getElementById('proy-desde').value;
   const hasta = document.getElementById('proy-hasta').value;
-  if (!desde || !hasta){ aviso('notice-proy','Elegí primero el rango Desde/Hasta, arriba de todo.'); return; }
+  const eraAutocompletado = py.autoDesde && py.autoHasta;
+  const cambioRango = eraAutocompletado && (py.autoDesde !== desde || py.autoHasta !== hasta);
+  if (cambioRango){ autocompletarDesdeProduccion(false); }
+  else { renderProyecciones(); }
+}
+document.getElementById('proy-desde').onchange = () => { if(document.activeElement.id!=='proy-desde') onCambioFechaProyeccion(); };
+document.getElementById('proy-hasta').onchange = () => { if(document.activeElement.id!=='proy-hasta') onCambioFechaProyeccion(); };
+document.getElementById('proy-desde').onblur = onCambioFechaProyeccion;
+document.getElementById('proy-hasta').onblur = onCambioFechaProyeccion;
+/* Precio a usar en la proyección: primero el precio real observado en el último informe importado (Producción),
+   y si no hay dato, el vinculado en Precios sugeridos. */
+function precioEstimadoParaProyeccion(ref, clave){
+  const hist = state.produccion.historico[0];
+  if (hist && hist.porProducto && hist.porProducto[clave]){
+    const d = hist.porProducto[clave];
+    if (d.cant > 0) return d.ingreso / d.cant;
+  }
+  const venta = state.ventas.find(v=>v.ref===ref);
+  if (venta) return (venta.oferta && venta.oferta>0) ? venta.oferta : (venta.precio||0);
+  return 0;
+}
+function autocompletarDesdeProduccion(mostrarAviso){
+  const desde = document.getElementById('proy-desde').value;
+  const hasta = document.getElementById('proy-hasta').value;
+  if (!desde || !hasta){ if(mostrarAviso) aviso('notice-proy','Elegí primero el rango Desde/Hasta, arriba de todo.'); return; }
   const counts = contarDiasSemanaEnRango(desde, hasta);
   const totales = {};
   Object.entries(state.produccion.objetivos||{}).forEach(([dia,sabores]) => {
@@ -1489,18 +1526,27 @@ document.getElementById('btn-autocompletar-proy').onclick = () => {
     Object.entries(sabores).forEach(([clave,obj]) => { totales[clave] = (totales[clave]||0) + obj*n; });
   });
   const nuevosItems = [];
+  let sinPrecio = 0;
   Object.entries(totales).forEach(([clave,cant]) => {
     const ref = state.produccion.vinculos[clave];
     if (!ref || !cant) return;
-    const venta = state.ventas.find(v=>v.ref===ref);
-    const precio = venta ? ((venta.oferta && venta.oferta>0) ? venta.oferta : venta.precio) : 0;
+    const precio = precioEstimadoParaProyeccion(ref, clave);
+    if (!precio) sinPrecio++;
     nuevosItems.push({ref, mult:1, extra:0, precio, cant});
   });
-  if (!nuevosItems.length){ aviso('notice-proy','No encontré objetivos de producción vinculados para ese rango.'); return; }
+  if (!nuevosItems.length){ if(mostrarAviso) aviso('notice-proy','No encontré objetivos de producción vinculados para ese rango.'); return; }
   state.proyeccion.items = nuevosItems;
+  state.proyeccion.autoDesde = desde;
+  state.proyeccion.autoHasta = hasta;
   save(); renderProyecciones();
-  aviso('notice-proy', `Cargados ${nuevosItems.length} productos desde los objetivos de Producción.`);
-};
+  if (mostrarAviso){
+    const msg = sinPrecio
+      ? `Cargados ${nuevosItems.length} productos. ${sinPrecio} sin precio: no aparecen en ningún informe importado ni vinculados en Precios sugeridos.`
+      : `Cargados ${nuevosItems.length} productos desde los objetivos de Producción, con precio real del último informe.`;
+    aviso('notice-proy', msg);
+  }
+}
+document.getElementById('btn-autocompletar-proy').onclick = () => autocompletarDesdeProduccion(true);
 
 function renderGastos(){
   const box = document.getElementById('proy-gastos-list');
@@ -1561,7 +1607,15 @@ function renderProyecciones(){
   renderGastos();
 
   const box = document.getElementById('proy-items');
-  document.getElementById('proy-items-count').textContent = py.items.length ? `${py.items.length} productos` : '';
+  {
+    const desde = inpDesde.value, hasta = inpHasta.value;
+    const sincronizado = py.autoDesde && py.autoDesde===desde && py.autoHasta===hasta;
+    const txt = !py.items.length ? '' :
+      sincronizado ? `${py.items.length} productos · autocompletados para este período` :
+      py.autoDesde ? `${py.items.length} productos · cargados para otro período (${py.autoDesde} a ${py.autoHasta}), no coincide con el actual` :
+      `${py.items.length} productos · cargados a mano`;
+    document.getElementById('proy-items-count').textContent = txt;
+  }
   if (!py.items.length){
     box.innerHTML = '<div class="empty">Todavía no agregaste productos. Tocá "+ Producto" o autocompletá desde Producción.</div>';
   } else {
@@ -1769,8 +1823,9 @@ document.getElementById('file-prod-xlsx').onchange = e => {
         const diaSemana = fecha ? DIAS_SEMANA[fecha.getDay()] : null;
         const fechaIso = fecha ? fecha.toISOString().slice(0,10) : null;
         const esBebida = /gaseosa|cerveza/i.test(categoria);
+        const esDocenaEmpanadas = /docena/i.test(categoria);
 
-        const desglose = parseDesgloseDocena(detalles);
+        const desglose = esDocenaEmpanadas ? parseDesgloseDocena(detalles) : [];
         if (desglose.length){
           const totalUnid = desglose.reduce((a,b)=>a+b.cant,0) || 1;
           desglose.forEach(d => {
