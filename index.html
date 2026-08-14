@@ -1850,9 +1850,13 @@ function leerHojaInforme(wb, nombreHoja){
 function parseDesgloseDocena(texto){
   const out = [];
   if (!texto) return out;
+  /* El texto puede traer varias secciones separadas por línea en blanco (ej: la docena
+     y aparte "Suma Cervezas con Descuento:"). Solo nos interesa la sección de la docena. */
+  const bloques = String(texto).split(/\n\s*\n/);
+  const bloqueDocena = bloques.find(b => /docena/i.test((b.split('\n')[0]||''))) || bloques[0] || '';
   const regex = /-\s*(\d+)\s*x\s*([^:]+):/gi;
   let m;
-  while ((m = regex.exec(String(texto))) !== null){
+  while ((m = regex.exec(bloqueDocena)) !== null){
     const cant = parseInt(m[1]);
     const nombre = m[2].trim();
     if (cant>0 && nombre) out.push({nombre, cant});
@@ -1899,11 +1903,21 @@ document.getElementById('file-prod-xlsx').onchange = e => {
       const pedidos = leerHojaInforme(wb, 'Pedidos');
       const detalle = leerHojaInforme(wb, 'Detalle de productos');
       const fechaPorCodigo = {};
-      pedidos.forEach(p => { const cod = p['Código']; if (cod) fechaPorCodigo[cod] = fechaDe(p['Fecha']); });
+      const codigosValidos = new Set();
+      let canceladosOmitidos = 0;
+      pedidos.forEach(p => {
+        const cod = p['Código'];
+        if (!cod) return;
+        const estado = String(p['Estado']||'').trim().toLowerCase();
+        if (estado === 'cancelado' || estado === 'cancelada'){ canceladosOmitidos++; return; }
+        fechaPorCodigo[cod] = fechaDe(p['Fecha']);
+        codigosValidos.add(cod);
+      });
 
       const ventasUnbundled = [];
       detalle.forEach(row => {
         const codigo = row['Código'];
+        if (!codigosValidos.has(codigo)) return; // pedido cancelado u otro estado no confiable: no cuenta como venta
         const categoria = String(row['Categoría']||'');
         const producto = String(row['Producto']||'').trim();
         const presentacion = String(row['Presentación']||'').replace(/^pizza\s*/i,'').trim();
@@ -1945,7 +1959,7 @@ document.getElementById('file-prod-xlsx').onchange = e => {
       state.produccion.ultimoImport = prodUltimoAnalisis;
       save();
       procesarAnalisisProduccion();
-      aviso('notice-prod-xlsx', `Informe procesado: ${ventasUnbundled.length} líneas de venta (mes ${mes}).`);
+      aviso('notice-prod-xlsx', `Informe procesado: ${ventasUnbundled.length} líneas de venta (mes ${mes}).${canceladosOmitidos?' Se excluyeron '+canceladosOmitidos+' pedidos cancelados.':''}`);
     } catch(err){
       console.error(err);
       aviso('notice-prod-xlsx','No pude leer el archivo. ¿Es el informe mensual exportado de Pedix?');
