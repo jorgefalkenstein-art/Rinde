@@ -406,7 +406,27 @@ table.prod-tabla input{padding:6px 5px;font-size:.82rem;width:56px;max-width:100
       <div class="card" id="card-rentabilidad-real" style="display:none">
         <h3 style="margin-bottom:10px">Ganancia real del mes</h3>
         <div id="prod-resumen-mes"></div>
-        <div id="prod-detalle-productos" style="margin-top:12px"></div>
+      </div>
+      <div class="card" id="card-ganancia-neta" style="display:none">
+        <h3 style="margin-bottom:4px">Ganancia neta real del mes</h3>
+        <p class="hint" style="margin-top:0;margin-bottom:10px">Todo incluido: ingredientes, mano de obra real (de Personal, mismas fechas del mes) y gastos fijos actuales (de Proyecciones). Si tus gastos fijos eran distintos ese mes, ajustalos en Proyecciones antes de mirar este número.</p>
+        <div id="prod-ganancia-neta"></div>
+      </div>
+      <div class="card" id="card-reserva-reposicion" style="display:none">
+        <h3 style="margin-bottom:4px">Reserva para reponer insumos del mes que viene</h3>
+        <p class="hint" style="margin-top:0;margin-bottom:10px">Estimado de cuánto vas a necesitar comprar de materia prima el mes que viene, según el promedio real de ventas. Es plata que conviene separar antes de considerar "disponible" el resto de la ganancia.</p>
+        <div id="prod-reserva-reposicion"></div>
+      </div>
+      <div class="card">
+        <h3 style="margin-bottom:4px">Fondo de amortización de equipos</h3>
+        <p class="hint" style="margin-top:0;margin-bottom:10px">Horno, freezer, heladera, mostrador, lo que sea. Valor de reposición ÷ años de vida útil = cuánto conviene reservar por mes para poder reemplazarlo cuando toque, sin sorpresas.</p>
+        <div id="equipos-list"></div>
+        <button class="btn ghost sm" id="btn-add-equipo" style="margin-top:8px">+ Equipo</button>
+        <div id="equipos-total" style="margin-top:12px"></div>
+      </div>
+      <div class="card" id="card-detalle-productos" style="display:none">
+        <h3 style="margin-bottom:10px">Detalle por producto</h3>
+        <div id="prod-detalle-productos"></div>
       </div>
       <div class="empty" id="ganancia-vacio">Importá un informe mensual (pestaña Importar) para ver la ganancia real.</div>
     </div>
@@ -586,7 +606,7 @@ function migrarGastosViejos(proy){
 }
 const PRODUCCION_DEFAULT = {vinculos:{}, objetivos:{}, promedios:{}, extras:{}, historico:[], ultimoImport:null, registro:{}, etiquetas:{}, origenes:{}};
 const PERSONAL_DEFAULT = {empleados:[], turnos:[]};
-const ESTADO_DEFAULT = {ingredientes:[],preparaciones:[],productos:[],ventas:[],margenObj:60,proyeccion:null,produccion:null,personal:null};
+const ESTADO_DEFAULT = {ingredientes:[],preparaciones:[],productos:[],ventas:[],margenObj:60,proyeccion:null,produccion:null,personal:null,equipos:null};
 function estadoBase(datos){
   const base = Object.assign({}, ESTADO_DEFAULT, datos);
   base.proyeccion = Object.assign({}, PROYECCION_DEFAULT, datos && datos.proyeccion || {});
@@ -594,6 +614,7 @@ function estadoBase(datos){
   base.personal = Object.assign({}, PERSONAL_DEFAULT, datos && datos.personal || {});
   base.personal.empleados = (datos && datos.personal && datos.personal.empleados) || [];
   base.personal.turnos = (datos && datos.personal && datos.personal.turnos) || [];
+  base.equipos = (datos && datos.equipos) || [];
   base.proyeccion.gastos = (datos && datos.proyeccion && datos.proyeccion.gastos) || [];
   base.proyeccion.items = (datos && datos.proyeccion && datos.proyeccion.items) || [];
   migrarGastosViejos(base.proyeccion);
@@ -2120,24 +2141,168 @@ window.setObjetivo = (dia,clave,v) => {
   save(); renderObjetivos();
 };
 
+function primerYUltimoDiaMes(mesStr){
+  const [y,m] = mesStr.split('-').map(Number);
+  const primer = `${mesStr}-01`;
+  const ultimo = new Date(y, m, 0);
+  return { primer, ultimo: ultimo.toISOString().slice(0,10) };
+}
+function rangoMesSiguiente(mesStr){
+  const [y,m] = mesStr.split('-').map(Number);
+  let ny = y, nm = m+1;
+  if (nm > 12){ nm = 1; ny++; }
+  const desde = `${ny}-${String(nm).padStart(2,'0')}-01`;
+  const hasta = new Date(ny, nm, 0).toISOString().slice(0,10);
+  return { desde, hasta };
+}
+/* Estima cuánto va a costar la materia prima del próximo mes, usando el promedio real de ventas por día de semana */
+function estimarCostoReposicion(desde, hasta){
+  const counts = contarDiasSemanaEnRango(desde, hasta);
+  let costoTotal = 0;
+  Object.entries(state.produccion.promedios||{}).forEach(([dia,sabores]) => {
+    const n = counts[dia]||0;
+    if (!n) return;
+    Object.entries(sabores).forEach(([clave,prom]) => {
+      const ref = state.produccion.vinculos[clave];
+      if (!ref || !prom) return;
+      const costoUnit = costoVinculo(ref);
+      if (costoUnit===null) return;
+      const extra = Number(state.produccion.extras[clave])||0;
+      costoTotal += (costoUnit+extra) * prom * n;
+    });
+  });
+  return costoTotal;
+}
+/* ================= EQUIPOS (fondo de amortización) ================= */
+let equipoEditando = null;
+function reservaMensualEquipo(e){
+  const anios = Number(e.vidaUtilAnios)||0;
+  if (anios<=0) return 0;
+  return (Number(e.valorReposicion)||0) / (anios*12);
+}
+function totalReservaEquipos(){ return state.equipos.reduce((a,e)=>a+reservaMensualEquipo(e), 0); }
+function renderEquipos(){
+  const box = document.getElementById('equipos-list');
+  if (!state.equipos.length){ box.innerHTML = '<div class="empty">Sin equipos cargados. Tocá "+ Equipo" para agregar el horno, freezer, etc.</div>'; }
+  else {
+    box.innerHTML = state.equipos.map(e => {
+      if (equipoEditando === e.id){
+        return `<div class="ing-item" style="display:block">
+          <div class="field" style="margin-bottom:8px"><label>Nombre</label><input id="edit-eq-nom-${e.id}" value="${esc(e.nombre)}" placeholder="Horno rotativo"></div>
+          <div class="grid2" style="margin-bottom:8px">
+            <div class="field"><label>Valor de reposición $</label><input id="edit-eq-val-${e.id}" type="number" inputmode="decimal" value="${e.valorReposicion||''}"></div>
+            <div class="field"><label>Años de vida útil</label><input id="edit-eq-vu-${e.id}" type="number" inputmode="decimal" value="${e.vidaUtilAnios||''}"></div>
+          </div>
+          <div class="act-row">
+            <button class="btn done sm" onclick="guardarEdicionEquipo('${e.id}')">Listo</button>
+            <button class="btn edit sm" onclick="cancelarEdicionEquipo()">Cancelar</button>
+            <button class="del" onclick="delEquipo(this,'${e.id}')" aria-label="Eliminar" style="margin-left:auto">✕</button>
+          </div>
+        </div>`;
+      }
+      const reserva = reservaMensualEquipo(e);
+      return `<div class="ing-item">
+        <div style="flex:1;min-width:120px">
+          <div class="ing-name">${esc(e.nombre)}</div>
+          <div class="ing-detail">${fmt(e.valorReposicion||0)} · ${e.vidaUtilAnios||0} años · <span class="ing-unit-cost mono">${fmt(reserva)}/mes</span></div>
+        </div>
+        <button class="btn edit sm" onclick="editarEquipo('${e.id}')">Editar</button>
+      </div>`;
+    }).join('');
+  }
+  document.getElementById('equipos-total').innerHTML = state.equipos.length
+    ? `<div class="cost-banner"><div><div class="big mono">${fmt(totalReservaEquipos())}</div><div class="lbl">Total a reservar por mes (todos los equipos)</div></div></div>`
+    : '';
+}
+window.editarEquipo = id => { equipoEditando = id; renderEquipos(); };
+window.cancelarEdicionEquipo = () => { equipoEditando = null; renderEquipos(); };
+window.guardarEdicionEquipo = id => {
+  const nombre = document.getElementById('edit-eq-nom-'+id).value.trim();
+  const valorReposicion = parseFloat(document.getElementById('edit-eq-val-'+id).value)||0;
+  const vidaUtilAnios = parseFloat(document.getElementById('edit-eq-vu-'+id).value)||0;
+  if (!nombre) return;
+  const e = state.equipos.find(x=>x.id===id);
+  Object.assign(e, {nombre, valorReposicion, vidaUtilAnios});
+  equipoEditando = null; save(); renderEquipos(); renderRentabilidadReal();
+};
+window.delEquipo = (btn,id) => {
+  if (!btn.classList.contains('confirm')){ armarConfirm(btn); return; }
+  state.equipos = state.equipos.filter(e=>e.id!==id);
+  equipoEditando = null; save(); renderEquipos(); renderRentabilidadReal();
+};
+document.getElementById('btn-add-equipo').onclick = () => {
+  const nid = uid();
+  state.equipos.push({id:nid, nombre:'Equipo nuevo', valorReposicion:0, vidaUtilAnios:10});
+  equipoEditando = nid;
+  save(); renderEquipos();
+};
+
 function renderRentabilidadReal(){
   const card = document.getElementById('card-rentabilidad-real');
+  const cardNeta = document.getElementById('card-ganancia-neta');
+  const cardReserva = document.getElementById('card-reserva-reposicion');
+  const cardDetalle = document.getElementById('card-detalle-productos');
   const hist = state.produccion.historico;
-  if (!hist.length){ card.style.display='none'; return; }
-  card.style.display = 'block';
+  if (!hist.length){ card.style.display='none'; cardNeta.style.display='none'; cardReserva.style.display='none'; cardDetalle.style.display='none'; return; }
+  card.style.display = 'block'; cardNeta.style.display = 'block'; cardReserva.style.display = 'block'; cardDetalle.style.display = 'block';
   const ultimo = hist[0];
   const margen = ultimo.ingresoTotal>0 ? (ultimo.gananciaTotal/ultimo.ingresoTotal*100) : 0;
   const resumen = document.getElementById('prod-resumen-mes');
   resumen.innerHTML = `
-    <p class="hint" style="margin-top:0;margin-bottom:10px">Mes <b>${ultimo.mes}</b> — costo real por sabor dentro de cada docena, no un % promedio.</p>
+    <p class="hint" style="margin-top:0;margin-bottom:10px">Mes <b>${ultimo.mes}</b> — solo ingredientes, costo real por sabor dentro de cada docena, no un % promedio.</p>
     <div class="resumen-mes-banner">
       <div class="stat"><div class="cost-banner" style="margin:0"><div><div class="big mono">${fmt(ultimo.ingresoTotal)}</div><div class="lbl">Ingreso</div></div></div></div>
-      <div class="stat"><div class="cost-banner" style="margin:0"><div><div class="big mono">${fmt(ultimo.costoTotal)}</div><div class="lbl">Costo real</div></div></div></div>
-      <div class="stat"><div class="cost-banner green" style="margin:0"><div><div class="big mono">${fmt(ultimo.gananciaTotal)}</div><div class="lbl">Ganancia · ${margen.toFixed(0)}%</div></div></div></div>
+      <div class="stat"><div class="cost-banner" style="margin:0"><div><div class="big mono">${fmt(ultimo.costoTotal)}</div><div class="lbl">Costo ingredientes</div></div></div></div>
+      <div class="stat"><div class="cost-banner green" style="margin:0"><div><div class="big mono">${fmt(ultimo.gananciaTotal)}</div><div class="lbl">Ganancia bruta · ${margen.toFixed(0)}%</div></div></div></div>
     </div>
     ${ultimo.sinVincularCant>0 ? `<div class="notice show" style="margin-bottom:10px">Hay ${ultimo.sinVincularCant} unidades vendidas sin vincular a una receta: su costo no está incluido arriba. Vinculalas para un cálculo exacto.</div>` : ''}
     ${hist.length>1 ? `<p class="hint">Meses anteriores: ${hist.slice(1).map(h=>`${h.mes} (${fmt(h.gananciaTotal)})`).join(' · ')}</p>` : ''}
   `;
+
+  /* Ganancia neta real: ingredientes (ya calculado) - mano de obra real de ese mes (Personal) - gastos fijos actuales (Proyecciones) */
+  const {primer, ultimo: ultimoDia} = primerYUltimoDiaMes(ultimo.mes);
+  const mo = calcularManoObraPeriodo(primer, ultimoDia);
+  const costoGastos = (state.proyeccion.gastos||[]).reduce((a,g)=>a+(Number(g.monto)||0), 0);
+  const costoIIBB = ultimo.ingresoTotal * (Number(state.proyeccion.iibbPct)||0) / 100;
+  const costoFijos = costoGastos + costoIIBB;
+  const gananciaNeta = ultimo.gananciaTotal - mo.costoTotal - costoFijos;
+  const margenNeto = ultimo.ingresoTotal>0 ? (gananciaNeta/ultimo.ingresoTotal*100) : 0;
+  const boxNeta = document.getElementById('prod-ganancia-neta');
+  boxNeta.innerHTML = `
+    <div class="cost-banner">
+      <div><div class="big mono">${fmt(ultimo.gananciaTotal)}</div><div class="lbl">Ganancia bruta</div></div>
+      <div><div class="big mono">${fmt(mo.costoTotal)}</div><div class="lbl">Mano de obra (${mo.horasTotal.toFixed(0)} h)</div></div>
+    </div>
+    <div class="cost-banner" style="margin-top:10px">
+      <div><div class="big mono">${fmt(costoGastos)}</div><div class="lbl">Gastos fijos</div></div>
+      <div><div class="big mono">${fmt(costoIIBB)}</div><div class="lbl">Ingresos Brutos (${state.proyeccion.iibbPct||0}%)</div></div>
+    </div>
+    <div class="cost-banner ${gananciaNeta>=0?'green':''}" style="margin-top:10px">
+      <div><div class="big mono">${fmt(gananciaNeta)}</div><div class="lbl">Ganancia neta real</div></div>
+      <div><div class="big mono">${margenNeto.toFixed(1)}%</div><div class="lbl">Margen neto real</div></div>
+    </div>
+    ${mo.horasTotal===0 ? '<div class="notice show" style="margin-top:10px">No hay turnos cargados en Personal para ese mes — la mano de obra está en $0, revisalo si corresponde.</div>' : ''}
+  `;
+
+  /* Reserva para reponer insumos del mes que viene, según el promedio real de ventas */
+  const rangoProx = rangoMesSiguiente(ultimo.mes);
+  const costoReposicion = estimarCostoReposicion(rangoProx.desde, rangoProx.hasta);
+  const reservaEquipos = totalReservaEquipos();
+  const gananciaDisponible = gananciaNeta - costoReposicion - reservaEquipos;
+  const [ry,rm] = rangoProx.desde.split('-');
+  const nombreMesProx = new Date(Number(ry), Number(rm)-1, 1).toLocaleDateString('es-AR', {month:'long', year:'numeric'});
+  const boxReserva = document.getElementById('prod-reserva-reposicion');
+  boxReserva.innerHTML = `
+    <div class="cost-banner">
+      <div><div class="big mono">${fmt(costoReposicion)}</div><div class="lbl">Reservar para insumos de ${nombreMesProx}</div></div>
+      <div><div class="big mono">${fmt(reservaEquipos)}</div><div class="lbl">Amortización de equipos (1 mes)</div></div>
+    </div>
+    <div class="cost-banner ${gananciaDisponible>=0?'green':''}" style="margin-top:10px">
+      <div><div class="big mono">${fmt(gananciaDisponible)}</div><div class="lbl">Ganancia realmente disponible</div></div>
+    </div>
+    <p class="hint" style="margin-top:10px">Calculado con el promedio real de cada sabor por día de semana × costo de receta, proyectado sobre los días de ${nombreMesProx}. No incluye mano de obra ni gastos fijos del mes que viene — solo materia prima.</p>
+  `;
+
   const detalle = document.getElementById('prod-detalle-productos');
   const items = Object.entries(ultimo.porProducto).sort((a,b)=>b[1].ingreso-a[1].ingreso);
   detalle.innerHTML = items.map(([clave,d]) => {
@@ -2432,6 +2597,7 @@ document.getElementById('btn-compartir-prod').onclick = async () => {
 function renderProduccion(){
   prodUltimoAnalisis = state.produccion.ultimoImport;
   renderVincular();
+  renderEquipos();
   renderRentabilidadReal();
   renderObjetivos();
   renderHojaProduccion();
