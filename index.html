@@ -80,7 +80,7 @@ main{padding:18px 16px 80px;max-width:720px;margin:0 auto}
 input,select{width:100%;background:var(--surface);border:1.5px solid var(--line);border-radius:10px;color:var(--ink);padding:12px 11px;font-size:.95rem;font-family:'IBM Plex Mono',monospace}
 input:focus,select:focus{outline:none;border-color:var(--red)}
 select{font-family:'Montserrat',sans-serif;font-weight:500}
-.grid2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.grid2{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:10px}
 .grid-add{display:grid;grid-template-columns:1fr;gap:10px}
 
 .btn{background:var(--red);color:#fff;border:none;border-radius:10px;padding:13px 18px;font-weight:700;font-size:.85rem;letter-spacing:.02em;cursor:pointer;font-family:inherit;width:100%}
@@ -1501,11 +1501,12 @@ function renderTurnosList(){
     const h = horasDeTurno(t.entrada, t.salida);
     return `<div class="prod-item-row">
       <span>${esc(emp?emp.nombre:'(empleado eliminado)')} <span class="pin">${t.fecha} · ${t.turno} · ${t.entrada}–${t.salida}</span></span>
-      <span class="mono">${h.toFixed(1)} h <button class="del" onclick="delTurno('${t.id}')" aria-label="Eliminar" style="margin-left:6px">✕</button></span>
+      <span class="mono">${h.toFixed(1)} h <button class="del" onclick="delTurno(this,'${t.id}')" aria-label="Eliminar" style="margin-left:6px">✕</button></span>
     </div>`;
   }).join('');
 }
-window.delTurno = id => {
+window.delTurno = (btn,id) => {
+  if (!btn.classList.contains('confirm')){ armarConfirm(btn); return; }
   state.personal.turnos = state.personal.turnos.filter(t=>t.id!==id);
   save(); renderTurnosList(); renderPersonalResumen();
 };
@@ -1672,7 +1673,7 @@ function renderGastos(){
         <input value="${esc(g.nombre)}" style="border:none;background:none;font-weight:700;padding:4px 0;width:100%" onchange="setGasto('${g.id}','nombre',this.value)">
       </div>
       <input class="mono" type="number" inputmode="decimal" style="width:110px" value="${g.monto||''}" onchange="setGasto('${g.id}','monto',this.value)">
-      <button class="del" onclick="delGasto('${g.id}')" aria-label="Eliminar">✕</button>
+      <button class="del" onclick="delGasto(this,'${g.id}')" aria-label="Eliminar">✕</button>
     </div>`).join('');
 }
 document.getElementById('btn-add-gasto').onclick = () => {
@@ -1690,7 +1691,8 @@ window.setGasto = (id,campo,v) => {
   g[campo] = campo==='monto' ? (parseFloat(v)||0) : v;
   save(); renderProyecciones();
 };
-window.delGasto = id => {
+window.delGasto = (btn,id) => {
+  if (!btn.classList.contains('confirm')){ armarConfirm(btn); return; }
   state.proyeccion.gastos = state.proyeccion.gastos.filter(g=>g.id!==id);
   save(); renderProyecciones();
 };
@@ -1766,7 +1768,7 @@ function renderProyecciones(){
         </div>
         <div class="act-row">
           <button class="btn done sm" onclick="toggleProyItem(${idx})">Listo</button>
-          <button class="del" onclick="delProyItem(${idx})" style="margin-left:auto" aria-label="Quitar">✕ Quitar</button>
+          <button class="del" onclick="delProyItem(this,${idx})" style="margin-left:auto" aria-label="Quitar">✕ Quitar</button>
         </div>
       </div>`;
     }).join('');
@@ -1820,7 +1822,10 @@ window.setProyItem = (idx,field,v) => {
   }
   save(); renderProyecciones();
 };
-window.delProyItem = idx => { state.proyeccion.items.splice(idx,1); save(); renderProyecciones(); };
+window.delProyItem = (btn,idx) => {
+  if (!btn.classList.contains('confirm')){ armarConfirm(btn); return; }
+  state.proyeccion.items.splice(idx,1); save(); renderProyecciones();
+};
 
 /* ================= RESPALDO ================= */
 document.getElementById('btn-export').onclick = () => {
