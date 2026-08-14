@@ -98,8 +98,9 @@ select{font-family:'Montserrat',sans-serif;font-weight:500}
 .precio-edit{display:flex;align-items:center;gap:7px}
 .precio-edit input{width:100px;padding:9px 9px;font-size:.88rem}
 
-.cost-banner{background:var(--red);border-radius:12px;padding:15px;display:flex;gap:10px;justify-content:space-around;text-align:center;margin-top:14px;color:#fff}
-.cost-banner .big{font-size:1.35rem;font-weight:800}
+.cost-banner{background:var(--red);border-radius:12px;padding:15px;display:flex;gap:8px;justify-content:space-around;text-align:center;margin-top:14px;color:#fff}
+.cost-banner>div{flex:1;min-width:0}
+.cost-banner .big{font-size:clamp(.95rem,4.8vw,1.35rem);font-weight:800;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .cost-banner .lbl{font-size:.62rem;text-transform:uppercase;letter-spacing:.08em;opacity:.9;margin-top:4px;font-weight:600}
 .cost-banner.green{background:var(--green)}
 
@@ -195,7 +196,7 @@ table.prod-tabla input{padding:6px 5px;font-size:.82rem;width:56px;max-width:100
 .tabla-scroll{overflow-x:auto;-webkit-overflow-scrolling:touch;margin:0 -16px;padding:0 16px}
 .tabla-scroll table.prod-tabla{min-width:460px}
 .resumen-mes-banner{display:flex;gap:8px;flex-wrap:wrap;justify-content:space-around;text-align:center;margin-bottom:12px}
-.resumen-mes-banner .stat{flex:1;min-width:100px}
+.resumen-mes-banner .stat{flex:1;min-width:148px}
 .prod-item-row{display:flex;justify-content:space-between;align-items:baseline;padding:8px 2px;border-bottom:1px solid var(--line);font-size:.82rem;gap:8px}
 .prod-item-row:last-child{border-bottom:none}
 .prod-item-row .pin{color:var(--ink-soft);font-size:.72rem}
@@ -2209,10 +2210,11 @@ function renderEquipos(){
       const cant = Number(e.cantidad)||1;
       return `<div class="ing-item">
         <div style="flex:1;min-width:120px">
-          <div class="ing-name">${esc(e.nombre)}${cant>1?` <span style="color:var(--ink-soft);font-weight:600">× ${cant}</span>`:''}</div>
+          <div class="ing-name">${esc(e.nombre)||'(sin nombre)'}${cant>1?` <span style="color:var(--ink-soft);font-weight:600">× ${cant}</span>`:''}</div>
           <div class="ing-detail">${fmt(e.valorReposicion||0)}${cant>1?' c/u':''} · ${e.vidaUtilAnios||0} años · <span class="ing-unit-cost mono">${fmt(reserva)}/mes</span></div>
         </div>
         <button class="btn edit sm" onclick="editarEquipo('${e.id}')">Editar</button>
+        <button class="del" onclick="delEquipoDirecto(this,'${e.id}')" aria-label="Eliminar">✕</button>
       </div>`;
     }).join('');
   }
@@ -2236,6 +2238,11 @@ window.delEquipo = (btn,id) => {
   if (!btn.classList.contains('confirm')){ armarConfirm(btn); return; }
   state.equipos = state.equipos.filter(e=>e.id!==id);
   equipoEditando = null; save(); renderEquipos(); renderRentabilidadReal();
+};
+window.delEquipoDirecto = (btn,id) => {
+  if (!btn.classList.contains('confirm')){ armarConfirm(btn); return; }
+  state.equipos = state.equipos.filter(e=>e.id!==id);
+  save(); renderEquipos(); renderRentabilidadReal();
 };
 document.getElementById('btn-add-equipo').onclick = () => {
   const nid = uid();
