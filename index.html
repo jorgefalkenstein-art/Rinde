@@ -1407,7 +1407,7 @@ document.getElementById('btn-export-costos').onclick = () => {
   const wsBeb = XLSX.utils.json_to_sheet(filasBeb.length ? filasBeb : [{'Bebida':'(ninguna vinculada todavía en Producción)'}]);
   XLSX.utils.book_append_sheet(wb, wsBeb, 'Bebidas');
 
-  const fecha = new Date().toISOString().slice(0,10);
+  const fecha = isoLocal(new Date());
   XLSX.writeFile(wb, `Troppo-costos-${fecha}.xlsx`);
 };
 
@@ -1515,7 +1515,7 @@ window.delTurno = (btn,id) => {
 
 function rangoPeriodo(periodo){
   const hoy = new Date();
-  const iso = d => d.toISOString().slice(0,10);
+  const iso = d => isoLocal(d);
   if (periodo==='hoy') return {desde: iso(hoy), hasta: iso(hoy)};
   if (periodo==='semana'){
     const dia = (hoy.getDay()+6)%7; // lunes=0
@@ -1604,12 +1604,15 @@ function contarDiasSemanaEnRango(desde, hasta){
   return counts;
 }
 function onCambioFechaProyeccion(){
-  save();
   const py = state.proyeccion;
-  const desde = document.getElementById('proy-desde').value;
-  const hasta = document.getElementById('proy-hasta').value;
+  /* Guardamos los valores YA, leídos directo del campo, antes de cualquier render —
+     así no importa si por una fracción de segundo ningún input tiene el foco todavía
+     (pasa al saltar de "Desde" a "Hasta" con un clic o con Tab). */
+  py.desde = document.getElementById('proy-desde').value;
+  py.hasta = document.getElementById('proy-hasta').value;
+  save();
   const eraAutocompletado = py.autoDesde && py.autoHasta;
-  const cambioRango = eraAutocompletado && (py.autoDesde !== desde || py.autoHasta !== hasta);
+  const cambioRango = eraAutocompletado && (py.autoDesde !== py.desde || py.autoHasta !== py.hasta);
   if (cambioRango){ autocompletarDesdeProduccion(false); }
   else { renderProyecciones(); }
 }
@@ -1855,6 +1858,15 @@ document.getElementById('file-import').onchange = e => {
 
 /* ================= PRODUCCIÓN ================= */
 const DIAS_SEMANA = ['domingo','lunes','martes','miercoles','jueves','viernes','sabado'];
+/* Convierte una fecha a texto YYYY-MM-DD usando el día/mes/año LOCAL del dispositivo,
+   nunca .toISOString() (esa convierte a UTC y corre la fecha un día para atrás/adelante
+   según la hora y el uso horario — ej: en Argentina, de noche pasadas las 21hs). */
+function isoLocal(d){
+  const y = d.getFullYear();
+  const m = String(d.getMonth()+1).padStart(2,'0');
+  const day = String(d.getDate()).padStart(2,'0');
+  return `${y}-${m}-${day}`;
+}
 const DIA_LABEL = {domingo:'Domingo',lunes:'Lunes',martes:'Martes',miercoles:'Miércoles',jueves:'Jueves',viernes:'Viernes',sabado:'Sábado'};
 
 /* Lee una hoja tipo informe Pedix: fila 1 = título de la hoja, fila 2 = encabezados, resto = datos */
@@ -1956,7 +1968,7 @@ document.getElementById('file-prod-xlsx').onchange = e => {
         const detalles = row['Detalles'];
         const fecha = fechaPorCodigo[codigo];
         const diaSemana = fecha ? DIAS_SEMANA[fecha.getDay()] : null;
-        const fechaIso = fecha ? fecha.toISOString().slice(0,10) : null;
+        const fechaIso = fecha ? isoLocal(fecha) : null;
         const esBebida = /gaseosa|cerveza/i.test(categoria);
         const esDocenaEmpanadas = /docena/i.test(categoria) || /docena/i.test(producto);
 
@@ -2155,14 +2167,14 @@ function primerYUltimoDiaMes(mesStr){
   const [y,m] = mesStr.split('-').map(Number);
   const primer = `${mesStr}-01`;
   const ultimo = new Date(y, m, 0);
-  return { primer, ultimo: ultimo.toISOString().slice(0,10) };
+  return { primer, ultimo: isoLocal(ultimo) };
 }
 function rangoMesSiguiente(mesStr){
   const [y,m] = mesStr.split('-').map(Number);
   let ny = y, nm = m+1;
   if (nm > 12){ nm = 1; ny++; }
   const desde = `${ny}-${String(nm).padStart(2,'0')}-01`;
-  const hasta = new Date(ny, nm, 0).toISOString().slice(0,10);
+  const hasta = isoLocal(new Date(ny, nm, 0));
   return { desde, hasta };
 }
 /* Estima cuánto va a costar la materia prima del próximo mes, usando el promedio real de ventas por día de semana */
@@ -2354,7 +2366,7 @@ function fechaProximoDia(diaSemana){
   const objetivo = DIAS_SEMANA.indexOf(diaSemana);
   const diff = (objetivo - hoy.getDay() + 7) % 7;
   const f = new Date(hoy); f.setDate(hoy.getDate()+diff);
-  return f.toISOString().slice(0,10);
+  return isoLocal(f);
 }
 function claveEsBebida(clave){ return state.produccion.origenes[clave] === 'bebida'; }
 function claveEsEmpanada(clave){
