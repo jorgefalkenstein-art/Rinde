@@ -388,9 +388,10 @@ table.prod-tabla input{padding:6px 5px;font-size:.82rem;width:56px;max-width:100
 
     <div id="prod-sub-importar" hidden>
       <div class="card">
-        <h3 style="margin-bottom:8px">Importar informe mensual</h3>
-        <p class="hint" style="margin-top:0;margin-bottom:12px">Subí el Excel con las solapas <b>Pedidos</b> y <b>Detalle de productos</b> (el informe completo del mes, no la carta). Desarma automáticamente las docenas y promos en sus sabores reales.</p>
-        <button class="btn" id="btn-prod-xlsx">Importar informe del mes</button>
+        <h3 style="margin-bottom:8px">Importar informe de ventas</h3>
+        <p class="hint" style="margin-top:0;margin-bottom:12px">Subí el Excel de Pedix con las solapas <b>Pedidos</b> y <b>Detalle de productos</b> (no la carta). Podés subir el mes completo de una vez, o ir subiendo semana por semana — se van acumulando solas hasta completar el mes calendario. Si volvés a subir una semana ya cargada, corrige en vez de duplicar.</p>
+        <button class="btn" id="btn-prod-xlsx">Importar informe</button>
+        <p class="hint" style="margin-top:6px">Nota: Pedix exporta con formato mensual de fábrica — si querés generar solo una semana, hay que pedirle al soporte de Pedix el rango de fechas que necesitás, o exportar el mes y filtrarlo aparte antes de subirlo.</p>
         <input type="file" id="file-prod-xlsx" accept=".xlsx,.xls" style="display:none">
         <div class="notice" id="notice-prod-xlsx"></div>
       </div>
@@ -422,6 +423,13 @@ table.prod-tabla input{padding:6px 5px;font-size:.82rem;width:56px;max-width:100
         <div id="prod-reserva-reposicion"></div>
       </div>
       <div class="card">
+        <h3 style="margin-bottom:4px">Stock actual</h3>
+        <p class="hint" style="margin-top:0;margin-bottom:10px">Cuánto tenés ya producido y congelado de cada sabor, ahora mismo. Cargalo una vez al contar físicamente el freezer. De ahí en más: sube solo cuando marcás "Producido" en la Hoja, y baja solo cada vez que importás el informe mensual (te descuenta lo que se vendió ese mes). Podés corregirlo a mano en cualquier momento si hacés un recuento físico.</p>
+        <div class="search-box" style="margin-bottom:10px"><input id="stock-search" placeholder="Buscar sabor..." autocomplete="off"></div>
+        <div id="stock-actual-list"></div>
+        <div id="stock-actual-total" style="margin-top:10px"></div>
+      </div>
+      <div class="card">
         <h3 style="margin-bottom:4px">Fondo de amortización de equipos</h3>
         <p class="hint" style="margin-top:0;margin-bottom:10px">Horno, freezer, heladera, mostrador, lo que sea. Valor de reposición ÷ años de vida útil = cuánto conviene reservar por mes para poder reemplazarlo cuando toque, sin sorpresas.</p>
         <div id="equipos-list"></div>
@@ -445,6 +453,12 @@ table.prod-tabla input{padding:6px 5px;font-size:.82rem;width:56px;max-width:100
     </div>
 
     <div id="prod-sub-hoja">
+    <div class="card" id="card-resumen-semanal" style="display:none">
+      <h3 style="margin-bottom:4px">Resumen semanal — Empanadas</h3>
+      <p class="hint" style="margin-top:0;margin-bottom:10px">Sumando el objetivo de todos los días que trabajás, y descontando tu stock actual, esto es lo que hay que producir en total para cubrir toda la semana entrante — repartilo en tus días de producción como te convenga.</p>
+      <div id="resumen-semanal-list"></div>
+      <div id="resumen-semanal-total" style="margin-top:10px"></div>
+    </div>
     <div class="card">
       <div class="prod-header" style="margin-bottom:10px">
         <h3 style="flex:1">Hoja de producción</h3>
@@ -608,7 +622,7 @@ function migrarGastosViejos(proy){
     if (Number(monto) > 0) proy.gastos.push({id:uid(), nombre, monto:Number(monto)});
   });
 }
-const PRODUCCION_DEFAULT = {vinculos:{}, objetivos:{}, promedios:{}, extras:{}, historico:[], ultimoImport:null, registro:{}, etiquetas:{}, origenes:{}};
+const PRODUCCION_DEFAULT = {vinculos:{}, objetivos:{}, promedios:{}, extras:{}, historico:[], ultimoImport:null, registro:{}, etiquetas:{}, origenes:{}, stockActual:{}, mesesReconciliados:{}, ventasPorFecha:{}, stockDescontadoPorFecha:{}};
 const PERSONAL_DEFAULT = {empleados:[], turnos:[]};
 const ESTADO_DEFAULT = {ingredientes:[],preparaciones:[],productos:[],ventas:[],margenObj:60,proyeccion:null,produccion:null,personal:null,equipos:null};
 function estadoBase(datos){
@@ -626,6 +640,10 @@ function estadoBase(datos){
   base.produccion.objetivos = Object.assign({}, PRODUCCION_DEFAULT.objetivos, (datos && datos.produccion && datos.produccion.objetivos) || {});
   base.produccion.promedios = Object.assign({}, PRODUCCION_DEFAULT.promedios, (datos && datos.produccion && datos.produccion.promedios) || {});
   base.produccion.extras = Object.assign({}, PRODUCCION_DEFAULT.extras, (datos && datos.produccion && datos.produccion.extras) || {});
+  base.produccion.stockActual = Object.assign({}, PRODUCCION_DEFAULT.stockActual, (datos && datos.produccion && datos.produccion.stockActual) || {});
+  base.produccion.mesesReconciliados = Object.assign({}, PRODUCCION_DEFAULT.mesesReconciliados, (datos && datos.produccion && datos.produccion.mesesReconciliados) || {});
+  base.produccion.ventasPorFecha = Object.assign({}, PRODUCCION_DEFAULT.ventasPorFecha, (datos && datos.produccion && datos.produccion.ventasPorFecha) || {});
+  base.produccion.stockDescontadoPorFecha = Object.assign({}, PRODUCCION_DEFAULT.stockDescontadoPorFecha, (datos && datos.produccion && datos.produccion.stockDescontadoPorFecha) || {});
   base.produccion.registro = Object.assign({}, PRODUCCION_DEFAULT.registro, (datos && datos.produccion && datos.produccion.registro) || {});
   base.produccion.etiquetas = Object.assign({}, PRODUCCION_DEFAULT.etiquetas, (datos && datos.produccion && datos.produccion.etiquetas) || {});
   base.produccion.origenes = Object.assign({}, PRODUCCION_DEFAULT.origenes, (datos && datos.produccion && datos.produccion.origenes) || {});
@@ -1929,8 +1947,6 @@ function registrarEtiqueta(clave, nombreVisible){
 }
 function etiquetaDe(clave){ return state.produccion.etiquetas[clave] || clave; }
 
-let prodUltimoAnalisis = null; // {mes, ventas:[{nombre,clave,cantidad,ingreso,diaSemana,fechaIso}]}
-
 document.getElementById('btn-prod-xlsx').onclick = () => document.getElementById('file-prod-xlsx').click();
 document.getElementById('file-prod-xlsx').onchange = e => {
   const f = e.target.files[0]; if (!f) return;
@@ -1995,16 +2011,14 @@ document.getElementById('file-prod-xlsx').onchange = e => {
         return;
       }
 
-      const fechasValidas = ventasUnbundled.map(v=>v.fechaIso).filter(Boolean).sort();
-      const mes = fechasValidas.length ? fechasValidas[Math.floor(fechasValidas.length/2)].slice(0,7) : 'sin-fecha';
-      prodUltimoAnalisis = {mes, ventas: ventasUnbundled};
-      state.produccion.ultimoImport = prodUltimoAnalisis;
+      const fechasNuevas = fusionarVentasPorFecha(ventasUnbundled);
+      const mesesTocados = [...new Set(fechasNuevas.map(f=>f.slice(0,7)))];
       save();
-      procesarAnalisisProduccion();
-      aviso('notice-prod-xlsx', `Informe procesado: ${ventasUnbundled.length} líneas de venta (mes ${mes}).${canceladosOmitidos?' Se excluyeron '+canceladosOmitidos+' pedidos cancelados.':''}`);
+      const descontado = procesarAnalisisProduccion(fechasNuevas);
+      aviso('notice-prod-xlsx', `Informe procesado: ${ventasUnbundled.length} líneas de venta, ${fechasNuevas.length} día(s) (${mesesTocados.join(', ')}).${canceladosOmitidos?' Se excluyeron '+canceladosOmitidos+' pedidos cancelados.':''}${descontado?' Se descontaron '+descontado+' unidades del stock por lo vendido esos días.':''}`);
     } catch(err){
       console.error(err);
-      aviso('notice-prod-xlsx','No pude leer el archivo. ¿Es el informe mensual exportado de Pedix?');
+      aviso('notice-prod-xlsx','No pude leer el archivo. ¿Es el informe exportado de Pedix?');
     }
   };
   r.readAsArrayBuffer(f);
@@ -2012,14 +2026,20 @@ document.getElementById('file-prod-xlsx').onchange = e => {
 };
 
 let vincularFiltro = '';
+function hayDatosImportados(){ return Object.keys(state.produccion.ventasPorFecha||{}).length > 0; }
+function todasLasVentasAcumuladas(){
+  const out = [];
+  Object.values(state.produccion.ventasPorFecha||{}).forEach(lineas => out.push(...lineas));
+  return out;
+}
 function renderVincular(){
   const card = document.getElementById('card-vincular');
-  if (!prodUltimoAnalisis){ card.style.display = 'none'; return; }
+  if (!hayDatosImportados()){ card.style.display = 'none'; return; }
   card.style.display = 'block';
 
   const vistos = new Set();
   const todos = [];
-  prodUltimoAnalisis.ventas.forEach(v => {
+  todasLasVentasAcumuladas().forEach(v => {
     if (vistos.has(v.clave)) return;
     vistos.add(v.clave);
     todos.push(v.clave);
@@ -2059,23 +2079,64 @@ window.setVinculoProduccion = (clave, ref) => {
 document.getElementById('btn-recalcular').onclick = () => { procesarAnalisisProduccion(); };
 
 /* Calcula objetivos por día de semana + ganancia real del mes, a partir del último análisis */
-function procesarAnalisisProduccion(){
-  if (!prodUltimoAnalisis) return;
-  const ventas = prodUltimoAnalisis.ventas;
-
-  /* Objetivos: para empanadas, máximo por fecha redondeado a múltiplo de 6 (asegurar stock congelado).
-     Para pizzas/bebidas: PROMEDIO real por día de semana (se arman/reponen al momento, no tiene sentido
-     sumar el pico independiente de cada sabor — eso arma un día "Frankenstein" que nunca pasó). */
+/* Fusiona las líneas de venta recién parseadas en el acumulado por fecha — reemplaza cada
+   fecha puntual con los datos nuevos, así una semana que se vuelve a subir corrige en vez
+   de duplicar, y semanas distintas se van sumando solas hasta completar el mes calendario. */
+function fusionarVentasPorFecha(ventasUnbundled){
   const porFecha = {};
-  ventas.forEach(v => {
+  ventasUnbundled.forEach(v => {
     if (!v.fechaIso) return;
+    porFecha[v.fechaIso] = porFecha[v.fechaIso] || [];
+    porFecha[v.fechaIso].push(v);
+  });
+  const fechasTocadas = Object.keys(porFecha);
+  fechasTocadas.forEach(fecha => { state.produccion.ventasPorFecha[fecha] = porFecha[fecha]; });
+  return fechasTocadas;
+}
+/* Cotejo automático de stock por fecha: si esa fecha ya se había descontado antes (se está
+   corrigiendo una semana re-subida), primero devuelve lo viejo y después resta lo nuevo —
+   así nunca se descuenta la misma venta dos veces ni queda plata mal restada. */
+function reconciliarStockPorFechas(fechas){
+  let unidadesDescontadas = 0;
+  fechas.forEach(fecha => {
+    const previo = state.produccion.stockDescontadoPorFecha[fecha];
+    if (previo){
+      Object.entries(previo).forEach(([clave,cant]) => {
+        state.produccion.stockActual[clave] = (state.produccion.stockActual[clave]||0) + cant;
+      });
+    }
+    const lineas = state.produccion.ventasPorFecha[fecha] || [];
+    const nuevo = {};
+    lineas.forEach(v => { nuevo[v.clave] = (nuevo[v.clave]||0) + v.cantidad; });
+    Object.entries(nuevo).forEach(([clave,cant]) => {
+      const actual = state.produccion.stockActual[clave] || 0;
+      unidadesDescontadas += Math.min(actual, cant);
+      const resultado = Math.max(0, actual - cant);
+      if (resultado>0) state.produccion.stockActual[clave] = resultado; else delete state.produccion.stockActual[clave];
+    });
+    state.produccion.stockDescontadoPorFecha[fecha] = nuevo;
+  });
+  return unidadesDescontadas;
+}
+/* Recalcula objetivos/promedios (del mes más reciente con datos) y la ganancia real de
+   CADA mes presente en el acumulado — así julio queda quieto mientras agosto se va llenando
+   semana a semana, y el mes activo para producir siempre es el más nuevo. */
+function recalcularTodoDesdeAcumulado(){
+  const fechas = Object.keys(state.produccion.ventasPorFecha).sort();
+  if (!fechas.length) return;
+  const todasVentas = todasLasVentasAcumuladas();
+  const mesActivo = fechas[fechas.length-1].slice(0,7);
+  const ventasMesActivo = todasVentas.filter(v => v.fechaIso && v.fechaIso.slice(0,7)===mesActivo);
+
+  const porFecha = {};
+  ventasMesActivo.forEach(v => {
     porFecha[v.fechaIso] = porFecha[v.fechaIso] || {};
     porFecha[v.fechaIso][v.clave] = (porFecha[v.fechaIso][v.clave]||0) + v.cantidad;
   });
   const maxPorDia = {}, sumaPorDia = {}, diasPorSemana = {};
   Object.keys(porFecha).forEach(fechaIso => {
     const dia = DIAS_SEMANA[new Date(fechaIso+'T12:00:00').getDay()];
-    diasPorSemana[dia] = (diasPorSemana[dia]||0) + 1; // mismo denominador para todos los sabores de ese día
+    diasPorSemana[dia] = (diasPorSemana[dia]||0) + 1;
   });
   Object.entries(porFecha).forEach(([fechaIso, sabores]) => {
     const dia = DIAS_SEMANA[new Date(fechaIso+'T12:00:00').getDay()];
@@ -2096,43 +2157,53 @@ function procesarAnalisisProduccion(){
     objetivos[dia] = {};
     Object.entries(sabores).forEach(([clave,max]) => {
       if (claveEsEmpanada(clave)){
-        objetivos[dia][clave] = Math.ceil(max/6)*6; // bandeja de producción
+        objetivos[dia][clave] = Math.ceil(max/6)*6;
       } else {
         const prom = (promedios[dia] && promedios[dia][clave]) || 0;
-        objetivos[dia][clave] = Math.round(prom); // día típico real, sin piso mínimo artificial
+        objetivos[dia][clave] = Math.round(prom);
       }
     });
   });
   state.produccion.objetivos = objetivos;
   state.produccion.promedios = promedios;
 
-  /* Ganancia real: usa el costo de la receta vinculada + el extra por unidad (ej: bebida incluida en un combo) */
-  let ingresoTotal = 0, costoTotal = 0, sinVincularCant = 0;
-  const porProducto = {};
-  ventas.forEach(v => {
-    ingresoTotal += v.ingreso;
-    const ref = state.produccion.vinculos[v.clave];
-    const costoUnitBase = ref ? costoVinculo(ref) : null;
-    const extraUnit = Number(state.produccion.extras[v.clave])||0;
-    const costoUnit = (costoUnitBase!==null) ? costoUnitBase + extraUnit : null;
-    const costoLinea = (costoUnit!==null) ? costoUnit*v.cantidad : 0;
-    if (costoUnit===null) sinVincularCant += v.cantidad;
-    costoTotal += costoLinea;
-    porProducto[v.clave] = porProducto[v.clave] || {cant:0, ingreso:0, costo:0, vinculado: !!ref};
-    porProducto[v.clave].cant += v.cantidad;
-    porProducto[v.clave].ingreso += v.ingreso;
-    porProducto[v.clave].costo += costoLinea;
+  const mesesPresentes = [...new Set(fechas.map(f=>f.slice(0,7)))];
+  const historicoNuevo = [];
+  mesesPresentes.forEach(mes => {
+    const ventasDeEseMes = todasVentas.filter(v=>v.fechaIso && v.fechaIso.slice(0,7)===mes);
+    let ingresoTotal=0, costoTotal=0, sinVincularCant=0;
+    const porProducto = {};
+    ventasDeEseMes.forEach(v => {
+      ingresoTotal += v.ingreso;
+      const ref = state.produccion.vinculos[v.clave];
+      const costoUnitBase = ref ? costoVinculo(ref) : null;
+      const extraUnit = Number(state.produccion.extras[v.clave])||0;
+      const costoUnit = (costoUnitBase!==null) ? costoUnitBase + extraUnit : null;
+      const costoLinea = (costoUnit!==null) ? costoUnit*v.cantidad : 0;
+      if (costoUnit===null) sinVincularCant += v.cantidad;
+      costoTotal += costoLinea;
+      porProducto[v.clave] = porProducto[v.clave] || {cant:0, ingreso:0, costo:0, vinculado: !!ref};
+      porProducto[v.clave].cant += v.cantidad;
+      porProducto[v.clave].ingreso += v.ingreso;
+      porProducto[v.clave].costo += costoLinea;
+    });
+    const existente = state.produccion.historico.find(h=>h.mes===mes);
+    historicoNuevo.push({
+      mes, ingresoTotal, costoTotal, gananciaTotal: ingresoTotal-costoTotal,
+      porProducto, sinVincularCant,
+      importadoEn: existente ? existente.importadoEn : Date.now()
+    });
   });
-  const entrada = {
-    mes: prodUltimoAnalisis.mes, ingresoTotal, costoTotal,
-    gananciaTotal: ingresoTotal-costoTotal, porProducto, sinVincularCant,
-    importadoEn: Date.now()
-  };
-  state.produccion.historico = state.produccion.historico.filter(h=>h.mes!==entrada.mes);
-  state.produccion.historico.push(entrada);
-  state.produccion.historico.sort((a,b)=>(b.importadoEn||0)-(a.importadoEn||0));
-
+  state.produccion.historico = historicoNuevo.sort((a,b)=>b.mes.localeCompare(a.mes));
+}
+/* Punto de entrada: se llama al importar un archivo nuevo (con fechasNuevas, para cotejar
+   stock) o al recalcular vínculos (sin fechasNuevas, no toca el stock — no hay ventas nuevas). */
+function procesarAnalisisProduccion(fechasNuevas){
+  if (!hayDatosImportados()) return 0;
+  recalcularTodoDesdeAcumulado();
+  const unidadesDescontadas = fechasNuevas ? reconciliarStockPorFechas(fechasNuevas) : 0;
   save(); renderProduccion();
+  return unidadesDescontadas;
 }
 
 let objDiaActivo = null;
@@ -2195,6 +2266,52 @@ function estimarCostoReposicion(desde, hasta){
   });
   return costoTotal;
 }
+/* Valor (en costo de ingredientes) de la mercadería ya producida que tenés en stock/freezer */
+function valorStockActual(){
+  let total = 0;
+  Object.entries(state.produccion.stockActual||{}).forEach(([clave,cant]) => {
+    if (!cant) return;
+    const ref = state.produccion.vinculos[clave];
+    if (!ref) return;
+    const costoUnit = costoVinculo(ref);
+    if (costoUnit===null) return;
+    const extra = Number(state.produccion.extras[clave])||0;
+    total += (costoUnit+extra) * cant;
+  });
+  return total;
+}
+let stockFiltro = '';
+function renderStockActual(){
+  const box = document.getElementById('stock-actual-list');
+  if (!box) return;
+  /* mostramos todo sabor vinculado (empanadas, pizzas, bebidas) que aparezca en algún objetivo */
+  const claves = new Set();
+  Object.values(state.produccion.objetivos||{}).forEach(sabores => Object.keys(sabores).forEach(c=>claves.add(c)));
+  Object.keys(state.produccion.stockActual||{}).forEach(c=>claves.add(c));
+  let lista = [...claves].filter(c=>state.produccion.vinculos[c]);
+  const f = stockFiltro.trim().toLowerCase();
+  if (f) lista = lista.filter(c => etiquetaDe(c).toLowerCase().includes(f));
+  lista.sort((a,b)=>etiquetaDe(a).localeCompare(etiquetaDe(b),'es'));
+
+  if (!lista.length){ box.innerHTML = '<div class="empty">Todavía no hay sabores vinculados. Importá un informe mensual y vinculá sabores primero.</div>'; document.getElementById('stock-actual-total').innerHTML=''; return; }
+
+  box.innerHTML = lista.map(clave => {
+    const cant = state.produccion.stockActual[clave] || 0;
+    return `<div class="obj-row">
+      <span>${esc(etiquetaDe(clave))}</span>
+      <input class="mono" type="number" inputmode="numeric" value="${cant||''}" placeholder="0" onchange="setStockActual('${clave}',this.value)">
+    </div>`;
+  }).join('');
+  document.getElementById('stock-actual-total').innerHTML =
+    `<div class="cost-banner" style="margin:0"><div><div class="big mono">${fmt(valorStockActual())}</div><div class="lbl">Valor total del stock actual</div></div></div>`;
+}
+window.setStockActual = (clave, v) => {
+  const n = Math.max(0, parseInt(v)||0);
+  if (n>0) state.produccion.stockActual[clave] = n; else delete state.produccion.stockActual[clave];
+  save(); renderStockActual(); renderRentabilidadReal(); renderResumenSemanal();
+};
+document.getElementById('stock-search').oninput = e => { stockFiltro = e.target.value; renderStockActual(); };
+
 /* ================= EQUIPOS (fondo de amortización) ================= */
 let equipoEditando = null;
 function reservaMensualEquipo(e){
@@ -2323,15 +2440,22 @@ function renderRentabilidadReal(){
     ${mo.horasTotal===0 ? '<div class="notice show" style="margin-top:10px">No hay turnos cargados en Personal para ese mes — la mano de obra está en $0, revisalo si corresponde.</div>' : ''}
   `;
 
-  /* Reserva para reponer insumos del mes que viene, según el promedio real de ventas */
+  /* Reserva para reponer insumos del mes que viene, según el promedio real de ventas,
+     descontando el valor de la mercadería que ya tenés en stock (no hace falta comprar de nuevo lo que ya está hecho) */
   const rangoProx = rangoMesSiguiente(ultimo.mes);
-  const costoReposicion = estimarCostoReposicion(rangoProx.desde, rangoProx.hasta);
+  const costoReposicionBruto = estimarCostoReposicion(rangoProx.desde, rangoProx.hasta);
+  const valorStock = valorStockActual();
+  const costoReposicion = Math.max(0, costoReposicionBruto - valorStock);
   const reservaEquipos = totalReservaEquipos();
   const gananciaDisponible = gananciaNeta - costoReposicion - reservaEquipos;
   const [ry,rm] = rangoProx.desde.split('-');
   const nombreMesProx = new Date(Number(ry), Number(rm)-1, 1).toLocaleDateString('es-AR', {month:'long', year:'numeric'});
   const boxReserva = document.getElementById('prod-reserva-reposicion');
   boxReserva.innerHTML = `
+    <div class="resumen-mes-banner" style="margin-bottom:10px">
+      <div class="stat"><div class="cost-banner" style="margin:0"><div><div class="big mono">${fmt(costoReposicionBruto)}</div><div class="lbl">Necesidad bruta</div></div></div></div>
+      <div class="stat"><div class="cost-banner" style="margin:0;background:var(--green)"><div><div class="big mono">-${fmt(valorStock)}</div><div class="lbl">Ya tenés en stock</div></div></div></div>
+    </div>
     <div class="cost-banner">
       <div><div class="big mono">${fmt(costoReposicion)}</div><div class="lbl">Reservar para insumos de ${nombreMesProx}</div></div>
       <div><div class="big mono">${fmt(reservaEquipos)}</div><div class="lbl">Amortización de equipos (1 mes)</div></div>
@@ -2339,7 +2463,7 @@ function renderRentabilidadReal(){
     <div class="cost-banner ${gananciaDisponible>=0?'green':''}" style="margin-top:10px">
       <div><div class="big mono">${fmt(gananciaDisponible)}</div><div class="lbl">Ganancia realmente disponible</div></div>
     </div>
-    <p class="hint" style="margin-top:10px">Calculado con el promedio real de cada sabor por día de semana × costo de receta, proyectado sobre los días de ${nombreMesProx}. No incluye mano de obra ni gastos fijos del mes que viene — solo materia prima.</p>
+    <p class="hint" style="margin-top:10px">Calculado con el promedio real de cada sabor por día de semana × costo de receta, proyectado sobre los días de ${nombreMesProx}, menos el valor de lo que ya tenés producido en stock (cargalo en "Stock actual" abajo). No incluye mano de obra ni gastos fijos del mes que viene — solo materia prima.</p>
   `;
 
   const detalle = document.getElementById('prod-detalle-productos');
@@ -2356,8 +2480,21 @@ function renderRentabilidadReal(){
 window.setMesGanancia = mes => { mesGananciaSeleccionado = mes; renderRentabilidadReal(); };
 window.borrarMesHistorico = mes => {
   state.produccion.historico = state.produccion.historico.filter(h=>h.mes!==mes);
+  delete state.produccion.mesesReconciliados[mes];
+  /* devolver al stock lo que se había descontado por las fechas de ese mes, y sacarlas del acumulado */
+  Object.keys(state.produccion.ventasPorFecha).filter(f=>f.slice(0,7)===mes).forEach(fecha => {
+    const previo = state.produccion.stockDescontadoPorFecha[fecha];
+    if (previo){
+      Object.entries(previo).forEach(([clave,cant]) => {
+        state.produccion.stockActual[clave] = (state.produccion.stockActual[clave]||0) + cant;
+      });
+      delete state.produccion.stockDescontadoPorFecha[fecha];
+    }
+    delete state.produccion.ventasPorFecha[fecha];
+  });
+  recalcularTodoDesdeAcumulado();
   mesGananciaSeleccionado = null;
-  save(); renderRentabilidadReal();
+  save(); renderProduccion();
 };
 
 /* Hoja de producción imprimible por día */
@@ -2437,6 +2574,41 @@ document.querySelectorAll('#prod-tipo-toggle .tt-btn').forEach(btn => btn.onclic
   renderHojaProduccion();
 });
 
+function renderResumenSemanal(){
+  const card = document.getElementById('card-resumen-semanal');
+  const dias = Object.keys(state.produccion.objetivos||{});
+  if (!dias.length){ card.style.display = 'none'; return; }
+
+  /* sumamos el objetivo de cada sabor de empanada en TODOS los días que trabajás */
+  const totalPorSabor = {};
+  dias.forEach(dia => {
+    Object.entries(state.produccion.objetivos[dia]||{}).forEach(([clave,obj]) => {
+      if (!claveEsEmpanada(clave)) return;
+      totalPorSabor[clave] = (totalPorSabor[clave]||0) + obj;
+    });
+  });
+  const claves = Object.keys(totalPorSabor);
+  if (!claves.length){ card.style.display = 'none'; return; }
+  card.style.display = 'block';
+
+  claves.sort((a,b)=>etiquetaDe(a).localeCompare(etiquetaDe(b),'es'));
+  let totalProducir = 0, totalObjetivo = 0, totalStock = 0;
+  document.getElementById('resumen-semanal-list').innerHTML = claves.map(clave => {
+    const objetivoSemana = totalPorSabor[clave];
+    const stock = state.produccion.stockActual[clave] || 0;
+    const producir = Math.max(0, objetivoSemana - stock);
+    totalProducir += producir; totalObjetivo += objetivoSemana; totalStock += Math.min(stock, objetivoSemana);
+    return `<div class="prod-item-row">
+      <span>${esc(etiquetaDe(clave))} <span class="pin">objetivo ${objetivoSemana} · stock ${stock}</span></span>
+      <span class="mono">${producir>0 ? 'producir '+producir : '✓ cubierto'}</span>
+    </div>`;
+  }).join('');
+  document.getElementById('resumen-semanal-total').innerHTML = `
+    <div class="cost-banner">
+      <div><div class="big mono">${totalObjetivo}</div><div class="lbl">Objetivo total semana</div></div>
+      <div><div class="big mono">${totalProducir}</div><div class="lbl">A producir en total</div></div>
+    </div>`;
+}
 function renderHojaProduccion(){
   const dia = document.getElementById('prod-dia-select').value;
   const fechaIso = fechaProximoDia(dia);
@@ -2460,7 +2632,7 @@ function renderHojaProduccion(){
         <thead><tr><th>Sabor</th><th>Objetivo</th><th>Stock inicial</th><th>Producir</th><th>Producido</th></tr></thead>
         <tbody>
           ${sabores.map(([clave,obj]) => {
-            const r = reg[clave] || {stockInicial:0, producido:0};
+            const r = reg[clave] || {stockInicial: state.produccion.stockActual[clave]||0, producido:0};
             const producir = Math.max(0, obj - (Number(r.stockInicial)||0));
             return `<tr>
               <td>${esc(etiquetaDe(clave))}</td>
@@ -2515,7 +2687,7 @@ function renderHojaProduccion(){
         <thead><tr><th>Bebida</th><th>Objetivo</th><th>Stock actual</th><th>Reponer</th><th>Repuesto</th></tr></thead>
         <tbody>
           ${sabores.map(([clave,obj]) => {
-            const r = reg[clave] || {stockInicial:0, producido:0};
+            const r = reg[clave] || {stockInicial: state.produccion.stockActual[clave]||0, producido:0};
             const reponer = Math.max(0, obj - (Number(r.stockInicial)||0));
             return `<tr>
               <td>${esc(etiquetaDe(clave))}</td>
@@ -2595,9 +2767,20 @@ function renderPrintArea(dia, fechaIso, tipo, sabores, reg, insumosList){
 }
 window.setRegistroProd = (fechaIso, clave, campo, v) => {
   state.produccion.registro[fechaIso] = state.produccion.registro[fechaIso] || {};
-  state.produccion.registro[fechaIso][clave] = state.produccion.registro[fechaIso][clave] || {stockInicial:0, producido:0};
-  state.produccion.registro[fechaIso][clave][campo] = Math.max(0, parseInt(v)||0);
-  save(); renderHojaProduccion();
+  const reg = state.produccion.registro[fechaIso][clave] || {stockInicial: state.produccion.stockActual[clave]||0, producido:0};
+  const nuevoValor = Math.max(0, parseInt(v)||0);
+  if (campo==='stockInicial'){
+    /* estás corrigiendo el stock real (recuento) -> sincroniza el stock central */
+    state.produccion.stockActual[clave] = nuevoValor;
+  }
+  if (campo==='producido'){
+    /* lo que produjiste hoy se suma al stock central, para que mañana ya aparezca cargado */
+    const delta = nuevoValor - (reg.producido||0);
+    state.produccion.stockActual[clave] = Math.max(0, (state.produccion.stockActual[clave]||0) + delta);
+  }
+  reg[campo] = nuevoValor;
+  state.produccion.registro[fechaIso][clave] = reg;
+  save(); renderHojaProduccion(); renderResumenSemanal();
 };
 document.getElementById('prod-dia-select').onchange = renderHojaProduccion;
 document.getElementById('btn-imprimir-prod').onclick = () => { renderHojaProduccion(); setTimeout(()=>window.print(), 80); };
@@ -2640,11 +2823,12 @@ document.getElementById('btn-compartir-prod').onclick = async () => {
 };
 
 function renderProduccion(){
-  prodUltimoAnalisis = state.produccion.ultimoImport;
   renderVincular();
   renderEquipos();
+  renderStockActual();
   renderRentabilidadReal();
   renderObjetivos();
+  renderResumenSemanal();
   renderHojaProduccion();
   document.getElementById('ganancia-vacio').style.display = state.produccion.historico.length ? 'none' : 'block';
 }
