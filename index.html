@@ -319,8 +319,8 @@ table.prod-tabla input{padding:6px 5px;font-size:.82rem;width:56px;max-width:100
     </div>
 
     <div class="card">
-      <h3 style="margin-bottom:3px">Lista de precios</h3>
-      <p class="hint" style="margin-top:0;margin-bottom:10px">Ordenada alfabéticamente. Tocá <b>Editar</b> en un ingrediente para cambiar su precio sin riesgo de tocarlo por accidente.</p>
+      <h3 style="margin-bottom:3px">Lista de precios<button type="button" class="help-btn" onclick="toggleAyuda('ayuda-ing-lista')">?</button></h3>
+      <div class="help-text" id="ayuda-ing-lista">Ordenada alfabéticamente. Tocá Editar en un ingrediente para cambiar su precio sin riesgo de tocarlo por accidente.</div>
       <div class="count-tag" id="ing-count"></div>
       <div id="ing-list"></div>
     </div>
@@ -331,9 +331,8 @@ table.prod-tabla input{padding:6px 5px;font-size:.82rem;width:56px;max-width:100
     <div class="page-title">Preparaciones</div>
     <div class="page-sub">Lo que hacés en tanda y después usás en los productos.</div>
     <div class="card info-box" style="margin-bottom:14px">
-      <h3>¿Qué es una preparación?</h3>
-      <p class="hint" style="color:var(--ink)">Prepizzas, masa de empanadas, salsa, relleno. Cargás la receta de la tanda, indicás cuánto rinde, y el sistema calcula el costo por unidad o por gramo. Después aparece como un ingrediente más (marcado con ★) en las recetas.</p>
-      <p class="hint" style="color:var(--green);font-weight:600">Ej: "Prepizza grande" → 1000 g harina + levadura + agua... rinde <b>4 unidades</b> → costo por prepizza.</p>
+      <h3>¿Qué es una preparación?<button type="button" class="help-btn" onclick="toggleAyuda('ayuda-prep-que-es')" style="border-color:var(--green);color:var(--green)">?</button></h3>
+      <div class="help-text" id="ayuda-prep-que-es" style="background:#fff">Prepizzas, masa de empanadas, salsa, relleno. Cargás la receta de la tanda, indicás cuánto rinde, y el sistema calcula el costo por unidad o por gramo. Después aparece como un ingrediente más (marcado con ★) en las recetas.<br><br><span style="color:var(--green);font-weight:600">Ej: "Prepizza grande" → 1000 g harina + levadura + agua... rinde 4 unidades → costo por prepizza.</span></div>
     </div>
     <button class="btn" id="add-prep" style="margin-bottom:14px">+ Nueva preparación</button>
     <div class="notice" id="notice-prep">Primero cargá ingredientes en la sección <b>Ingredientes</b>.</div>
@@ -363,21 +362,21 @@ table.prod-tabla input{padding:6px 5px;font-size:.82rem;width:56px;max-width:100
     <div class="page-title">Precios sugeridos</div>
     <div class="page-sub">Herramienta para decidir a qué precio vender: compará el costo de cada receta contra el precio de Pedix. "Prom. real" es el precio promedio que efectivamente cobraste por unidad, mezclando ventas sueltas y la parte proporcional de docenas/promos, según el último informe importado en Producción.</div>
     <div class="card">
-      <h3 style="margin-bottom:8px">Exportar costos a Excel</h3>
-      <p class="hint" style="margin-top:0;margin-bottom:12px">Bajá un Excel con Empanadas, Pizzas y Bebidas: costo por unidad, precio actual y margen — listo para analizar afuera (por ejemplo, con IA).</p>
+      <h3 style="margin-bottom:8px">Exportar costos a Excel<button type="button" class="help-btn" onclick="toggleAyuda('ayuda-export-costos')">?</button></h3>
+      <div class="help-text" id="ayuda-export-costos">Bajá un Excel con Empanadas, Pizzas y Bebidas: costo por unidad, precio actual y margen — listo para analizar afuera (por ejemplo, con IA).</div>
       <button class="btn ghost" id="btn-export-costos">⬇ Exportar costos (Excel)</button>
     </div>
     <div class="card">
-      <h3 style="margin-bottom:8px">Importar carta de Pedix</h3>
-      <p class="hint" style="margin-top:0;margin-bottom:12px">Subí el Excel exportado desde Pedix (hoja Productos). Al reimportar uno nuevo, los vínculos que ya armaste se conservan (se reconocen por el ID de Pedix).</p>
+      <h3 style="margin-bottom:8px">Importar carta de Pedix<button type="button" class="help-btn" onclick="toggleAyuda('ayuda-import-carta')">?</button></h3>
+      <div class="help-text" id="ayuda-import-carta">Subí el Excel exportado desde Pedix (hoja Productos). Al reimportar uno nuevo, los vínculos que ya armaste se conservan (se reconocen por el ID de Pedix).</div>
       <button class="btn" id="btn-xlsx">Importar Excel</button>
       <input type="file" id="file-xlsx" accept=".xlsx,.xls" style="display:none">
       <div class="notice" id="notice-xlsx"></div>
     </div>
     <div class="card">
-      <div class="field"><label>Margen objetivo % (sobre venta)</label>
+      <div class="field"><label>Margen objetivo % (sobre venta)<button type="button" class="help-btn" onclick="toggleAyuda('ayuda-margen-obj')">?</button></label>
         <input id="margen-obj" type="number" inputmode="decimal" value="60"></div>
-      <p class="hint">El precio sugerido busca que el costo sea el (100 − margen)% del precio. Se redondea hacia arriba a la centena. El margen mostrado usa la <b>oferta</b> si existe, si no el precio.</p>
+      <div class="help-text" id="ayuda-margen-obj">El precio sugerido busca que el costo sea el (100 − margen)% del precio. Se redondea hacia arriba a la centena. El margen mostrado usa la oferta si existe, si no el precio.</div>
     </div>
     <div id="ventas-list"><div class="empty">Importá el Excel de Pedix para empezar.</div></div>
   </section>
@@ -396,17 +395,16 @@ table.prod-tabla input{padding:6px 5px;font-size:.82rem;width:56px;max-width:100
 
     <div id="prod-sub-importar" hidden>
       <div class="card">
-        <h3 style="margin-bottom:8px">Importar informe de ventas</h3>
-        <p class="hint" style="margin-top:0;margin-bottom:12px">Subí el Excel de Pedix con las solapas <b>Pedidos</b> y <b>Detalle de productos</b> (no la carta). Podés subir el mes completo de una vez, o ir subiendo semana por semana — se van acumulando solas hasta completar el mes calendario. Si volvés a subir una semana ya cargada, corrige en vez de duplicar.</p>
+        <h3 style="margin-bottom:8px">Importar informe de ventas<button type="button" class="help-btn" onclick="toggleAyuda('ayuda-import-ventas')">?</button></h3>
+        <div class="help-text" id="ayuda-import-ventas">Subí el Excel de Pedix con las solapas Pedidos y Detalle de productos (no la carta). Podés subir el mes completo de una vez, o ir subiendo semana por semana — se van acumulando solas hasta completar el mes calendario. Si volvés a subir una semana ya cargada, corrige en vez de duplicar.<br><br>Nota: Pedix exporta con formato mensual de fábrica — si querés generar solo una semana, hay que pedirle al soporte de Pedix el rango de fechas que necesitás, o exportar el mes y filtrarlo aparte antes de subirlo.</div>
         <button class="btn" id="btn-prod-xlsx">Importar informe</button>
-        <p class="hint" style="margin-top:6px">Nota: Pedix exporta con formato mensual de fábrica — si querés generar solo una semana, hay que pedirle al soporte de Pedix el rango de fechas que necesitás, o exportar el mes y filtrarlo aparte antes de subirlo.</p>
         <input type="file" id="file-prod-xlsx" accept=".xlsx,.xls" style="display:none">
         <div class="notice" id="notice-prod-xlsx"></div>
       </div>
 
       <div class="card">
-        <h3 style="margin-bottom:8px">Importar plan de producción (Excel)</h3>
-        <p class="hint" style="margin-top:0;margin-bottom:12px">Para cargar objetivos a mano sin tipear sabor por sabor: descargá la plantilla, completala (o pasala al resto del equipo), y volvé a subirla. Tiene una solapa por día y columnas <b>Sabor</b> / <b>Objetivo</b>. Reemplaza el objetivo de ese día completo por lo que traiga el archivo.</p>
+        <h3 style="margin-bottom:8px">Importar plan de producción (Excel)<button type="button" class="help-btn" onclick="toggleAyuda('ayuda-import-plan')">?</button></h3>
+        <div class="help-text" id="ayuda-import-plan">Para cargar objetivos a mano sin tipear sabor por sabor: descargá la plantilla, completala (o pasala al resto del equipo), y volvé a subirla. Tiene una solapa por día y columnas Sabor / Objetivo. Reemplaza el objetivo de ese día completo por lo que traiga el archivo.</div>
         <div class="btn-row">
           <button class="btn ghost" id="btn-descargar-plantilla">⬇ Descargar plantilla</button>
           <button class="btn" id="btn-plan-xlsx">⬆ Subir plan completado</button>
@@ -416,8 +414,8 @@ table.prod-tabla input{padding:6px 5px;font-size:.82rem;width:56px;max-width:100
       </div>
 
       <div class="card" id="card-vincular" style="display:none">
-        <h3 style="margin-bottom:4px">Vincular sabores</h3>
-        <p class="hint" style="margin-top:0;margin-bottom:6px">Elegí a qué receta de Rinde corresponde cada nombre que aparece en el informe. Se guarda para siempre, el punto rojo marca los que faltan.</p>
+        <h3 style="margin-bottom:4px">Vincular sabores<button type="button" class="help-btn" onclick="toggleAyuda('ayuda-vincular')">?</button></h3>
+        <div class="help-text" id="ayuda-vincular">Elegí a qué receta de Rinde corresponde cada nombre que aparece en el informe. Se guarda para siempre, el punto rojo marca los que faltan.</div>
         <p class="count-tag" id="vincular-count"></p>
         <div class="search-box" style="margin-bottom:10px"><input id="vincular-search" placeholder="Buscar sabor..." autocomplete="off"></div>
         <div id="vincular-list"></div>
@@ -427,23 +425,24 @@ table.prod-tabla input{padding:6px 5px;font-size:.82rem;width:56px;max-width:100
 
     <div id="prod-sub-ganancia" hidden>
       <div class="card" id="card-rentabilidad-real" style="display:none">
-        <h3 style="margin-bottom:10px">Ganancia real del mes</h3>
+        <h3 style="margin-bottom:10px">Ganancia real del mes<button type="button" class="help-btn" onclick="toggleAyuda('ayuda-ganancia-real')">?</button></h3>
+        <div class="help-text" id="ayuda-ganancia-real">Solo ingredientes (sin mano de obra ni gastos fijos todavía, eso está más abajo en "Ganancia neta"). Usa el costo real de cada sabor dentro de cada docena, no un % promedio parejo para todo.</div>
         <div class="day-tabs" id="mes-tabs"></div>
         <div id="prod-resumen-mes"></div>
       </div>
       <div class="card" id="card-ganancia-neta" style="display:none">
-        <h3 style="margin-bottom:4px">Ganancia neta real del mes</h3>
-        <p class="hint" style="margin-top:0;margin-bottom:10px">Todo incluido: ingredientes, mano de obra real (de Personal, mismas fechas del mes) y gastos fijos actuales (de Proyecciones). Si tus gastos fijos eran distintos ese mes, ajustalos en Proyecciones antes de mirar este número.</p>
+        <h3 style="margin-bottom:4px">Ganancia neta real del mes<button type="button" class="help-btn" onclick="toggleAyuda('ayuda-ganancia-neta')">?</button></h3>
+        <div class="help-text" id="ayuda-ganancia-neta">Todo incluido: ingredientes, mano de obra real (de Personal, mismas fechas del mes) y gastos fijos actuales (de Proyecciones). Si tus gastos fijos eran distintos ese mes, ajustalos en Proyecciones antes de mirar este número.</div>
         <div id="prod-ganancia-neta"></div>
       </div>
       <div class="card" id="card-reserva-reposicion" style="display:none">
-        <h3 style="margin-bottom:4px">Reserva para reponer insumos del mes que viene</h3>
-        <p class="hint" style="margin-top:0;margin-bottom:10px">Estimado de cuánto vas a necesitar comprar de materia prima el mes que viene, según el promedio real de ventas. Es plata que conviene separar antes de considerar "disponible" el resto de la ganancia.</p>
+        <h3 style="margin-bottom:4px">Reserva para reponer insumos del mes que viene<button type="button" class="help-btn" onclick="toggleAyuda('ayuda-reserva-repo')">?</button></h3>
+        <div class="help-text" id="ayuda-reserva-repo">Estimado de cuánto vas a necesitar comprar de materia prima el mes que viene, según el promedio real de cada sabor por día de semana × costo de receta — no según el máximo (el máximo es para asegurar stock en Producción, acá usamos lo realista). Se le resta el valor de lo que ya tenés producido en "Stock actual", así no comprás de más algo que ya tenés hecho. Es plata que conviene separar antes de considerar "disponible" el resto de la ganancia — no incluye mano de obra ni gastos fijos del mes que viene, solo materia prima.</div>
         <div id="prod-reserva-reposicion"></div>
       </div>
       <div class="card">
-        <h3 style="margin-bottom:4px">Fondo de amortización de equipos</h3>
-        <p class="hint" style="margin-top:0;margin-bottom:10px">Horno, freezer, heladera, mostrador, lo que sea. Valor de reposición ÷ años de vida útil = cuánto conviene reservar por mes para poder reemplazarlo cuando toque, sin sorpresas.</p>
+        <h3 style="margin-bottom:4px">Fondo de amortización de equipos<button type="button" class="help-btn" onclick="toggleAyuda('ayuda-fondo-amort')">?</button></h3>
+        <div class="help-text" id="ayuda-fondo-amort">Horno, freezer, heladera, mostrador, lo que sea. Valor de reposición ÷ años de vida útil = cuánto conviene reservar por mes para poder reemplazarlo cuando toque, sin sorpresas.</div>
         <div id="equipos-list"></div>
         <button class="btn ghost sm" id="btn-add-equipo" style="margin-top:8px">+ Equipo</button>
         <div id="equipos-total" style="margin-top:12px"></div>
@@ -457,8 +456,8 @@ table.prod-tabla input{padding:6px 5px;font-size:.82rem;width:56px;max-width:100
 
     <div id="prod-sub-objetivos" hidden>
       <div class="card">
-        <h3 style="margin-bottom:3px">Objetivos de producción</h3>
-        <p class="hint" style="margin-top:0;margin-bottom:10px">Calculados automáticamente al importar. Podés ajustarlos a mano.</p>
+        <h3 style="margin-bottom:3px">Objetivos de producción<button type="button" class="help-btn" onclick="toggleAyuda('ayuda-objetivos')">?</button></h3>
+        <div class="help-text" id="ayuda-objetivos">Calculados automáticamente al importar. Podés ajustarlos a mano.</div>
         <div class="tipo-toggle" id="obj-tipo-toggle">
           <button class="tt-btn active" data-tipo="empanadas">Empanadas</button>
           <button class="tt-btn" data-tipo="pizzas">Pizzas</button>
@@ -487,8 +486,8 @@ table.prod-tabla input{padding:6px 5px;font-size:.82rem;width:56px;max-width:100
 
     <div id="hoja-sub-stock">
     <div class="card">
-      <h3 style="margin-bottom:4px">Stock actual</h3>
-      <p class="hint" style="margin-top:0;margin-bottom:10px">Cuánto tenés ya producido y congelado de cada sabor, ahora mismo. Cargalo acá contando físicamente el freezer. De ahí en más: sube solo cuando marcás "Producido" abajo, y baja solo cada vez que importás un informe de Pedix (te descuenta lo que se vendió). Corregilo a mano cuando hagas un recuento.</p>
+      <h3 style="margin-bottom:4px">Stock actual<button type="button" class="help-btn" onclick="toggleAyuda('ayuda-stock-actual')">?</button></h3>
+      <div class="help-text" id="ayuda-stock-actual">Cuánto tenés ya producido y congelado de cada sabor, ahora mismo. Cargalo acá contando físicamente el freezer. De ahí en más: sube solo cuando marcás "Producido" abajo, y baja solo cada vez que importás un informe de Pedix (te descuenta lo que se vendió). Corregilo a mano cuando hagas un recuento.</div>
       <div class="tipo-toggle" id="stock-tipo-toggle">
         <button class="tt-btn active" data-tipo="empanadas">Empanadas</button>
         <button class="tt-btn" data-tipo="pizzas">Pizzas</button>
@@ -507,14 +506,14 @@ table.prod-tabla input{padding:6px 5px;font-size:.82rem;width:56px;max-width:100
 
     <div id="hoja-sub-semana" hidden>
     <div class="card" id="card-movimiento-semanal" style="display:none">
-      <h3 style="margin-bottom:4px">Movimiento de esta semana</h3>
-      <p class="hint" style="margin-top:0;margin-bottom:10px">Con qué arrancaste la semana, cuánto produjiste, cuánto se vendió (según el último informe importado que caiga en estos días), y con cuánto arrancás la que viene.</p>
+      <h3 style="margin-bottom:4px">Movimiento de esta semana<button type="button" class="help-btn" onclick="toggleAyuda('ayuda-mov-semanal')">?</button></h3>
+      <div class="help-text" id="ayuda-mov-semanal">Con qué arrancaste la semana, cuánto produjiste, cuánto se vendió (según el último informe importado que caiga en estos días), y con cuánto arrancás la que viene.</div>
       <div id="movimiento-semanal-list"></div>
       <div id="movimiento-semanal-total" style="margin-top:10px"></div>
     </div>
     <div class="card" id="card-resumen-semanal" style="display:none">
-      <h3 style="margin-bottom:4px">Resumen semanal — Empanadas</h3>
-      <p class="hint" style="margin-top:0;margin-bottom:10px">Sumando el objetivo de todos los días que trabajás, y descontando tu stock actual, esto es lo que hay que producir en total para cubrir toda la semana entrante — repartilo en tus días de producción como te convenga.</p>
+      <h3 style="margin-bottom:4px">Resumen semanal — Empanadas<button type="button" class="help-btn" onclick="toggleAyuda('ayuda-resumen-semanal')">?</button></h3>
+      <div class="help-text" id="ayuda-resumen-semanal">Sumando el objetivo de todos los días que trabajás, y descontando tu stock actual, esto es lo que hay que producir en total para cubrir toda la semana entrante — repartilo en tus días de producción como te convenga.</div>
       <div id="resumen-semanal-list"></div>
       <div id="resumen-semanal-total" style="margin-top:10px"></div>
       <div class="btn-row" style="margin-top:14px">
@@ -565,8 +564,8 @@ table.prod-tabla input{padding:6px 5px;font-size:.82rem;width:56px;max-width:100
     <div class="page-sub">Tu equipo y las horas trabajadas. Proyecciones toma el costo de mano de obra automáticamente desde acá.</div>
 
     <div class="card">
-      <h3 style="margin-bottom:3px">Empleados</h3>
-      <p class="hint" style="margin-top:0;margin-bottom:10px">Cada uno con su categoría y valor hora — no todos cobran lo mismo.</p>
+      <h3 style="margin-bottom:3px">Empleados<button type="button" class="help-btn" onclick="toggleAyuda('ayuda-empleados')">?</button></h3>
+      <div class="help-text" id="ayuda-empleados">Cada uno con su categoría y valor hora — no todos cobran lo mismo.</div>
       <div id="empleados-list"></div>
       <button class="btn ghost sm" id="btn-add-empleado" style="margin-top:8px">+ Empleado</button>
     </div>
@@ -695,12 +694,12 @@ table.prod-tabla input{padding:6px 5px;font-size:.82rem;width:56px;max-width:100
 
     <div id="proy-sub-resumen">
       <div class="card">
-        <h3 style="margin-bottom:8px">Período</h3>
+        <h3 style="margin-bottom:8px">Período<button type="button" class="help-btn" onclick="toggleAyuda('ayuda-periodo')">?</button></h3>
+        <div class="help-text" id="ayuda-periodo">Arranca en la semana actual por default. Cambialo para simular otro período — se usa acá y en Producción.</div>
         <div class="grid2">
           <div class="field"><label>Desde</label><input type="date" id="proy-desde"></div>
           <div class="field"><label>Hasta</label><input type="date" id="proy-hasta"></div>
         </div>
-        <p class="hint">Arranca en la semana actual por default. Cambialo para simular otro período — se usa acá y en Producción.</p>
       </div>
       <div class="card">
         <h3 style="margin-bottom:10px">Resultado proyectado</h3>
@@ -710,32 +709,32 @@ table.prod-tabla input{padding:6px 5px;font-size:.82rem;width:56px;max-width:100
 
     <div id="proy-sub-obra" hidden>
       <div class="card">
-        <h3 style="margin-bottom:8px">Mano de obra</h3>
+        <h3 style="margin-bottom:8px">Mano de obra<button type="button" class="help-btn" onclick="toggleAyuda('ayuda-mano-obra')">?</button></h3>
+        <div class="help-text" id="ayuda-mano-obra">Sale de las horas cargadas en Personal dentro del período elegido en Resumen, multiplicadas por el valor hora de cada empleado.</div>
         <div id="proy-mano-obra-resumen"></div>
-        <p class="hint">Sale de las horas cargadas en <b>Personal</b> dentro del período elegido en Resumen, multiplicadas por el valor hora de cada empleado.</p>
       </div>
     </div>
 
     <div id="proy-sub-gastos" hidden>
       <div class="card">
-        <h3 style="margin-bottom:8px">Gastos fijos e impuestos</h3>
-        <p class="hint" style="margin-top:0;margin-bottom:10px">Agregá cada gasto por separado (Luz, Gas, Monotributo, Alquiler, etc.), con el mes al que corresponde. Solo suma en el período que tenga ese mes incluido — así un gasto de agosto no te afecta el cálculo de julio.</p>
+        <h3 style="margin-bottom:8px">Gastos fijos e impuestos<button type="button" class="help-btn" onclick="toggleAyuda('ayuda-gastos-fijos')">?</button></h3>
+        <div class="help-text" id="ayuda-gastos-fijos">Agregá cada gasto por separado (Luz, Gas, Monotributo, Alquiler, etc.), con el mes al que corresponde. Solo suma en el período que tenga ese mes incluido — así un gasto de agosto no te afecta el cálculo de julio.</div>
         <div id="proy-gastos-list"></div>
         <div class="grid-add" style="margin-top:10px">
           <input id="gasto-nuevo-nombre" placeholder="Nombre del gasto">
           <input id="gasto-nuevo-monto" type="number" inputmode="decimal" placeholder="Monto $">
         </div>
         <button class="btn ghost sm" id="btn-add-gasto" style="margin-top:8px">+ Gasto</button>
-        <div class="field" style="margin-top:14px"><label>Ingresos Brutos %</label>
+        <div class="field" style="margin-top:14px"><label>Ingresos Brutos %<button type="button" class="help-btn" onclick="toggleAyuda('ayuda-iibb')">?</button></label>
           <input id="proy-iibb" type="number" inputmode="decimal" placeholder="0"></div>
-        <p class="hint">Ingresos Brutos se calcula como % sobre el ingreso proyectado (así se ajusta solo si vendés más o menos).</p>
+        <div class="help-text" id="ayuda-iibb">Ingresos Brutos se calcula como % sobre el ingreso proyectado (así se ajusta solo si vendés más o menos).</div>
       </div>
     </div>
 
     <div id="proy-sub-productos" hidden>
       <div class="card">
-        <h3 style="margin-bottom:3px">Productos a vender</h3>
-        <p class="hint" style="margin-top:0;margin-bottom:10px">Es la lista de qué pensás vender en el período, para proyectar el ingreso. Autocompletala usando el <b>promedio real</b> de ventas de Producción (no el máximo — el máximo es para asegurar stock, no para proyectar ingresos), o armala vos.</p>
+        <h3 style="margin-bottom:3px">Productos a vender<button type="button" class="help-btn" onclick="toggleAyuda('ayuda-productos-vender')">?</button></h3>
+        <div class="help-text" id="ayuda-productos-vender">Es la lista de qué pensás vender en el período, para proyectar el ingreso. Autocompletala usando el promedio real de ventas de Producción (no el máximo — el máximo es para asegurar stock, no para proyectar ingresos), o armala vos.</div>
         <button class="btn ghost sm" id="btn-autocompletar-proy" style="margin-bottom:12px">↺ Autocompletar desde Producción</button>
         <div class="count-tag" id="proy-items-count"></div>
         <div id="proy-items"></div>
@@ -2742,7 +2741,7 @@ function renderRentabilidadReal(){
   const margen = ultimo.ingresoTotal>0 ? (ultimo.gananciaTotal/ultimo.ingresoTotal*100) : 0;
   const resumen = document.getElementById('prod-resumen-mes');
   resumen.innerHTML = `
-    <p class="hint" style="margin-top:0;margin-bottom:10px">Mes <b>${ultimo.mes}</b> — solo ingredientes, costo real por sabor dentro de cada docena, no un % promedio.</p>
+    <p class="hint" style="margin-top:0;margin-bottom:10px">Mes <b>${ultimo.mes}</b></p>
     <div class="resumen-mes-banner">
       <div class="stat"><div class="cost-banner" style="margin:0"><div><div class="big mono">${fmt(ultimo.ingresoTotal)}</div><div class="lbl">Ingreso</div></div></div></div>
       <div class="stat"><div class="cost-banner" style="margin:0"><div><div class="big mono">${fmt(ultimo.costoTotal)}</div><div class="lbl">Costo ingredientes</div></div></div></div>
@@ -2800,7 +2799,7 @@ function renderRentabilidadReal(){
     <div class="cost-banner ${gananciaDisponible>=0?'green':''}" style="margin-top:10px">
       <div><div class="big mono">${fmt(gananciaDisponible)}</div><div class="lbl">Ganancia realmente disponible</div></div>
     </div>
-    <p class="hint" style="margin-top:10px">Calculado con el promedio real de cada sabor por día de semana × costo de receta, proyectado sobre los días de ${nombreMesProx}, menos el valor de lo que ya tenés producido en stock (cargalo en "Stock actual" abajo). No incluye mano de obra ni gastos fijos del mes que viene — solo materia prima.</p>
+    <p class="hint" style="margin-top:10px">Proyectado sobre los días de ${nombreMesProx}.</p>
   `;
 
   const detalle = document.getElementById('prod-detalle-productos');
