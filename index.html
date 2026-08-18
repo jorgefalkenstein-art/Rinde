@@ -614,6 +614,7 @@ table.prod-tabla input{padding:6px 5px;font-size:.82rem;width:56px;max-width:100
       <div class="search-box" style="margin-bottom:10px"><input id="stock-search" placeholder="Buscar sabor..." autocomplete="off"></div>
       <div id="stock-actual-list"></div>
       <div id="stock-actual-total" style="margin-top:10px"></div>
+      <button class="btn ghost sm" id="btn-resetear-stock" style="margin-top:12px;width:100%;text-align:center;color:var(--red);border-color:var(--red)">↺ Resetear todo el stock a cero</button>
       <div class="btn-row" style="margin-top:14px">
         <button class="btn ghost sm" id="btn-imprimir-stock">🖨 Imprimir</button>
         <button class="btn ghost sm" id="btn-compartir-stock">📤 Compartir</button>
@@ -2599,7 +2600,12 @@ function fusionarVentasPorFecha(ventasUnbundled){
    así nunca se descuenta la misma venta dos veces ni queda plata mal restada. */
 function reconciliarStockPorFechas(fechas){
   let unidadesDescontadas = 0;
+  const hoyIso = isoLocal(new Date());
+  const LIMITE_DIAS = 45; // no tiene sentido tocar el stock de hoy por ventas de hace muchos meses
   fechas.forEach(fecha => {
+    const diasAtras = Math.round((new Date(hoyIso) - new Date(fecha)) / 86400000);
+    if (diasAtras > LIMITE_DIAS) return; // demasiado vieja: solo sirve para ganancia/historial, no toca stock
+
     const previo = state.produccion.stockDescontadoPorFecha[fecha];
     if (previo){
       Object.entries(previo).forEach(([clave,cant]) => {
@@ -2609,13 +2615,16 @@ function reconciliarStockPorFechas(fechas){
     const lineas = state.produccion.ventasPorFecha[fecha] || [];
     const nuevo = {};
     lineas.forEach(v => { nuevo[v.clave] = (nuevo[v.clave]||0) + v.cantidad; });
+    const descontadoReal = {};
     Object.entries(nuevo).forEach(([clave,cant]) => {
       const actual = state.produccion.stockActual[clave] || 0;
-      unidadesDescontadas += Math.min(actual, cant);
-      const resultado = Math.max(0, actual - cant);
+      const restado = Math.min(actual, cant); // nunca más de lo que realmente había
+      unidadesDescontadas += restado;
+      const resultado = actual - restado;
       if (resultado>0) state.produccion.stockActual[clave] = resultado; else delete state.produccion.stockActual[clave];
-    });
-    state.produccion.stockDescontadoPorFecha[fecha] = nuevo;
+      descontadoReal[clave] = restado; // guardamos lo que se descontó DE VERDAD, no lo "ideal" — así una futura
+    });                                  // corrección nunca devuelve más stock del que realmente se sacó
+    state.produccion.stockDescontadoPorFecha[fecha] = descontadoReal;
   });
   return unidadesDescontadas;
 }
@@ -2919,6 +2928,19 @@ window.setStockActual = (clave, v) => {
   save(); renderStockActual(); renderRentabilidadReal(); renderResumenSemanal();
 };
 document.getElementById('stock-search').oninput = e => { stockFiltro = e.target.value; renderStockActual(); };
+document.getElementById('btn-resetear-stock').onclick = e => {
+  const btn = e.target;
+  if (!btn.classList.contains('confirm')){
+    btn.classList.add('confirm');
+    btn.textContent = '¿Seguro? Tocá de nuevo para borrar todo';
+    setTimeout(()=>{ btn.classList.remove('confirm'); btn.textContent = '↺ Resetear todo el stock a cero'; }, 3500);
+    return;
+  }
+  state.produccion.stockActual = {};
+  btn.classList.remove('confirm');
+  btn.textContent = '↺ Resetear todo el stock a cero';
+  save(); renderStockActual(); renderRentabilidadReal(); renderResumenSemanal(); renderMovimientoSemanal();
+};
 
 /* ================= EQUIPOS (fondo de amortización) ================= */
 let equipoEditando = null;
