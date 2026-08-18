@@ -296,6 +296,7 @@ table.prod-tabla input{padding:6px 5px;font-size:.82rem;width:56px;max-width:100
     <button data-tab="produccion"><span class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 21V10l6 4v-4l6 4V7l6 4v10H3Z"/><path d="M3 21h18"/></svg></span> Producción</button>
     <button data-tab="personal"><span class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg></span> Personal</button>
     <button data-tab="caja"><span class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="1" y="4" width="22" height="16" rx="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg></span> Caja</button>
+    <button data-tab="proveedores"><span class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="1" y="3" width="15" height="13"/><polygon points="16 8 20 8 23 11 23 16 16 16 16 8"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></svg></span> Proveedores</button>
     <button data-tab="usuarios"><span class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg></span> Usuarios</button>
     <button data-tab="proyecciones"><span class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/></svg></span> Proyecciones</button>
   </nav>
@@ -321,6 +322,18 @@ table.prod-tabla input{padding:6px 5px;font-size:.82rem;width:56px;max-width:100
       <img id="perfil-logo-preview" src="" alt="" style="display:none;width:84px;height:84px;object-fit:cover;border-radius:16px;margin:0 auto 12px;box-shadow:var(--shadow)">
       <div id="perfil-nombre-preview" style="font-size:1.3rem;font-weight:800"></div>
       <div id="perfil-datos-preview" style="color:var(--ink-soft);font-size:.82rem;margin-top:6px;line-height:1.6"></div>
+    </div>
+
+    <div class="card" id="card-dashboard-alertas" style="display:none">
+      <h3>Alertas<button type="button" class="help-btn" onclick="toggleAyuda('ayuda-dashboard-alertas')">?</button></h3>
+      <div class="help-text" id="ayuda-dashboard-alertas">Ingredientes con stock por debajo del mínimo que configuraste, y compras a proveedores vencidas o por vencer pronto.</div>
+      <div id="dashboard-alertas-list"></div>
+    </div>
+
+    <div class="card">
+      <h3>Resumen<button type="button" class="help-btn" onclick="toggleAyuda('ayuda-dashboard-resumen')">?</button></h3>
+      <div class="help-text" id="ayuda-dashboard-resumen">Un vistazo rápido: lo vendido hoy y esta semana (según el último informe de Pedix importado), cómo cerró la caja de hoy, y la ganancia del último mes con informe cargado.</div>
+      <div id="dashboard-resumen"></div>
     </div>
 
     <div class="card">
@@ -771,6 +784,89 @@ table.prod-tabla input{padding:6px 5px;font-size:.82rem;width:56px;max-width:100
     </div>
   </section>
 
+  <!-- PROVEEDORES -->
+  <section id="tab-proveedores" hidden>
+    <div class="page-title">Proveedores</div>
+    <div class="page-sub">Cuánto le debés a cada uno, y cuándo vence.</div>
+
+    <div class="tipo-toggle" id="prov-subtabs">
+      <button class="tt-btn active" data-psub="lista">Proveedores</button>
+      <button class="tt-btn" data-psub="movimiento">Cargar movimiento</button>
+      <button class="tt-btn" data-psub="vencimientos">Vencimientos</button>
+    </div>
+
+    <div id="prov-sub-lista">
+      <div class="card">
+        <h3>Proveedores<button type="button" class="help-btn" onclick="toggleAyuda('ayuda-prov-lista')">?</button></h3>
+        <div class="help-text" id="ayuda-prov-lista">El saldo es lo que le debés hoy a ese proveedor: suma de compras menos suma de pagos. Se actualiza solo con lo que cargues en "Cargar movimiento".</div>
+        <div id="proveedores-list"></div>
+        <button class="btn ghost sm" id="btn-add-proveedor" style="margin-top:8px">+ Proveedor</button>
+        <div id="proveedores-total" style="margin-top:12px"></div>
+      </div>
+    </div>
+
+    <div id="prov-sub-movimiento" hidden>
+      <div class="card">
+        <h3>Cargar movimiento<button type="button" class="help-btn" onclick="toggleAyuda('ayuda-prov-movimiento')">?</button></h3>
+        <div class="help-text" id="ayuda-prov-movimiento">Una <b>Compra a cuenta corriente</b> aumenta lo que le debés (podés ponerle vencimiento). Una compra <b>Contado</b> queda registrada pero no suma deuda, porque ya la pagaste en el momento. Un <b>Pago</b> reduce lo que debías. Si elegís un ingrediente de tu lista, el precio de referencia se actualiza solo con la cantidad y el precio unitario que cargues acá — no hace falta ir a Ingredientes después.</div>
+        <div class="field" style="margin-bottom:8px"><label>Proveedor</label><select id="prov-mov-proveedor"></select></div>
+        <div class="field" style="margin-bottom:8px"><label>Tipo</label>
+          <select id="prov-mov-tipo">
+            <option value="compra">Compra</option>
+            <option value="pago">Pago</option>
+          </select>
+        </div>
+
+        <div id="prov-mov-bloque-compra">
+          <div class="field" style="margin-bottom:8px"><label>Ingrediente relacionado (opcional)</label>
+            <select id="prov-mov-ingrediente"><option value="">— ninguno / otro gasto —</option></select>
+          </div>
+          <div id="prov-mov-cantidad-precio" style="display:none">
+            <div class="grid2" style="margin-bottom:8px">
+              <div class="field"><label id="prov-mov-cantidad-label">Cantidad</label><input type="number" inputmode="decimal" id="prov-mov-cantidad" placeholder="Ej: 25"></div>
+              <div class="field"><label>Precio por unidad $</label><input type="number" inputmode="decimal" id="prov-mov-precio-unitario" placeholder="Ej: 1500"></div>
+            </div>
+          </div>
+          <div class="field" id="prov-mov-monto-box" style="margin-bottom:8px">
+            <label id="prov-mov-monto-label">Monto total $</label>
+            <input type="number" inputmode="decimal" id="prov-mov-monto" placeholder="0">
+          </div>
+          <div class="field" style="margin-bottom:8px"><label>Forma de pago</label>
+            <select id="prov-mov-forma-pago">
+              <option value="cuenta_corriente">Cuenta corriente (queda a deber)</option>
+              <option value="contado">Contado (ya está pagada)</option>
+            </select>
+          </div>
+          <div class="grid2" style="margin-bottom:8px">
+            <div class="field"><label>Fecha</label><input type="date" id="prov-mov-fecha"></div>
+            <div class="field" id="prov-mov-vencimiento-box"><label>Vencimiento</label><input type="date" id="prov-mov-vencimiento"></div>
+          </div>
+        </div>
+
+        <div id="prov-mov-bloque-pago" style="display:none">
+          <div class="field" style="margin-bottom:8px"><label>Monto $</label><input type="number" inputmode="decimal" id="prov-mov-monto-pago" placeholder="0"></div>
+          <div class="field" style="margin-bottom:8px"><label>Fecha</label><input type="date" id="prov-mov-fecha-pago"></div>
+        </div>
+
+        <div class="field" style="margin-bottom:10px"><label>Descripción (opcional)</label><input id="prov-mov-desc" placeholder="Ej: 5 bolsas de 25kg"></div>
+        <button class="btn" id="btn-add-mov-proveedor">Cargar movimiento</button>
+        <div class="notice" id="notice-prov-mov"></div>
+      </div>
+      <div class="card">
+        <h3>Movimientos recientes</h3>
+        <div id="prov-movimientos-list"></div>
+      </div>
+    </div>
+
+    <div id="prov-sub-vencimientos" hidden>
+      <div class="card">
+        <h3>Vencimientos<button type="button" class="help-btn" onclick="toggleAyuda('ayuda-prov-vencimientos')">?</button></h3>
+        <div class="help-text" id="ayuda-prov-vencimientos">Compras con fecha de vencimiento cargada, ordenadas de la más urgente a la más lejana. En rojo, las vencidas.</div>
+        <div id="prov-vencimientos-list"></div>
+      </div>
+    </div>
+  </section>
+
   <!-- USUARIOS -->
   <section id="tab-usuarios" hidden>
     <div class="page-title">Usuarios</div>
@@ -884,7 +980,7 @@ function migrarGastosViejos(proy){
 }
 const PRODUCCION_DEFAULT = {vinculos:{}, objetivos:{}, promedios:{}, extras:{}, historico:[], ultimoImport:null, registro:{}, etiquetas:{}, origenes:{}, stockActual:{}, mesesReconciliados:{}, ventasPorFecha:{}, stockDescontadoPorFecha:{}};
 const PERSONAL_DEFAULT = {empleados:[], turnos:[]};
-const ESTADO_DEFAULT = {ingredientes:[],preparaciones:[],productos:[],ventas:[],margenObj:60,proyeccion:null,produccion:null,personal:null,equipos:null,caja:null,perfil:null,seguridad:null};
+const ESTADO_DEFAULT = {ingredientes:[],preparaciones:[],productos:[],ventas:[],margenObj:60,proyeccion:null,produccion:null,personal:null,equipos:null,caja:null,perfil:null,seguridad:null,proveedores:null};
 function estadoBase(datos){
   const base = Object.assign({}, ESTADO_DEFAULT, datos);
   base.proyeccion = Object.assign({}, PROYECCION_DEFAULT, datos && datos.proyeccion || {});
@@ -899,6 +995,9 @@ function estadoBase(datos){
   base.perfil = Object.assign({nombre:'', logo:'', cuit:'', ingresosBrutos:'', condicionIVA:'', domicilio:'', telefono:'', email:''}, datos && datos.perfil || {});
   base.seguridad = Object.assign({adminPin:'', usuarios:[], sesionUsuarioId:null}, datos && datos.seguridad || {});
   base.seguridad.usuarios = (datos && datos.seguridad && datos.seguridad.usuarios) || [];
+  base.proveedores = Object.assign({lista:[], movimientos:[]}, datos && datos.proveedores || {});
+  base.proveedores.lista = (datos && datos.proveedores && datos.proveedores.lista) || [];
+  base.proveedores.movimientos = (datos && datos.proveedores && datos.proveedores.movimientos) || [];
   base.proyeccion.gastos = (datos && datos.proyeccion && datos.proyeccion.gastos) || [];
   base.proyeccion.items = (datos && datos.proyeccion && datos.proyeccion.items) || [];
   migrarGastosViejos(base.proyeccion);
@@ -1082,7 +1181,7 @@ function cerrarMenu(){ sidebar.classList.remove('open'); scrim.classList.remove(
 document.getElementById('hamb').onclick = abrirMenu;
 scrim.onclick = cerrarMenu;
 
-const SECCIONES = {inicio:'Inicio', ingredientes:'Ingredientes', preparaciones:'Preparaciones', empanadas:'Empanadas', pizzas:'Pizzas', rentabilidad:'Precios sugeridos', produccion:'Producción', personal:'Personal', caja:'Caja', usuarios:'Usuarios', proyecciones:'Proyecciones'};
+const SECCIONES = {inicio:'Inicio', ingredientes:'Ingredientes', preparaciones:'Preparaciones', empanadas:'Empanadas', pizzas:'Pizzas', rentabilidad:'Precios sugeridos', produccion:'Producción', personal:'Personal', caja:'Caja', proveedores:'Proveedores', usuarios:'Usuarios', proyecciones:'Proyecciones'};
 document.querySelectorAll('#nav button[data-tab]').forEach(t => t.onclick = () => {
   document.querySelectorAll('#nav button[data-tab]').forEach(x=>x.classList.remove('active'));
   t.classList.add('active');
@@ -1132,6 +1231,13 @@ function renderIngredientes(){
           <select id="edit-uni-${ing.id}">
             ${['kg','g','l','ml','u'].map(u=>`<option value="${u}" ${ing.unidad===u?'selected':''}>${u}</option>`).join('')}
           </select></div>
+        <p class="hint" style="margin-top:0;margin-bottom:8px">Stock (opcional — dejalo vacío si no querés controlar el stock de este ingrediente):</p>
+        <div class="grid2" style="margin-bottom:10px">
+          <div class="field"><label>Stock actual (en ${baseDe(ing)})</label>
+            <input id="edit-stock-${ing.id}" type="number" inputmode="decimal" value="${ing.stockActual??''}" placeholder="Sin controlar"></div>
+          <div class="field"><label>Alertar si baja de</label>
+            <input id="edit-min-${ing.id}" type="number" inputmode="decimal" value="${ing.stockMinimo??''}" placeholder="Ej: 2000"></div>
+        </div>
         <div class="act-row">
           <button class="btn done sm" onclick="guardarEdicionIng('${ing.id}')">Listo</button>
           <button class="btn edit sm" onclick="cancelarEdicionIng()">Cancelar</button>
@@ -1139,16 +1245,27 @@ function renderIngredientes(){
         </div>
       </div>`;
     }
+    const controlaStock = ing.stockActual!==undefined && ing.stockActual!==null && ing.stockActual!=='';
+    const stockBajo = controlaStock && ing.stockMinimo!==undefined && ing.stockMinimo!=='' && Number(ing.stockActual) <= Number(ing.stockMinimo);
     return `<div class="ing-item">
       <div style="flex:1;min-width:120px">
-        <div class="ing-name">${esc(ing.nombre)}</div>
-        <div class="ing-detail">${ocultarSensible('ingredientes') ? `${ing.cantidad} ${ing.unidad}` : `${fmt(ing.precio)} por ${ing.cantidad} ${ing.unidad} · <span class="ing-unit-cost mono">${fmt(costoBase(ing))}/${baseDe(ing)}</span>`}</div>
+        <div class="ing-name">${esc(ing.nombre)}${stockBajo?' <span title="Stock bajo" style="color:var(--red)">⚠</span>':''}</div>
+        <div class="ing-detail">${ocultarSensible('ingredientes') ? `${ing.cantidad} ${ing.unidad}` : `${fmt(ing.precio)} por ${ing.cantidad} ${ing.unidad} · <span class="ing-unit-cost mono">${fmt(costoBase(ing))}/${baseDe(ing)}</span>`}${controlaStock?` <span style="color:${stockBajo?'var(--red)':'var(--ink-soft)'};font-size:.74rem;font-weight:${stockBajo?'700':'400'}"> · stock: ${ing.stockActual} ${baseDe(ing)}</span>`:''}</div>
       </div>
+      <button class="btn ghost sm" onclick="registrarCompraDesdeIngrediente('${ing.id}')" title="Registrar compra a proveedor">💰</button>
       <button class="btn edit sm" onclick="editarIng('${ing.id}')">Editar</button>
     </div>`;
   }).join('');
 }
 window.editarIng = id => { ingEditando = id; renderIngredientes(); };
+window.registrarCompraDesdeIngrediente = id => {
+  document.querySelector('#nav button[data-tab="proveedores"]').click();
+  document.querySelector('#prov-subtabs .tt-btn[data-psub="movimiento"]').click();
+  document.getElementById('prov-mov-tipo').value = 'compra';
+  document.getElementById('prov-mov-tipo').dispatchEvent(new Event('change'));
+  document.getElementById('prov-mov-ingrediente').value = id;
+  document.getElementById('prov-mov-ingrediente').dispatchEvent(new Event('change'));
+};
 window.cancelarEdicionIng = () => { ingEditando = null; renderIngredientes(); };
 window.guardarEdicionIng = id => {
   const nombre = document.getElementById('edit-nom-'+id).value.trim();
@@ -1156,8 +1273,12 @@ window.guardarEdicionIng = id => {
   const cantidad = parseFloat(document.getElementById('edit-can-'+id).value);
   const unidad = document.getElementById('edit-uni-'+id).value;
   if (!nombre || !(precio>0) || !(cantidad>0)){ return; }
+  const stockVal = document.getElementById('edit-stock-'+id).value;
+  const minVal = document.getElementById('edit-min-'+id).value;
   const ing = ingById(id);
-  Object.assign(ing, {nombre, precio, cantidad, unidad});
+  Object.assign(ing, {nombre, precio, cantidad, unidad,
+    stockActual: stockVal===''? null : parseFloat(stockVal),
+    stockMinimo: minVal===''? null : parseFloat(minVal)});
   ingEditando = null; save(); renderAll();
 };
 
@@ -3736,6 +3857,259 @@ function renderCaja(){
   renderCajaResumen();
 }
 
+/* ================= PROVEEDORES ================= */
+const PROV_SUBTABS = ['lista','movimiento','vencimientos'];
+document.querySelectorAll('#prov-subtabs .tt-btn').forEach(btn => btn.onclick = () => {
+  document.querySelectorAll('#prov-subtabs .tt-btn').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+  const sub = btn.dataset.psub;
+  PROV_SUBTABS.forEach(s => document.getElementById('prov-sub-'+s).hidden = (s !== sub));
+  window.scrollTo({top:0, behavior:'instant'});
+});
+function proveedorById(id){ return state.proveedores.lista.find(p=>p.id===id); }
+function saldoProveedor(id){
+  return state.proveedores.movimientos
+    .filter(m=>m.proveedorId===id)
+    .reduce((a,m) => {
+      if (m.tipo==='compra') return a + (m.formaPago==='contado' ? 0 : (Number(m.monto)||0));
+      return a - (Number(m.monto)||0);
+    }, 0);
+}
+let proveedorEditando = null;
+function renderProveedores(){
+  const box = document.getElementById('proveedores-list');
+  const sel = document.getElementById('prov-mov-proveedor');
+  if (!state.proveedores.lista.length){
+    box.innerHTML = '<div class="empty">Sin proveedores cargados. Tocá "+ Proveedor".</div>';
+  } else {
+    box.innerHTML = state.proveedores.lista.map(p => {
+      const saldo = saldoProveedor(p.id);
+      if (proveedorEditando === p.id){
+        return `<div class="ing-item" style="display:block">
+          <div class="field" style="margin-bottom:8px"><label>Nombre</label><input id="edit-prov-nom-${p.id}" value="${esc(p.nombre)}" placeholder="Nombre del proveedor"></div>
+          <div class="field" style="margin-bottom:10px"><label>Teléfono (opcional)</label><input id="edit-prov-tel-${p.id}" value="${esc(p.telefono||'')}" placeholder="Ej: 2954 000000"></div>
+          <div class="act-row">
+            <button class="btn done sm" onclick="guardarEdicionProveedor('${p.id}')">Listo</button>
+            <button class="del" onclick="delProveedor(this,'${p.id}')" aria-label="Eliminar" style="margin-left:auto">✕</button>
+          </div>
+        </div>`;
+      }
+      return `<div class="ing-item">
+        <div style="flex:1">
+          <div class="ing-name">${esc(p.nombre)||'(sin nombre)'}</div>
+          <div class="ing-detail"><span class="ing-unit-cost mono" style="color:${saldo>0?'var(--red)':'var(--green)'}">${fmt(Math.abs(saldo))}${saldo>0?' le debés':saldo<0?' a favor':''}</span></div>
+        </div>
+        <button class="btn edit sm" onclick="editarProveedor('${p.id}')">Editar</button>
+      </div>`;
+    }).join('');
+  }
+  sel.innerHTML = state.proveedores.lista.length
+    ? state.proveedores.lista.map(p=>`<option value="${p.id}">${esc(p.nombre)}</option>`).join('')
+    : '<option value="">— cargá un proveedor primero —</option>';
+
+  const totalDeuda = state.proveedores.lista.reduce((a,p)=>a+Math.max(0,saldoProveedor(p.id)),0);
+  document.getElementById('proveedores-total').innerHTML = state.proveedores.lista.length
+    ? `<div class="cost-banner"><div><div class="big mono">${fmt(totalDeuda)}</div><div class="lbl">Total que les debés a todos</div></div></div>` : '';
+}
+window.editarProveedor = id => { proveedorEditando = id; renderProveedores(); };
+window.guardarEdicionProveedor = id => {
+  const nombre = document.getElementById('edit-prov-nom-'+id).value.trim();
+  if (!nombre) return;
+  const telefono = document.getElementById('edit-prov-tel-'+id).value.trim();
+  Object.assign(proveedorById(id), {nombre, telefono});
+  proveedorEditando = null; save(); renderProveedores();
+};
+window.delProveedor = (btn,id) => {
+  if (!btn.classList.contains('confirm')){ armarConfirm(btn); return; }
+  state.proveedores.lista = state.proveedores.lista.filter(p=>p.id!==id);
+  state.proveedores.movimientos = state.proveedores.movimientos.filter(m=>m.proveedorId!==id);
+  proveedorEditando = null; save(); renderProveedores(); renderMovimientosProveedores();
+};
+document.getElementById('btn-add-proveedor').onclick = () => {
+  const nid = uid();
+  state.proveedores.lista.push({id:nid, nombre:'', telefono:''});
+  proveedorEditando = nid;
+  save(); renderProveedores();
+};
+
+function renderMovimientosProveedores(){
+  document.getElementById('prov-mov-fecha').value = document.getElementById('prov-mov-fecha').value || isoLocal(new Date());
+  document.getElementById('prov-mov-fecha-pago').value = document.getElementById('prov-mov-fecha-pago').value || isoLocal(new Date());
+  const box = document.getElementById('prov-movimientos-list');
+  const movs = [...state.proveedores.movimientos].sort((a,b)=>b.fecha.localeCompare(a.fecha));
+  box.innerHTML = movs.length ? movs.slice(0,40).map(m => {
+    const p = proveedorById(m.proveedorId);
+    const ing = m.ingredienteId ? ingById(m.ingredienteId) : null;
+    const tipoTxt = m.tipo==='compra' ? (m.formaPago==='contado'?'Compra (contado)':'Compra (cta cte)') : 'Pago';
+    return `<div class="prod-item-row">
+      <span>${esc(p?p.nombre:'(eliminado)')} <span class="pin">${m.fecha} · ${tipoTxt}${m.descripcion?' · '+esc(m.descripcion):''}${ing?' · actualizó '+esc(ing.nombre):''}${m.vencimiento?' · vence '+m.vencimiento:''}</span></span>
+      <span class="mono" style="color:${m.tipo==='compra'&&m.formaPago!=='contado'?'var(--red)':'var(--ink-soft)'}">${m.tipo==='compra'?'+':'-'}${fmt(m.monto)} <button class="del" onclick="delMovProveedor('${m.id}')" aria-label="Eliminar" style="margin-left:6px">✕</button></span>
+    </div>`;
+  }).join('') : '<div class="empty">Sin movimientos cargados todavía.</div>';
+
+  const selIng = document.getElementById('prov-mov-ingrediente');
+  const actual = selIng.value;
+  selIng.innerHTML = '<option value="">— ninguno / otro gasto —</option>' +
+    [...state.ingredientes].sort((a,b)=>a.nombre.localeCompare(b.nombre,'es')).map(i=>`<option value="${i.id}" ${i.id===actual?'selected':''}>${esc(i.nombre)}</option>`).join('');
+}
+document.getElementById('prov-mov-tipo').onchange = e => {
+  const esCompra = e.target.value==='compra';
+  document.getElementById('prov-mov-bloque-compra').style.display = esCompra ? 'block' : 'none';
+  document.getElementById('prov-mov-bloque-pago').style.display = esCompra ? 'none' : 'block';
+};
+function recalcularMontoDesdeCantidad(){
+  const cant = parseFloat(document.getElementById('prov-mov-cantidad').value)||0;
+  const unit = parseFloat(document.getElementById('prov-mov-precio-unitario').value)||0;
+  if (cant>0 && unit>0) document.getElementById('prov-mov-monto').value = Math.round(cant*unit*100)/100;
+}
+document.getElementById('prov-mov-ingrediente').onchange = e => {
+  const cajaCP = document.getElementById('prov-mov-cantidad-precio');
+  const montoLabel = document.getElementById('prov-mov-monto-label');
+  if (e.target.value){
+    const ing = ingById(e.target.value);
+    document.getElementById('prov-mov-cantidad-label').textContent = `Cantidad (en ${ing.unidad})`;
+    document.getElementById('prov-mov-cantidad').value = '';
+    document.getElementById('prov-mov-precio-unitario').value = '';
+    cajaCP.style.display = 'block';
+    montoLabel.textContent = 'Monto total $ (calculado)';
+  } else {
+    cajaCP.style.display = 'none';
+    montoLabel.textContent = 'Monto total $';
+  }
+};
+document.getElementById('prov-mov-cantidad').oninput = recalcularMontoDesdeCantidad;
+document.getElementById('prov-mov-precio-unitario').oninput = recalcularMontoDesdeCantidad;
+document.getElementById('prov-mov-forma-pago').onchange = e => {
+  document.getElementById('prov-mov-vencimiento-box').style.display = e.target.value==='cuenta_corriente' ? 'block' : 'none';
+};
+document.getElementById('btn-add-mov-proveedor').onclick = () => {
+  const proveedorId = document.getElementById('prov-mov-proveedor').value;
+  const tipo = document.getElementById('prov-mov-tipo').value;
+  const descripcion = document.getElementById('prov-mov-desc').value.trim();
+  if (!proveedorId){ aviso('notice-prov-mov','Elegí un proveedor.'); return; }
+
+  if (tipo==='pago'){
+    const monto = parseFloat(document.getElementById('prov-mov-monto-pago').value)||0;
+    const fecha = document.getElementById('prov-mov-fecha-pago').value || isoLocal(new Date());
+    if (!monto){ aviso('notice-prov-mov','Cargá un monto.'); return; }
+    state.proveedores.movimientos.push({id:uid(), proveedorId, tipo:'pago', monto, fecha, vencimiento:'', descripcion, ingredienteId:null, formaPago:''});
+    document.getElementById('prov-mov-monto-pago').value = '';
+  } else {
+    const monto = parseFloat(document.getElementById('prov-mov-monto').value)||0;
+    const fecha = document.getElementById('prov-mov-fecha').value || isoLocal(new Date());
+    const formaPago = document.getElementById('prov-mov-forma-pago').value;
+    const vencimiento = formaPago==='cuenta_corriente' ? document.getElementById('prov-mov-vencimiento').value : '';
+    const ingredienteId = document.getElementById('prov-mov-ingrediente').value;
+    const cantidad = parseFloat(document.getElementById('prov-mov-cantidad').value)||0;
+    const precioUnitario = parseFloat(document.getElementById('prov-mov-precio-unitario').value)||0;
+    if (!monto){ aviso('notice-prov-mov','Cargá el monto (o cantidad y precio por unidad si elegiste un ingrediente).'); return; }
+
+    let avisoExtra = '';
+    if (ingredienteId && cantidad>0 && precioUnitario>0){
+      const ing = ingById(ingredienteId);
+      ing.precio = precioUnitario;
+      ing.cantidad = 1;
+      avisoExtra = ` Precio de "${ing.nombre}" actualizado a ${fmt(precioUnitario)}/${ing.unidad}.`;
+    }
+
+    state.proveedores.movimientos.push({id:uid(), proveedorId, tipo:'compra', monto, fecha, vencimiento, descripcion, ingredienteId: ingredienteId||null, formaPago});
+    document.getElementById('prov-mov-monto').value = '';
+    document.getElementById('prov-mov-vencimiento').value = '';
+    document.getElementById('prov-mov-ingrediente').value = '';
+    document.getElementById('prov-mov-cantidad').value = '';
+    document.getElementById('prov-mov-precio-unitario').value = '';
+    document.getElementById('prov-mov-cantidad-precio').style.display = 'none';
+    save(); renderProveedores(); renderMovimientosProveedores(); renderVencimientosProveedores(); renderIngredientes();
+    document.getElementById('prov-mov-desc').value = '';
+    aviso('notice-prov-mov','Movimiento cargado.'+avisoExtra);
+    return;
+  }
+  document.getElementById('prov-mov-desc').value = '';
+  save(); renderProveedores(); renderMovimientosProveedores(); renderVencimientosProveedores();
+  aviso('notice-prov-mov','Movimiento cargado.');
+};
+window.delMovProveedor = id => {
+  state.proveedores.movimientos = state.proveedores.movimientos.filter(m=>m.id!==id);
+  save(); renderProveedores(); renderMovimientosProveedores(); renderVencimientosProveedores();
+};
+
+function vencimientosProveedoresProximos(){
+  const hoy = isoLocal(new Date());
+  return state.proveedores.movimientos
+    .filter(m => m.tipo==='compra' && m.vencimiento)
+    .map(m => ({...m, vencido: m.vencimiento < hoy}))
+    .sort((a,b)=>a.vencimiento.localeCompare(b.vencimiento));
+}
+function renderVencimientosProveedores(){
+  const box = document.getElementById('prov-vencimientos-list');
+  if (!box) return;
+  const lista = vencimientosProveedoresProximos();
+  box.innerHTML = lista.length ? lista.map(m => {
+    const p = proveedorById(m.proveedorId);
+    return `<div class="prod-item-row">
+      <span style="color:${m.vencido?'var(--red)':'var(--ink)'}">${esc(p?p.nombre:'—')} <span class="pin">${m.vencimiento}${m.vencido?' · VENCIDO':''}${m.descripcion?' · '+esc(m.descripcion):''}</span></span>
+      <span class="mono">${fmt(m.monto)}</span>
+    </div>`;
+  }).join('') : '<div class="empty">Sin vencimientos cargados.</div>';
+}
+
+function renderProveedoresAll(){
+  renderProveedores();
+  renderMovimientosProveedores();
+  renderVencimientosProveedores();
+}
+
+/* ================= DASHBOARD DE INICIO ================= */
+function ingredientesConStockBajo(){
+  return state.ingredientes.filter(i =>
+    i.stockActual!=null && i.stockActual!=='' &&
+    i.stockMinimo!=null && i.stockMinimo!=='' &&
+    Number(i.stockActual) <= Number(i.stockMinimo));
+}
+function renderDashboardInicio(){
+  const cardAlertas = document.getElementById('card-dashboard-alertas');
+  const boxAlertas = document.getElementById('dashboard-alertas-list');
+  const stockBajo = ingredientesConStockBajo();
+  const vencProv = vencimientosProveedoresProximos().filter(m => {
+    const hoy = isoLocal(new Date());
+    const en7dias = isoLocal(new Date(Date.now()+7*86400000));
+    return m.vencimiento <= en7dias; // vencidas o a menos de 7 días
+  });
+  const hayAlertas = stockBajo.length || vencProv.length;
+  cardAlertas.style.display = hayAlertas ? 'block' : 'none';
+  if (hayAlertas){
+    boxAlertas.innerHTML =
+      stockBajo.map(i => `<div class="prod-item-row"><span>⚠ ${esc(i.nombre)} <span class="pin">stock ${i.stockActual} ${baseDe(i)}, mínimo ${i.stockMinimo}</span></span><span class="mono" style="color:var(--red)">bajo</span></div>`).join('') +
+      vencProv.map(m => {
+        const p = proveedorById(m.proveedorId);
+        return `<div class="prod-item-row"><span>${m.vencido?'🔴':'🟡'} ${esc(p?p.nombre:'—')} <span class="pin">vence ${m.vencimiento}</span></span><span class="mono">${fmt(m.monto)}</span></div>`;
+      }).join('');
+  }
+
+  const box = document.getElementById('dashboard-resumen');
+  const hoy = isoLocal(new Date());
+  const {desde: desdeSemana, hasta: hastaSemana} = rangoPeriodo('semana');
+  const ventasHoy = (state.produccion.ventasPorFecha[hoy]||[]).reduce((a,v)=>a+v.ingreso,0);
+  let ventasSemana = 0;
+  Object.entries(state.produccion.ventasPorFecha||{}).forEach(([fecha,lineas]) => {
+    if (fecha>=desdeSemana && fecha<=hastaSemana) ventasSemana += lineas.reduce((a,v)=>a+v.ingreso,0);
+  });
+  const cajaHoy = state.caja.registros[hoy];
+  const resCaja = cajaHoy ? calcularResultadoCaja(hoy) : null;
+  const ultimoMes = state.produccion.historico[0];
+
+  box.innerHTML = `
+    <div class="resumen-mes-banner" style="margin-bottom:10px">
+      <div class="stat"><div class="cost-banner" style="margin:0"><div><div class="big mono">${fmt(ventasHoy)}</div><div class="lbl">Vendido hoy</div></div></div></div>
+      <div class="stat"><div class="cost-banner" style="margin:0"><div><div class="big mono">${fmt(ventasSemana)}</div><div class="lbl">Vendido esta semana</div></div></div></div>
+    </div>
+    ${resCaja ? `<div class="cost-banner ${Math.abs(resCaja.diferencia)<1?'green':''}" style="margin-bottom:10px">
+      <div><div class="big mono">${fmt(resCaja.diferencia)}</div><div class="lbl">Diferencia de caja hoy</div></div>
+    </div>` : '<p class="hint" style="margin:0 0 10px">Todavía no cargaste la caja de hoy.</p>'}
+    ${ultimoMes ? `<div class="cost-banner"><div><div class="big mono">${fmt(ultimoMes.gananciaTotal)}</div><div class="lbl">Ganancia bruta · ${ultimoMes.mes}</div></div></div>` : ''}
+  `;
+}
+
 /* ================= PERFIL DEL COMERCIO ================= */
 let perfilEditando = false;
 function renderPerfil(){
@@ -3815,7 +4189,7 @@ document.getElementById('file-logo').onchange = e => {
 /* ================= USUARIOS Y PERMISOS (freno de conveniencia, no seguridad real) ================= */
 const SECCIONES_CON_PERMISO = {
   ingredientes:'Ingredientes', preparaciones:'Preparaciones', empanadas:'Empanadas', pizzas:'Pizzas',
-  rentabilidad:'Precios sugeridos', produccion:'Producción', personal:'Personal', caja:'Caja', proyecciones:'Proyecciones'
+  rentabilidad:'Precios sugeridos', produccion:'Producción', personal:'Personal', caja:'Caja', proveedores:'Proveedores', proyecciones:'Proyecciones'
 };
 let usuarioEditando = null;
 let sesionActual = null; // {tipo:'admin'} | {tipo:'usuario', usuarioId} — NO se guarda, se pide de nuevo cada vez que abrís la app
@@ -4033,7 +4407,7 @@ function aplicarPermisos(){
   }
 }
 
-function renderAll(){ renderIngredientes(); renderPreparaciones(); renderEmpanadas(); renderPizzas(); renderRentabilidad(); renderProduccion(); renderPersonal(); renderCaja(); renderProyecciones(); renderPerfil(); mostrarGateSiCorresponde(); renderUsuarios(); aplicarPermisos(); }
+function renderAll(){ renderIngredientes(); renderPreparaciones(); renderEmpanadas(); renderPizzas(); renderRentabilidad(); renderProduccion(); renderPersonal(); renderCaja(); renderProveedoresAll(); renderProyecciones(); renderPerfil(); mostrarGateSiCorresponde(); renderUsuarios(); renderDashboardInicio(); aplicarPermisos(); }
 renderAll();
 cargarNube();
 
