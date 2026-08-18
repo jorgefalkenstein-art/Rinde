@@ -147,6 +147,13 @@ select{font-family:'Montserrat',sans-serif;font-weight:500}
 .rinde-row input{width:78px}
 .rinde-row select{width:auto}
 .notice{background:var(--red-soft);border:1px solid var(--red);border-radius:10px;padding:11px 13px;font-size:.8rem;color:var(--red-dark);margin:10px 0;display:none;font-weight:600}
+.card h3{display:flex;align-items:center;gap:2px}
+.help-btn{display:inline-flex;align-items:center;justify-content:center;width:19px;height:19px;border-radius:50%;border:1.5px solid var(--ink-soft);color:var(--ink-soft);font-size:.66rem;font-weight:800;cursor:pointer;margin-left:6px;flex-shrink:0;background:#fff;font-family:'Montserrat',sans-serif;line-height:1;padding:0}
+.help-btn:active{background:var(--red-soft);border-color:var(--red);color:var(--red)}
+.help-text{display:none;background:var(--bg);border-radius:10px;padding:11px 13px;font-size:.78rem;color:var(--ink-soft);line-height:1.55;margin:2px 0 12px}
+.help-text.show{display:block}
+.caja-row{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:9px 2px;border-bottom:1px solid var(--line)}
+.caja-row:last-child{border-bottom:none}
 .notice.show{display:block}
 .search-box{position:relative;margin-bottom:12px}
 .search-box input{padding-left:38px}
@@ -262,6 +269,7 @@ table.prod-tabla input{padding:6px 5px;font-size:.82rem;width:56px;max-width:100
     <button data-tab="rentabilidad"><span class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg></span> Precios sugeridos</button>
     <button data-tab="produccion"><span class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 21V10l6 4v-4l6 4V7l6 4v10H3Z"/><path d="M3 21h18"/></svg></span> Producción</button>
     <button data-tab="personal"><span class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg></span> Personal</button>
+    <button data-tab="caja"><span class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="1" y="4" width="22" height="16" rx="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg></span> Caja</button>
     <button data-tab="proyecciones"><span class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/></svg></span> Proyecciones</button>
   </nav>
   <div class="sidebar-foot">
@@ -598,6 +606,82 @@ table.prod-tabla input{padding:6px 5px;font-size:.82rem;width:56px;max-width:100
     </div>
   </section>
 
+  <!-- CAJA -->
+  <section id="tab-caja" hidden>
+    <div class="page-title">Caja</div>
+    <div class="page-sub">Apertura, cierre, retiros de socios, cobros electrónicos y conciliación contra lo vendido.</div>
+
+    <div class="tipo-toggle" id="caja-subtabs">
+      <button class="tt-btn active" data-csub="dia">Caja del día</button>
+      <button class="tt-btn" data-csub="socios">Socios</button>
+      <button class="tt-btn" data-csub="resumen">Resumen</button>
+    </div>
+
+    <div id="caja-sub-dia">
+      <div class="card">
+        <h3>Caja del día<button type="button" class="help-btn" onclick="toggleAyuda('ayuda-caja-dia')">?</button></h3>
+        <div class="help-text" id="ayuda-caja-dia">Todos los días arrancás con un monto en efectivo (Apertura). Durante el día entra plata en efectivo y por medios electrónicos (Point, transferencia, QR), y puede salir plata en Retiros (alguien se lleva efectivo). Al cerrar, contás físicamente el cajón (Cierre contado) y la app te dice si coincide con lo que "debería" haber, según lo vendido, lo retirado y lo cobrado electrónico.</div>
+        <div class="field" style="margin-bottom:12px"><label>Día</label><input type="date" id="caja-fecha"></div>
+        <div class="grid2" style="margin-bottom:8px">
+          <div class="field"><label>Apertura (efectivo inicial) $</label><input type="number" inputmode="decimal" id="caja-apertura" placeholder="0"></div>
+          <div class="field"><label>Cierre contado (recuento final) $</label><input type="number" inputmode="decimal" id="caja-cierre" placeholder="0"></div>
+        </div>
+      </div>
+
+      <div class="card">
+        <h3>Cobros electrónicos del día<button type="button" class="help-btn" onclick="toggleAyuda('ayuda-caja-electronico')">?</button></h3>
+        <div class="help-text" id="ayuda-caja-electronico">Cargá acá lo que entró por cada medio que no sea efectivo en mano. Esto se resta del total vendido para calcular cuánto de la venta del día debería haber quedado en efectivo.</div>
+        <div class="stack">
+          <div class="field"><label>Point (tarjeta) $</label><input type="number" inputmode="decimal" id="caja-point" placeholder="0"></div>
+          <div class="field"><label>Transferencia $</label><input type="number" inputmode="decimal" id="caja-transferencia" placeholder="0"></div>
+          <div class="field"><label>QR / Billetera virtual $</label><input type="number" inputmode="decimal" id="caja-qr" placeholder="0"></div>
+        </div>
+      </div>
+
+      <div class="card">
+        <h3>Retiros<button type="button" class="help-btn" onclick="toggleAyuda('ayuda-caja-retiros')">?</button></h3>
+        <div class="help-text" id="ayuda-caja-retiros">Cada vez que un socio saca efectivo de la caja, cargalo acá — con quién lo retiró y el motivo. Se descuenta del efectivo esperado, y queda guardado para el resumen mensual por socio.</div>
+        <div class="grid2" style="margin-bottom:8px">
+          <div class="field"><label>Quién retira</label><select id="caja-retiro-socio"></select></div>
+          <div class="field"><label>Monto $</label><input type="number" inputmode="decimal" id="caja-retiro-monto" placeholder="0"></div>
+        </div>
+        <div class="field" style="margin-bottom:10px"><label>Motivo (opcional)</label><input id="caja-retiro-motivo" placeholder="Ej: gastos personales"></div>
+        <button class="btn ghost sm" id="btn-add-retiro">+ Cargar retiro</button>
+        <div id="caja-retiros-list" style="margin-top:12px"></div>
+      </div>
+
+      <div class="card">
+        <h3>Resultado del día<button type="button" class="help-btn" onclick="toggleAyuda('ayuda-caja-resultado')">?</button></h3>
+        <div class="help-text" id="ayuda-caja-resultado">"Efectivo esperado" = Apertura + (lo vendido en efectivo, es decir ventas totales del día menos lo electrónico) − Retiros. "Diferencia" = lo que contaste al cerrar menos ese esperado. Si da $0, cerró perfecto. Si da negativo, falta plata. Si da positivo, sobra (revisá si cargaste bien los cobros electrónicos).</div>
+        <div id="caja-resultado"></div>
+        <div class="btn-row" style="margin-top:14px">
+          <button class="btn ghost sm" id="btn-imprimir-caja">🖨 Imprimir</button>
+          <button class="btn ghost sm" id="btn-compartir-caja">📤 Compartir</button>
+        </div>
+        <div class="notice" id="notice-compartir-caja"></div>
+      </div>
+    </div>
+
+    <div id="caja-sub-socios" hidden>
+      <div class="card">
+        <h3>Socios / Dueños<button type="button" class="help-btn" onclick="toggleAyuda('ayuda-caja-socios')">?</button></h3>
+        <div class="help-text" id="ayuda-caja-socios">Cargá acá a las personas que pueden retirar plata de la caja (vos y tus socios). Después aparecen para elegir en cada retiro, y el sistema suma cuánto se llevó cada uno por mes.</div>
+        <div id="socios-list"></div>
+        <button class="btn ghost sm" id="btn-add-socio" style="margin-top:8px">+ Socio</button>
+      </div>
+    </div>
+
+    <div id="caja-sub-resumen" hidden>
+      <div class="card">
+        <h3>Resumen y conciliación<button type="button" class="help-btn" onclick="toggleAyuda('ayuda-caja-resumen')">?</button></h3>
+        <div class="help-text" id="ayuda-caja-resumen">Elegí un período: te suma cuánto retiró cada socio, y compara el total vendido según Pedix contra lo que quedó registrado entre efectivo contado, electrónico y retiros — para detectar si algo no está cerrando en varios días juntos, no solo uno.</div>
+        <div class="day-tabs" id="caja-periodo-tabs"></div>
+        <div id="caja-resumen-socios"></div>
+        <div id="caja-resumen-conciliacion" style="margin-top:14px"></div>
+      </div>
+    </div>
+  </section>
+
   <section id="tab-proyecciones" hidden>
     <div class="page-title">Proyecciones</div>
     <div class="page-sub">Estimá ingresos y ganancia neta de un período. La mano de obra se calcula sola desde Personal.</div>
@@ -635,7 +719,7 @@ table.prod-tabla input{padding:6px 5px;font-size:.82rem;width:56px;max-width:100
     <div id="proy-sub-gastos" hidden>
       <div class="card">
         <h3 style="margin-bottom:8px">Gastos fijos e impuestos</h3>
-        <p class="hint" style="margin-top:0;margin-bottom:10px">Agregá cada gasto por separado (Luz, Gas, Monotributo, Alquiler, etc.), con la misma periodicidad que el período elegido en Resumen.</p>
+        <p class="hint" style="margin-top:0;margin-bottom:10px">Agregá cada gasto por separado (Luz, Gas, Monotributo, Alquiler, etc.), con el mes al que corresponde. Solo suma en el período que tenga ese mes incluido — así un gasto de agosto no te afecta el cálculo de julio.</p>
         <div id="proy-gastos-list"></div>
         <div class="grid-add" style="margin-top:10px">
           <input id="gasto-nuevo-nombre" placeholder="Nombre del gasto">
@@ -684,7 +768,7 @@ function migrarGastosViejos(proy){
 }
 const PRODUCCION_DEFAULT = {vinculos:{}, objetivos:{}, promedios:{}, extras:{}, historico:[], ultimoImport:null, registro:{}, etiquetas:{}, origenes:{}, stockActual:{}, mesesReconciliados:{}, ventasPorFecha:{}, stockDescontadoPorFecha:{}};
 const PERSONAL_DEFAULT = {empleados:[], turnos:[]};
-const ESTADO_DEFAULT = {ingredientes:[],preparaciones:[],productos:[],ventas:[],margenObj:60,proyeccion:null,produccion:null,personal:null,equipos:null};
+const ESTADO_DEFAULT = {ingredientes:[],preparaciones:[],productos:[],ventas:[],margenObj:60,proyeccion:null,produccion:null,personal:null,equipos:null,caja:null};
 function estadoBase(datos){
   const base = Object.assign({}, ESTADO_DEFAULT, datos);
   base.proyeccion = Object.assign({}, PROYECCION_DEFAULT, datos && datos.proyeccion || {});
@@ -693,6 +777,9 @@ function estadoBase(datos){
   base.personal.empleados = (datos && datos.personal && datos.personal.empleados) || [];
   base.personal.turnos = (datos && datos.personal && datos.personal.turnos) || [];
   base.equipos = (datos && datos.equipos) || [];
+  base.caja = Object.assign({socios:[], registros:{}}, datos && datos.caja || {});
+  base.caja.socios = (datos && datos.caja && datos.caja.socios) || [];
+  base.caja.registros = (datos && datos.caja && datos.caja.registros) || {};
   base.proyeccion.gastos = (datos && datos.proyeccion && datos.proyeccion.gastos) || [];
   base.proyeccion.items = (datos && datos.proyeccion && datos.proyeccion.items) || [];
   migrarGastosViejos(base.proyeccion);
@@ -792,6 +879,7 @@ async function cargarNube(){
 const fmt = n => isFinite(n) ? '$' + n.toLocaleString('es-AR',{minimumFractionDigits:0, maximumFractionDigits:2}) : '—';
 const esc = s => String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/"/g,'&quot;');
 
+window.toggleAyuda = id => { document.getElementById(id).classList.toggle('show'); };
 function aviso(id, msg){
   const el = document.getElementById(id);
   if (msg) el.textContent = msg;
@@ -875,7 +963,7 @@ function cerrarMenu(){ sidebar.classList.remove('open'); scrim.classList.remove(
 document.getElementById('hamb').onclick = abrirMenu;
 scrim.onclick = cerrarMenu;
 
-const SECCIONES = {ingredientes:'Ingredientes', preparaciones:'Preparaciones', empanadas:'Empanadas', pizzas:'Pizzas', rentabilidad:'Precios sugeridos', produccion:'Producción', personal:'Personal', proyecciones:'Proyecciones'};
+const SECCIONES = {ingredientes:'Ingredientes', preparaciones:'Preparaciones', empanadas:'Empanadas', pizzas:'Pizzas', rentabilidad:'Precios sugeridos', produccion:'Producción', personal:'Personal', caja:'Caja', proyecciones:'Proyecciones'};
 document.querySelectorAll('#nav button[data-tab]').forEach(t => t.onclick = () => {
   document.querySelectorAll('#nav button[data-tab]').forEach(x=>x.classList.remove('active'));
   t.classList.add('active');
@@ -1668,6 +1756,15 @@ function labelVinculo(ref){
 }
 let proyItemExpandido = null;
 window.toggleProyItem = idx => { proyItemExpandido = (proyItemExpandido===idx) ? null : idx; renderProyecciones(); };
+function mesesEnRango(desde, hasta){
+  if (!desde || !hasta) return [];
+  const out = new Set();
+  let cur = new Date(desde+'T12:00:00');
+  const fin = new Date(hasta+'T12:00:00');
+  let guard = 0;
+  while (cur<=fin && guard<400){ out.add(isoLocal(cur).slice(0,7)); cur.setDate(cur.getDate()+1); guard++; }
+  return [...out];
+}
 function contarDiasSemanaEnRango(desde, hasta){
   const counts = {}; DIAS_SEMANA.forEach(d=>counts[d]=0);
   if (!desde || !hasta) return counts;
@@ -1750,11 +1847,12 @@ function renderGastos(){
   const box = document.getElementById('proy-gastos-list');
   const gastos = state.proyeccion.gastos;
   if (!gastos.length){ box.innerHTML = '<div class="empty">Sin gastos cargados todavía.</div>'; return; }
-  box.innerHTML = gastos.map(g => `
-    <div class="ing-item">
+  box.innerHTML = gastos.slice().sort((a,b)=>(b.mes||'').localeCompare(a.mes||'')).map(g => `
+    <div class="ing-item" style="flex-wrap:wrap">
       <div style="flex:1;min-width:120px">
         <input value="${esc(g.nombre)}" style="border:none;background:none;font-weight:700;padding:4px 0;width:100%" onchange="setGasto('${g.id}','nombre',this.value)">
       </div>
+      <input type="month" class="mono" style="width:130px;font-size:.8rem" value="${g.mes||''}" onchange="setGasto('${g.id}','mes',this.value)">
       <input class="mono" type="number" inputmode="decimal" style="width:110px" value="${g.monto||''}" onchange="setGasto('${g.id}','monto',this.value)">
       <button class="del" onclick="delGasto(this,'${g.id}')" aria-label="Eliminar">✕</button>
     </div>`).join('');
@@ -1763,7 +1861,8 @@ document.getElementById('btn-add-gasto').onclick = () => {
   const nombre = document.getElementById('gasto-nuevo-nombre').value.trim();
   const monto = parseFloat(document.getElementById('gasto-nuevo-monto').value)||0;
   if (!nombre){ return; }
-  state.proyeccion.gastos.push({id:uid(), nombre, monto});
+  const mesActual = isoLocal(new Date()).slice(0,7);
+  state.proyeccion.gastos.push({id:uid(), nombre, monto, mes:mesActual});
   document.getElementById('gasto-nuevo-nombre').value = '';
   document.getElementById('gasto-nuevo-monto').value = '';
   save(); renderProyecciones();
@@ -1867,7 +1966,8 @@ function renderProyecciones(){
   });
   const costoManoObra = mo.costoTotal;
   const costoIIBB = ingresoTotal * (Number(py.iibbPct)||0) / 100;
-  const costoGastos = py.gastos.reduce((a,g)=>a+(Number(g.monto)||0), 0);
+  const mesesPeriodo = mesesEnRango(desde, hasta);
+  const costoGastos = py.gastos.filter(g => !g.mes || mesesPeriodo.includes(g.mes)).reduce((a,g)=>a+(Number(g.monto)||0), 0);
   const costoFijos = costoGastos + costoIIBB;
   const costoTotal = costoIngredientesTotal + costoManoObra + costoFijos;
   const gananciaNeta = ingresoTotal - costoTotal;
@@ -2655,7 +2755,7 @@ function renderRentabilidadReal(){
   /* Ganancia neta real: ingredientes (ya calculado) - mano de obra real de ese mes (Personal) - gastos fijos actuales (Proyecciones) */
   const {primer, ultimo: ultimoDia} = primerYUltimoDiaMes(ultimo.mes);
   const mo = calcularManoObraPeriodo(primer, ultimoDia);
-  const costoGastos = (state.proyeccion.gastos||[]).reduce((a,g)=>a+(Number(g.monto)||0), 0);
+  const costoGastos = (state.proyeccion.gastos||[]).filter(g => !g.mes || g.mes===ultimo.mes).reduce((a,g)=>a+(Number(g.monto)||0), 0);
   const costoIIBB = ultimo.ingresoTotal * (Number(state.proyeccion.iibbPct)||0) / 100;
   const costoFijos = costoGastos + costoIIBB;
   const gananciaNeta = ultimo.gananciaTotal - mo.costoTotal - costoFijos;
@@ -3292,7 +3392,231 @@ document.querySelectorAll('#proy-subtabs .tt-btn').forEach(btn => btn.onclick = 
   window.scrollTo({top:0, behavior:'instant'});
 });
 
-function renderAll(){ renderIngredientes(); renderPreparaciones(); renderEmpanadas(); renderPizzas(); renderRentabilidad(); renderProduccion(); renderPersonal(); renderProyecciones(); }
+/* ================= CAJA ================= */
+const CAJA_SUBTABS = ['dia','socios','resumen'];
+document.querySelectorAll('#caja-subtabs .tt-btn').forEach(btn => btn.onclick = () => {
+  document.querySelectorAll('#caja-subtabs .tt-btn').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+  const sub = btn.dataset.csub;
+  CAJA_SUBTABS.forEach(s => document.getElementById('caja-sub-'+s).hidden = (s !== sub));
+  window.scrollTo({top:0, behavior:'instant'});
+});
+
+function socioById(id){ return state.caja.socios.find(s=>s.id===id); }
+let socioEditando = null;
+function renderSociosCaja(){
+  const box = document.getElementById('socios-list');
+  const sel = document.getElementById('caja-retiro-socio');
+  if (!state.caja.socios.length){
+    box.innerHTML = '<div class="empty">Sin socios cargados. Tocá "+ Socio" para agregar quién puede retirar de la caja.</div>';
+  } else {
+    box.innerHTML = state.caja.socios.map(s => {
+      if (socioEditando === s.id){
+        return `<div class="ing-item" style="display:block">
+          <div class="field" style="margin-bottom:8px"><label>Nombre</label><input id="edit-socio-nom-${s.id}" value="${esc(s.nombre)}" placeholder="Nombre del socio"></div>
+          <div class="act-row">
+            <button class="btn done sm" onclick="guardarEdicionSocio('${s.id}')">Listo</button>
+            <button class="btn edit sm" onclick="cancelarEdicionSocio()">Cancelar</button>
+            <button class="del" onclick="delSocio(this,'${s.id}')" aria-label="Eliminar" style="margin-left:auto">✕</button>
+          </div>
+        </div>`;
+      }
+      return `<div class="ing-item">
+        <div style="flex:1"><div class="ing-name">${esc(s.nombre)||'(sin nombre)'}</div></div>
+        <button class="btn edit sm" onclick="editarSocio('${s.id}')">Editar</button>
+      </div>`;
+    }).join('');
+  }
+  sel.innerHTML = state.caja.socios.length
+    ? state.caja.socios.map(s=>`<option value="${s.id}">${esc(s.nombre)}</option>`).join('')
+    : '<option value="">— cargá un socio primero —</option>';
+}
+window.editarSocio = id => { socioEditando = id; renderSociosCaja(); };
+window.cancelarEdicionSocio = () => { socioEditando = null; renderSociosCaja(); };
+window.guardarEdicionSocio = id => {
+  const nombre = document.getElementById('edit-socio-nom-'+id).value.trim();
+  if (!nombre) return;
+  socioById(id).nombre = nombre;
+  socioEditando = null; save(); renderSociosCaja();
+};
+window.delSocio = (btn,id) => {
+  if (!btn.classList.contains('confirm')){ armarConfirm(btn); return; }
+  state.caja.socios = state.caja.socios.filter(s=>s.id!==id);
+  socioEditando = null; save(); renderSociosCaja();
+};
+document.getElementById('btn-add-socio').onclick = () => {
+  const nid = uid();
+  state.caja.socios.push({id:nid, nombre:''});
+  socioEditando = nid;
+  save(); renderSociosCaja();
+};
+
+function registroCajaDe(fecha){
+  state.caja.registros[fecha] = state.caja.registros[fecha] || {apertura:0, cierreContado:0, retiros:[], electronico:{point:0,transferencia:0,qr:0}};
+  return state.caja.registros[fecha];
+}
+function ventasDelDia(fecha){
+  const lineas = state.produccion.ventasPorFecha[fecha] || [];
+  return lineas.reduce((a,v)=>a+v.ingreso, 0);
+}
+function calcularResultadoCaja(fecha){
+  const r = registroCajaDe(fecha);
+  const totalRetiros = r.retiros.reduce((a,x)=>a+(Number(x.monto)||0),0);
+  const totalElectronico = (Number(r.electronico.point)||0)+(Number(r.electronico.transferencia)||0)+(Number(r.electronico.qr)||0);
+  const ventas = ventasDelDia(fecha);
+  const ventasEfectivo = Math.max(0, ventas - totalElectronico);
+  const efectivoEsperado = (Number(r.apertura)||0) + ventasEfectivo - totalRetiros;
+  const diferencia = (Number(r.cierreContado)||0) - efectivoEsperado;
+  return {r, totalRetiros, totalElectronico, ventas, ventasEfectivo, efectivoEsperado, diferencia};
+}
+
+let cajaFechaActiva = null;
+function renderCajaDia(){
+  if (!cajaFechaActiva) cajaFechaActiva = isoLocal(new Date());
+  document.getElementById('caja-fecha').value = cajaFechaActiva;
+  const r = registroCajaDe(cajaFechaActiva);
+  document.getElementById('caja-apertura').value = r.apertura || '';
+  document.getElementById('caja-cierre').value = r.cierreContado || '';
+  document.getElementById('caja-point').value = r.electronico.point || '';
+  document.getElementById('caja-transferencia').value = r.electronico.transferencia || '';
+  document.getElementById('caja-qr').value = r.electronico.qr || '';
+
+  const boxRetiros = document.getElementById('caja-retiros-list');
+  boxRetiros.innerHTML = r.retiros.length ? r.retiros.map(x => {
+    const s = socioById(x.socioId);
+    return `<div class="caja-row">
+      <span>${esc(s?s.nombre:'(socio eliminado)')}${x.motivo?` <span style="color:var(--ink-soft);font-size:.78rem">· ${esc(x.motivo)}</span>`:''}</span>
+      <span class="mono">${fmt(x.monto)} <button class="del" onclick="delRetiro('${x.id}')" aria-label="Eliminar" style="margin-left:6px">✕</button></span>
+    </div>`;
+  }).join('') : '<div class="empty">Sin retiros cargados este día.</div>';
+
+  const res = calcularResultadoCaja(cajaFechaActiva);
+  const box = document.getElementById('caja-resultado');
+  box.innerHTML = `
+    <div class="resumen-mes-banner" style="margin-bottom:10px">
+      <div class="stat"><div class="cost-banner" style="margin:0"><div><div class="big mono">${fmt(res.ventas)}</div><div class="lbl">Ventas del día (Pedix)</div></div></div></div>
+      <div class="stat"><div class="cost-banner" style="margin:0"><div><div class="big mono">${fmt(res.totalElectronico)}</div><div class="lbl">Total electrónico</div></div></div></div>
+    </div>
+    <div class="cost-banner">
+      <div><div class="big mono">${fmt(res.efectivoEsperado)}</div><div class="lbl">Efectivo esperado</div></div>
+      <div><div class="big mono">${fmt(res.totalRetiros)}</div><div class="lbl">Total retirado</div></div>
+    </div>
+    <div class="cost-banner ${Math.abs(res.diferencia)<1?'green':''}" style="margin-top:10px">
+      <div><div class="big mono">${fmt(res.diferencia)}</div><div class="lbl">Diferencia (contado − esperado)</div></div>
+    </div>
+    ${!res.ventas ? '<div class="notice show" style="margin-top:10px">No hay ventas importadas para este día — el "efectivo esperado" puede no ser real todavía.</div>' : ''}
+  `;
+}
+document.getElementById('caja-fecha').onchange = e => { cajaFechaActiva = e.target.value; renderCajaDia(); };
+function guardarCampoCaja(campo, v){
+  const r = registroCajaDe(cajaFechaActiva);
+  const n = Math.max(0, parseFloat(v)||0);
+  if (['point','transferencia','qr'].includes(campo)) r.electronico[campo] = n;
+  else r[campo] = n;
+  save(); renderCajaDia();
+}
+document.getElementById('caja-apertura').onchange = e => guardarCampoCaja('apertura', e.target.value);
+document.getElementById('caja-cierre').onchange = e => guardarCampoCaja('cierreContado', e.target.value);
+document.getElementById('caja-point').onchange = e => guardarCampoCaja('point', e.target.value);
+document.getElementById('caja-transferencia').onchange = e => guardarCampoCaja('transferencia', e.target.value);
+document.getElementById('caja-qr').onchange = e => guardarCampoCaja('qr', e.target.value);
+document.getElementById('btn-add-retiro').onclick = () => {
+  const socioId = document.getElementById('caja-retiro-socio').value;
+  const monto = parseFloat(document.getElementById('caja-retiro-monto').value)||0;
+  const motivo = document.getElementById('caja-retiro-motivo').value.trim();
+  if (!socioId || !monto){ return; }
+  registroCajaDe(cajaFechaActiva).retiros.push({id:uid(), socioId, monto, motivo});
+  document.getElementById('caja-retiro-monto').value = '';
+  document.getElementById('caja-retiro-motivo').value = '';
+  save(); renderCajaDia();
+};
+window.delRetiro = id => {
+  const r = registroCajaDe(cajaFechaActiva);
+  r.retiros = r.retiros.filter(x=>x.id!==id);
+  save(); renderCajaDia();
+};
+
+/* Imprimir / compartir la caja del día */
+function renderPrintAreaCaja(){
+  const res = calcularResultadoCaja(cajaFechaActiva);
+  const filasRetiros = res.r.retiros.map(x => {
+    const s = socioById(x.socioId);
+    return `<tr><td style="border-bottom:1px solid #ccc;padding:6px 4px">${esc(s?s.nombre:'—')}</td><td style="border-bottom:1px solid #ccc;padding:6px 4px">${esc(x.motivo||'')}</td><td style="border-bottom:1px solid #ccc;padding:6px 4px">${fmt(x.monto)}</td></tr>`;
+  }).join('');
+  const cuerpo = `
+    <table style="width:100%;border-collapse:collapse;font-family:Montserrat,sans-serif;font-size:14px;margin-top:6px">
+      <tbody>
+        <tr><td style="padding:5px 4px;font-weight:700">Apertura</td><td style="padding:5px 4px">${fmt(res.r.apertura)}</td></tr>
+        <tr><td style="padding:5px 4px;font-weight:700">Ventas del día</td><td style="padding:5px 4px">${fmt(res.ventas)}</td></tr>
+        <tr><td style="padding:5px 4px;font-weight:700">Electrónico (Point/Transf/QR)</td><td style="padding:5px 4px">${fmt(res.totalElectronico)}</td></tr>
+        <tr><td style="padding:5px 4px;font-weight:700">Total retirado</td><td style="padding:5px 4px">${fmt(res.totalRetiros)}</td></tr>
+        <tr><td style="padding:5px 4px;font-weight:700">Efectivo esperado</td><td style="padding:5px 4px">${fmt(res.efectivoEsperado)}</td></tr>
+        <tr><td style="padding:5px 4px;font-weight:700">Cierre contado</td><td style="padding:5px 4px">${fmt(res.r.cierreContado)}</td></tr>
+        <tr><td style="padding:5px 4px;font-weight:700">Diferencia</td><td style="padding:5px 4px">${fmt(res.diferencia)}</td></tr>
+      </tbody>
+    </table>
+    ${filasRetiros ? `<p style="font-family:Montserrat,sans-serif;font-weight:700;font-size:14px;margin:16px 0 4px">Retiros</p>
+    <table style="width:100%;border-collapse:collapse;font-family:Montserrat,sans-serif;font-size:13px">
+      <thead><tr><th style="text-align:left;border-bottom:2px solid #000;padding:6px 4px">Socio</th><th style="text-align:left;border-bottom:2px solid #000;padding:6px 4px">Motivo</th><th style="text-align:left;border-bottom:2px solid #000;padding:6px 4px">Monto</th></tr></thead>
+      <tbody>${filasRetiros}</tbody>
+    </table>` : ''}`;
+  armarPrintArea('Caja diaria', cajaFechaActiva, cuerpo);
+}
+document.getElementById('btn-imprimir-caja').onclick = () => { renderPrintAreaCaja(); setTimeout(()=>window.print(),80); };
+document.getElementById('btn-compartir-caja').onclick = () => { renderPrintAreaCaja(); compartirImagenGenerica(`caja-${cajaFechaActiva}.png`,'notice-compartir-caja','Caja Troppo',`Caja del ${cajaFechaActiva}`); };
+
+/* Resumen y conciliación por período */
+let cajaPeriodoActivo = 'semana';
+function renderCajaResumen(){
+  const tabs = document.getElementById('caja-periodo-tabs');
+  tabs.innerHTML = ['hoy','semana','mes'].map(p =>
+    `<button class="${p===cajaPeriodoActivo?'active':''}" onclick="setCajaPeriodo('${p}')">${p==='hoy'?'Hoy':p==='semana'?'Esta semana':'Este mes'}</button>`).join('');
+  const {desde,hasta} = rangoPeriodo(cajaPeriodoActivo);
+  const fechas = Object.keys(state.caja.registros).filter(f=>f>=desde && f<=hasta);
+
+  const porSocio = {};
+  let totalVentas=0, totalElectronico=0, totalRetiros=0, totalCierres=0, diasConCierre=0;
+  fechas.forEach(fecha => {
+    const res = calcularResultadoCaja(fecha);
+    totalVentas += res.ventas;
+    totalElectronico += res.totalElectronico;
+    totalRetiros += res.totalRetiros;
+    if (res.r.cierreContado){ totalCierres += res.r.cierreContado; diasConCierre++; }
+    res.r.retiros.forEach(x => {
+      const s = socioById(x.socioId);
+      const nombre = s ? s.nombre : '(socio eliminado)';
+      porSocio[nombre] = (porSocio[nombre]||0) + (Number(x.monto)||0);
+    });
+  });
+
+  const boxSocios = document.getElementById('caja-resumen-socios');
+  const nombresSocios = Object.keys(porSocio);
+  boxSocios.innerHTML = `<p class="hint" style="margin-top:0;font-weight:700;color:var(--ink)">Retirado por socio</p>` +
+    (nombresSocios.length
+      ? nombresSocios.map(n=>`<div class="prod-item-row"><span>${esc(n)}</span><span class="mono">${fmt(porSocio[n])}</span></div>`).join('')
+      : '<div class="empty">Sin retiros en este período.</div>');
+
+  const boxConc = document.getElementById('caja-resumen-conciliacion');
+  boxConc.innerHTML = `
+    <p class="hint" style="margin-top:0;font-weight:700;color:var(--ink)">Conciliación del período</p>
+    <div class="resumen-mes-banner">
+      <div class="stat"><div class="cost-banner" style="margin:0"><div><div class="big mono">${fmt(totalVentas)}</div><div class="lbl">Ventas Pedix</div></div></div></div>
+      <div class="stat"><div class="cost-banner" style="margin:0"><div><div class="big mono">${fmt(totalElectronico)}</div><div class="lbl">Electrónico</div></div></div></div>
+    </div>
+    <div class="cost-banner" style="margin-top:10px">
+      <div><div class="big mono">${fmt(totalRetiros)}</div><div class="lbl">Total retirado</div></div>
+      <div><div class="big mono">${diasConCierre}</div><div class="lbl">Días con cierre cargado</div></div>
+    </div>`;
+}
+window.setCajaPeriodo = p => { cajaPeriodoActivo = p; renderCajaResumen(); };
+
+function renderCaja(){
+  renderSociosCaja();
+  renderCajaDia();
+  renderCajaResumen();
+}
+
+function renderAll(){ renderIngredientes(); renderPreparaciones(); renderEmpanadas(); renderPizzas(); renderRentabilidad(); renderProduccion(); renderPersonal(); renderCaja(); renderProyecciones(); }
 renderAll();
 cargarNube();
 
