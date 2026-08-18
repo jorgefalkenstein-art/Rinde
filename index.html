@@ -653,7 +653,7 @@ table.prod-tabla input{padding:6px 5px;font-size:.82rem;width:56px;max-width:100
         <button class="tt-btn" data-tipo="bebidas">Bebidas</button>
       </div>
       <p class="hint" id="prod-tipo-hint" style="margin-bottom:12px"></p>
-      <div class="field" style="margin-bottom:12px"><label>Día a producir</label>
+      <div class="field" style="margin-bottom:6px"><label>Día a producir</label>
         <select id="prod-dia-select">
           <option value="miercoles">Miércoles</option>
           <option value="jueves">Jueves</option>
@@ -664,6 +664,7 @@ table.prod-tabla input{padding:6px 5px;font-size:.82rem;width:56px;max-width:100
           <option value="martes">Martes</option>
         </select>
       </div>
+      <p class="hint" id="prod-fecha-resuelta" style="margin-top:0;margin-bottom:12px;font-weight:700"></p>
       <div id="prod-hoja"></div>
       <div class="btn-row" style="margin-top:14px">
         <button class="btn ghost sm" id="btn-imprimir-prod"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:14px;height:14px;vertical-align:-2px;margin-right:4px"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>Imprimir</button>
@@ -2843,6 +2844,18 @@ function valorStockActual(){
   });
   return total;
 }
+/* Diagnóstico: sabores con stock cargado que NO están sumando al valor, y por qué */
+function diagnosticoStockSinValorizar(){
+  const problemas = [];
+  Object.entries(state.produccion.stockActual||{}).forEach(([clave,cant]) => {
+    if (!cant) return;
+    const ref = state.produccion.vinculos[clave];
+    if (!ref){ problemas.push({clave, motivo:'sin vincular a una receta'}); return; }
+    const costoUnit = costoVinculo(ref);
+    if (costoUnit===null){ problemas.push({clave, motivo:'la receta vinculada no tiene costo calculable (revisá sus ingredientes)'}); }
+  });
+  return problemas;
+}
 let stockFiltro = '';
 let stockTipoActivo = 'empanadas';
 document.querySelectorAll('#stock-tipo-toggle .tt-btn').forEach(btn => btn.onclick = () => {
@@ -2888,6 +2901,7 @@ function renderResumenTotalesStock(){
   const docenas = Math.floor(totalUnidadesEmp/12);
   const sueltas = totalUnidadesEmp % 12;
   const sinPlata = ocultarSensible('produccion');
+  const problemas = sinPlata ? [] : diagnosticoStockSinValorizar();
   return `
     <div class="resumen-mes-banner" style="margin-bottom:10px">
       ${sinPlata ? '' : `<div class="stat"><div class="cost-banner" style="margin:0"><div><div class="big mono">${fmt(valorStockActual())}</div><div class="lbl">Valor total del stock</div></div></div></div>`}
@@ -2896,7 +2910,8 @@ function renderResumenTotalesStock(){
     <div class="cost-banner">
       <div><div class="big mono">${docenas}</div><div class="lbl">Docenas completas</div></div>
       <div><div class="big mono">${sueltas}</div><div class="lbl">Unidades sueltas</div></div>
-    </div>`;
+    </div>
+    ${problemas.length ? `<div class="notice show" style="margin-top:10px">${problemas.length} sabor(es) con stock no valorizan: ${problemas.map(p=>`${esc(etiquetaDe(p.clave))} — ${p.motivo}`).join('; ')}.</div>` : ''}`;
 }
 window.setStockActual = (clave, v) => {
   const n = Math.max(0, parseInt(v)||0);
@@ -3113,6 +3128,11 @@ function renderRentabilidadReal(){
       <div><div class="big mono">${fmt(gananciaDisponible)}</div><div class="lbl">Ganancia realmente disponible</div></div>
     </div>
     <p class="hint" style="margin-top:10px">Proyectado sobre los días de ${nombreMesProx}.</p>
+    ${(() => {
+      const problemas = diagnosticoStockSinValorizar();
+      if (!problemas.length) return '';
+      return `<div class="notice show" style="margin-top:10px">Tenés stock cargado en ${problemas.length} sabor(es) que no está sumando al valor: ${problemas.map(p=>`${esc(etiquetaDe(p.clave))} (${p.motivo})`).join(', ')}. Vinculalos o revisá sus recetas en "Vincular sabores" (Importar) para que valoricen.</div>`;
+    })()}
   `;
 
   const detalle = document.getElementById('prod-detalle-productos');
@@ -3331,6 +3351,13 @@ function renderHojaProduccion(){
   const box = document.getElementById('prod-hoja');
   const hint = document.getElementById('prod-tipo-hint');
 
+  const hoyIso = isoLocal(new Date());
+  const esHoy = fechaIso === hoyIso;
+  const fechaLegible = new Date(fechaIso+'T12:00:00').toLocaleDateString('es-AR', {weekday:'long', day:'numeric', month:'long'});
+  document.getElementById('prod-fecha-resuelta').innerHTML = esHoy
+    ? `📅 Hoy, ${fechaLegible}`
+    : `📅 Próximo ${fechaLegible} (todavía no llegó — a ${Math.round((new Date(fechaIso)-new Date(hoyIso))/86400000)} día(s))`;
+
   if (prodTipoActual === 'empanadas'){
     hint.textContent = 'Las empanadas se producen y se congelan con anticipación. Cargá cuánto tenés en el freezer (stock inicial) y calcula cuánto falta producir para llegar al objetivo.';
     let sabores = Object.entries(objetivosDia).filter(([clave])=>claveEsEmpanada(clave)).sort((a,b)=>etiquetaDe(a[0]).localeCompare(etiquetaDe(b[0]),'es'));
@@ -3351,6 +3378,7 @@ function renderHojaProduccion(){
     const reg = state.produccion.registro[fechaIso];
     box.innerHTML = `
       ${esDiaSinVentasPropias ? `<div class="notice show" style="margin-bottom:10px">${DIA_LABEL[dia]} nunca tuvo ventas registradas, así que no tiene objetivo propio. Te mostramos como referencia el <b>objetivo semanal completo</b> (la suma de todos los días de venta) — igual podés cargar lo que produzcas hoy.</div>` : ''}
+      ${!esHoy ? `<div class="notice show" style="margin-bottom:10px">Esta fecha todavía no llegó — la columna "Stock inicial" te muestra tu <b>stock actual de ahora</b> como vista previa (nadie cargó nada específico para ese día todavía). Va a seguir cambiando a medida que produzcas y vendas hasta que llegue esa fecha. Para cargar lo de <b>hoy</b>, elegí el día de la semana que coincide con hoy.</div>` : ''}
       <div class="tabla-scroll">
       <table class="prod-tabla">
         <thead><tr><th>Sabor</th><th>Objetivo${esDiaSinVentasPropias?' semana':''}</th><th>Stock inicial</th><th>Producir</th><th>Producido</th></tr></thead>
@@ -3504,7 +3532,7 @@ window.setRegistroProd = (fechaIso, clave, campo, v) => {
   }
   reg[campo] = nuevoValor;
   state.produccion.registro[fechaIso][clave] = reg;
-  save(); renderHojaProduccion(); renderResumenSemanal();
+  save(); renderHojaProduccion(); renderResumenSemanal(); renderStockActual(); renderMovimientoSemanal();
 };
 document.getElementById('prod-dia-select').onchange = renderHojaProduccion;
 document.getElementById('btn-imprimir-prod').onclick = () => { renderHojaProduccion(); setTimeout(()=>window.print(), 80); };
@@ -3708,6 +3736,7 @@ document.querySelectorAll('#hoja-subtabs .tt-btn').forEach(btn => btn.onclick = 
   btn.classList.add('active');
   const sub = btn.dataset.hsub;
   HOJA_SUBTABS.forEach(s => document.getElementById('hoja-sub-'+s).hidden = (s !== sub));
+  renderStockActual(); renderMovimientoSemanal(); renderResumenSemanal(); renderHojaProduccion();
   window.scrollTo({top:0, behavior:'instant'});
 });
 const PROY_SUBTABS = ['resumen','obra','gastos','productos'];
