@@ -251,6 +251,21 @@ table.prod-tabla input{padding:6px 5px;font-size:.82rem;width:56px;max-width:100
 </div>
 
 <div class="scrim" id="scrim"></div>
+<div id="login-gate" style="display:none;position:fixed;inset:0;background:var(--bg);z-index:100;overflow-y:auto;padding:env(safe-area-inset-top) 16px 40px">
+  <div style="max-width:420px;margin:0 auto;padding-top:60px">
+    <div style="text-align:center;margin-bottom:22px">
+      <img id="login-gate-logo" src="" alt="" style="display:none;width:64px;height:64px;object-fit:cover;border-radius:14px;margin:0 auto 10px;box-shadow:var(--shadow)">
+      <div style="font-weight:900;font-size:1.4rem" id="login-gate-nombre">Rinde</div>
+    </div>
+    <div class="card">
+      <h3>Ingresar</h3>
+      <div class="field" style="margin-bottom:10px"><label>PIN de administrador</label><input type="password" inputmode="numeric" id="gate-admin-pin" placeholder="PIN"></div>
+      <button class="btn" id="gate-btn-admin" style="margin-bottom:18px">Entrar como administrador</button>
+      <p class="hint" style="margin-top:0;margin-bottom:8px">O elegí tu usuario:</p>
+      <div id="gate-usuarios-list"></div>
+    </div>
+  </div>
+</div>
 <div id="banner-operario" style="display:none;background:#1a1a1d;color:#fff;padding:9px 16px;font-size:.78rem;font-weight:700;text-align:center;position:sticky;top:0;z-index:39">
   👤 Sesión limitada: <span id="banner-operario-nombre"></span> <button id="btn-salir-operario" style="margin-left:10px;background:#fff;color:#1a1a1d;border:none;border-radius:6px;padding:5px 10px;font-weight:800;font-size:.72rem;cursor:pointer">Salir</button>
 </div>
@@ -754,40 +769,27 @@ table.prod-tabla input{padding:6px 5px;font-size:.82rem;width:56px;max-width:100
   <!-- USUARIOS -->
   <section id="tab-usuarios" hidden>
     <div class="page-title">Usuarios</div>
-    <div class="page-sub">Entrá como administrador para gestionar accesos, o elegí tu usuario si ya lo cargaron.</div>
+    <div class="page-sub">Gestioná quién puede entrar y a qué tiene acceso.</div>
 
-    <div id="usuarios-login">
-      <div class="card">
-        <h3>¿Quién sos?<button type="button" class="help-btn" onclick="toggleAyuda('ayuda-usuarios-login')">?</button></h3>
-        <div class="help-text" id="ayuda-usuarios-login">Como administrador tenés acceso a todo y podés crear usuarios con permisos limitados por sección. Recordá: esto es un freno para errores accidentales, no seguridad real — cualquiera con conocimientos técnicos puede saltearlo abriendo las herramientas de desarrollador del navegador.</div>
-        <div class="field" style="margin-bottom:12px"><label>PIN de administrador</label><input id="login-admin-pin" type="password" inputmode="numeric" placeholder="PIN"></div>
-        <button class="btn" id="btn-login-admin" style="margin-bottom:16px">Entrar como administrador</button>
-        <p class="hint" style="margin-top:0;margin-bottom:8px">O elegí tu usuario:</p>
-        <div id="usuarios-login-list"></div>
+    <div class="card">
+      <div class="prod-header">
+        <h3 style="flex:1">Sesión activa</h3>
       </div>
+      <div id="usuarios-sesion-info"></div>
+      <button class="btn ghost sm" id="btn-cerrar-sesion" style="margin-top:10px">Cambiar de usuario</button>
     </div>
 
-    <div id="usuarios-panel" style="display:none">
-      <div class="card">
-        <div class="prod-header">
-          <h3 style="flex:1">Sesión activa</h3>
-        </div>
-        <div id="usuarios-sesion-info"></div>
-        <button class="btn ghost sm" id="btn-cerrar-sesion" style="margin-top:10px">Cerrar sesión</button>
-      </div>
+    <div class="card" id="card-admin-usuarios" style="display:none">
+      <h3>PIN de administrador<button type="button" class="help-btn" onclick="toggleAyuda('ayuda-admin-pin')">?</button></h3>
+      <div class="help-text" id="ayuda-admin-pin">Con este PIN entrás como administrador cada vez que abrís la app. Si lo dejás vacío, la app no pide login y cualquiera tiene acceso completo (como hasta ahora). Guardalo bien — recordá que no hay seguridad real detrás: es un freno para errores, no protección contra alguien con conocimientos técnicos.</div>
+      <div class="field"><label>PIN de administrador</label><input id="admin-pin-set" inputmode="numeric" placeholder="Ej: 1234"></div>
+    </div>
 
-      <div class="card" id="card-admin-usuarios" style="display:none">
-        <h3>PIN de administrador<button type="button" class="help-btn" onclick="toggleAyuda('ayuda-admin-pin')">?</button></h3>
-        <div class="help-text" id="ayuda-admin-pin">Con este PIN entrás como administrador. Guardalo bien — si lo perdés, cualquiera con acceso al archivo puede editar el estado guardado directamente (recordá: no hay seguridad real detrás).</div>
-        <div class="field"><label>PIN de administrador</label><input id="admin-pin-set" inputmode="numeric" placeholder="Ej: 1234"></div>
-      </div>
-
-      <div class="card" id="card-usuarios-lista" style="display:none">
-        <h3>Usuarios cargados<button type="button" class="help-btn" onclick="toggleAyuda('ayuda-usuarios-lista')">?</button></h3>
-        <div class="help-text" id="ayuda-usuarios-lista">Cada usuario tiene su propio PIN y, sección por sección, uno de tres niveles: <b>Sin acceso</b> (no ve la pestaña), <b>Solo ver</b> (ve todo, puede imprimir/compartir, pero no puede tipear ni borrar nada), o <b>Acceso completo</b> (igual que vos).</div>
-        <div id="usuarios-list"></div>
-        <button class="btn ghost sm" id="btn-add-usuario" style="margin-top:8px">+ Usuario</button>
-      </div>
+    <div class="card" id="card-usuarios-lista" style="display:none">
+      <h3>Usuarios cargados<button type="button" class="help-btn" onclick="toggleAyuda('ayuda-usuarios-lista')">?</button></h3>
+      <div class="help-text" id="ayuda-usuarios-lista">Cada usuario tiene su propio PIN y, sección por sección, uno de tres niveles: <b>Sin acceso</b> (no ve la pestaña), <b>Solo ver</b> (ve todo, puede imprimir/compartir, pero no puede tipear ni borrar nada), o <b>Acceso completo</b> (igual que vos).</div>
+      <div id="usuarios-list"></div>
+      <button class="btn ghost sm" id="btn-add-usuario" style="margin-top:8px">+ Usuario</button>
     </div>
   </section>
 
@@ -3809,82 +3811,79 @@ const SECCIONES_CON_PERMISO = {
   ingredientes:'Ingredientes', preparaciones:'Preparaciones', empanadas:'Empanadas', pizzas:'Pizzas',
   rentabilidad:'Precios sugeridos', produccion:'Producción', personal:'Personal', caja:'Caja', proyecciones:'Proyecciones'
 };
-let usuariosAdminDesbloqueado = false;
 let usuarioEditando = null;
+let sesionActual = null; // {tipo:'admin'} | {tipo:'usuario', usuarioId} — NO se guarda, se pide de nuevo cada vez que abrís la app
 
+function esAdmin(){ return !!sesionActual && sesionActual.tipo === 'admin'; }
 function usuarioActivo(){
-  if (!state.seguridad.sesionUsuarioId) return null;
-  return state.seguridad.usuarios.find(u=>u.id===state.seguridad.sesionUsuarioId) || null;
+  if (!sesionActual || sesionActual.tipo !== 'usuario') return null;
+  return state.seguridad.usuarios.find(u=>u.id===sesionActual.usuarioId) || null;
 }
 function permisoDeSeccion(seccionKey){
+  if (esAdmin()) return 'completo';
   const u = usuarioActivo();
-  if (!u) return 'completo'; // sin sesión de usuario restringido = sos vos, el dueño, acceso total
+  if (!u) return 'completo'; // sin PIN configurado en toda la app = sin restricciones (comportamiento de siempre)
   return (u.permisos && u.permisos[seccionKey]) || 'ninguno';
 }
 
-function renderUsuarios(){
-  const u = usuarioActivo();
-  const mostrarPanel = !!u || usuariosAdminDesbloqueado;
-  document.getElementById('usuarios-login').style.display = mostrarPanel ? 'none' : 'block';
-  document.getElementById('usuarios-panel').style.display = mostrarPanel ? 'block' : 'none';
-
-  if (u){
-    document.getElementById('usuarios-sesion-info').innerHTML = `<div class="prod-item-row"><span>${esc(u.nombre)}</span><span class="mono" style="color:var(--ink-soft);font-size:.78rem">acceso limitado</span></div>`;
-    document.getElementById('card-admin-usuarios').style.display = 'none';
-    document.getElementById('card-usuarios-lista').style.display = 'none';
-    return;
-  }
-
-  const listaLogin = document.getElementById('usuarios-login-list');
-  listaLogin.innerHTML = state.seguridad.usuarios.length
-    ? state.seguridad.usuarios.map(x => `<button class="btn ghost sm" style="margin:4px 6px 4px 0" onclick="intentarLoginUsuario('${x.id}')">${esc(x.nombre)}</button>`).join('')
-    : '<div class="empty">Todavía no hay usuarios cargados.</div>';
-
-  document.getElementById('admin-pin-set').value = state.seguridad.adminPin || '';
-  document.getElementById('card-admin-usuarios').style.display = usuariosAdminDesbloqueado ? 'block' : 'none';
-  document.getElementById('card-usuarios-lista').style.display = usuariosAdminDesbloqueado ? 'block' : 'none';
-  document.getElementById('usuarios-sesion-info').innerHTML = usuariosAdminDesbloqueado
-    ? `<div class="prod-item-row"><span>Administrador</span><span class="mono" style="color:var(--green);font-size:.78rem">acceso total</span></div>`
-    : '<div class="empty">Todavía no entraste.</div>';
-
-  if (usuariosAdminDesbloqueado) renderListaUsuarios();
+/* Pantalla de bloqueo al abrir la app */
+function mostrarGateSiCorresponde(){
+  if (sesionActual) return; // ya entraste en esta misma carga de página
+  if (!state.seguridad.adminPin){ sesionActual = {tipo:'admin'}; return; } // nunca se configuró PIN: acceso libre, como siempre
+  const p = state.perfil;
+  document.getElementById('login-gate-nombre').textContent = p.nombre || 'Rinde';
+  const logo = document.getElementById('login-gate-logo');
+  if (p.logo){ logo.src = p.logo; logo.style.display = 'block'; } else { logo.style.display = 'none'; }
+  const box = document.getElementById('gate-usuarios-list');
+  box.innerHTML = state.seguridad.usuarios.length
+    ? state.seguridad.usuarios.map(x => `<button class="btn ghost sm" style="margin:4px 6px 4px 0" onclick="intentarLoginGateUsuario('${x.id}')">${esc(x.nombre)}</button>`).join('')
+    : '<div class="empty">Sin usuarios cargados todavía.</div>';
+  document.getElementById('login-gate').style.display = 'block';
 }
-document.getElementById('btn-login-admin').onclick = () => {
-  const intento = document.getElementById('login-admin-pin').value;
-  if (!state.seguridad.adminPin || intento === state.seguridad.adminPin){
-    usuariosAdminDesbloqueado = true;
-    document.getElementById('login-admin-pin').value = '';
-    renderUsuarios();
+document.getElementById('gate-btn-admin').onclick = () => {
+  const intento = document.getElementById('gate-admin-pin').value;
+  if (intento === state.seguridad.adminPin){
+    sesionActual = {tipo:'admin'};
+    document.getElementById('gate-admin-pin').value = '';
+    document.getElementById('login-gate').style.display = 'none';
+    aplicarPermisos(); renderUsuarios();
   } else {
     alert('PIN incorrecto.');
   }
 };
-document.getElementById('login-admin-pin').onkeydown = e => { if (e.key==='Enter') document.getElementById('btn-login-admin').click(); };
-window.intentarLoginUsuario = id => {
+document.getElementById('gate-admin-pin').onkeydown = e => { if (e.key==='Enter') document.getElementById('gate-btn-admin').click(); };
+window.intentarLoginGateUsuario = id => {
   const u = state.seguridad.usuarios.find(x=>x.id===id);
   if (!u) return;
   const intento = prompt(`PIN de ${u.nombre}:`);
   if (intento === null) return;
   if (intento === u.pin){
-    state.seguridad.sesionUsuarioId = u.id;
-    save(); aplicarPermisos(); renderUsuarios();
+    sesionActual = {tipo:'usuario', usuarioId:u.id};
+    document.getElementById('login-gate').style.display = 'none';
+    aplicarPermisos(); renderUsuarios();
   } else {
     alert('PIN incorrecto.');
   }
 };
-document.getElementById('btn-cerrar-sesion').onclick = () => {
-  const u = usuarioActivo();
-  if (u){
-    const intento = prompt('PIN de administrador para cerrar esta sesión:');
-    if (intento === null) return;
-    if (intento !== state.seguridad.adminPin){ alert('PIN incorrecto.'); return; }
-    state.seguridad.sesionUsuarioId = null;
-  } else {
-    usuariosAdminDesbloqueado = false;
-  }
-  save(); aplicarPermisos(); renderUsuarios();
-};
+
+function renderUsuarios(){
+  document.getElementById('usuarios-sesion-info').innerHTML = esAdmin()
+    ? `<div class="prod-item-row"><span>Administrador</span><span class="mono" style="color:var(--green);font-size:.78rem">acceso total</span></div>`
+    : usuarioActivo()
+      ? `<div class="prod-item-row"><span>${esc(usuarioActivo().nombre)}</span><span class="mono" style="color:var(--ink-soft);font-size:.78rem">acceso limitado</span></div>`
+      : '<div class="empty">Sin login configurado — acceso libre para todos.</div>';
+
+  document.getElementById('admin-pin-set').value = state.seguridad.adminPin || '';
+  document.getElementById('card-admin-usuarios').style.display = esAdmin() ? 'block' : 'none';
+  document.getElementById('card-usuarios-lista').style.display = esAdmin() ? 'block' : 'none';
+  if (esAdmin()) renderListaUsuarios();
+}
 document.getElementById('admin-pin-set').onchange = e => { state.seguridad.adminPin = e.target.value.trim(); save(); };
+document.getElementById('btn-cerrar-sesion').onclick = () => {
+  sesionActual = null;
+  mostrarGateSiCorresponde();
+  aplicarPermisos(); renderUsuarios();
+};
 
 function renderListaUsuarios(){
   const box = document.getElementById('usuarios-list');
@@ -3946,7 +3945,7 @@ document.getElementById('btn-add-usuario').onclick = () => {
   save(); renderListaUsuarios();
 };
 
-/* Aplica las restricciones al resto de la app según el usuario con sesión activa (si hay alguno) */
+/* Aplica las restricciones al resto de la app según la sesión activa */
 function aplicarPermisos(){
   const u = usuarioActivo();
   document.body.classList.toggle('modo-operario', !!u);
@@ -3968,20 +3967,18 @@ function aplicarPermisos(){
       campo.disabled = soloVer;
     });
     el.querySelectorAll('button').forEach(btn => {
-      const esSeguro = /imprimir|compartir|help-btn|buscar|search/i.test(btn.id+' '+btn.className) || btn.classList.contains('day-tabs') || btn.closest('.day-tabs') || btn.closest('.tipo-toggle');
+      const esSeguro = /imprimir|compartir|help-btn|buscar|search/i.test(btn.id+' '+btn.className) || btn.closest('.day-tabs') || btn.closest('.tipo-toggle');
       if (soloVer && !esSeguro) btn.disabled = true; else if (!soloVer) btn.disabled = false;
     });
   });
 
-  if (u){
-    const tabActual = document.querySelector('#nav button.active')?.dataset.tab;
-    if (tabActual && tabActual!=='inicio' && tabActual!=='usuarios' && permisoDeSeccion(tabActual)==='ninguno'){
-      document.querySelector('#nav button[data-tab="inicio"]').click();
-    }
+  const tabActual = document.querySelector('#nav button.active')?.dataset.tab;
+  if (u && tabActual && tabActual!=='inicio' && tabActual!=='usuarios' && permisoDeSeccion(tabActual)==='ninguno'){
+    document.querySelector('#nav button[data-tab="inicio"]').click();
   }
 }
 
-function renderAll(){ renderIngredientes(); renderPreparaciones(); renderEmpanadas(); renderPizzas(); renderRentabilidad(); renderProduccion(); renderPersonal(); renderCaja(); renderProyecciones(); renderPerfil(); renderUsuarios(); aplicarPermisos(); }
+function renderAll(){ renderIngredientes(); renderPreparaciones(); renderEmpanadas(); renderPizzas(); renderRentabilidad(); renderProduccion(); renderPersonal(); renderCaja(); renderProyecciones(); renderPerfil(); mostrarGateSiCorresponde(); renderUsuarios(); aplicarPermisos(); }
 renderAll();
 cargarNube();
 
