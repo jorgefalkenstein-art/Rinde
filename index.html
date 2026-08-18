@@ -423,13 +423,6 @@ table.prod-tabla input{padding:6px 5px;font-size:.82rem;width:56px;max-width:100
         <div id="prod-reserva-reposicion"></div>
       </div>
       <div class="card">
-        <h3 style="margin-bottom:4px">Stock actual</h3>
-        <p class="hint" style="margin-top:0;margin-bottom:10px">Cuánto tenés ya producido y congelado de cada sabor, ahora mismo. Cargalo una vez al contar físicamente el freezer. De ahí en más: sube solo cuando marcás "Producido" en la Hoja, y baja solo cada vez que importás el informe mensual (te descuenta lo que se vendió ese mes). Podés corregirlo a mano en cualquier momento si hacés un recuento físico.</p>
-        <div class="search-box" style="margin-bottom:10px"><input id="stock-search" placeholder="Buscar sabor..." autocomplete="off"></div>
-        <div id="stock-actual-list"></div>
-        <div id="stock-actual-total" style="margin-top:10px"></div>
-      </div>
-      <div class="card">
         <h3 style="margin-bottom:4px">Fondo de amortización de equipos</h3>
         <p class="hint" style="margin-top:0;margin-bottom:10px">Horno, freezer, heladera, mostrador, lo que sea. Valor de reposición ÷ años de vida útil = cuánto conviene reservar por mes para poder reemplazarlo cuando toque, sin sorpresas.</p>
         <div id="equipos-list"></div>
@@ -453,6 +446,19 @@ table.prod-tabla input{padding:6px 5px;font-size:.82rem;width:56px;max-width:100
     </div>
 
     <div id="prod-sub-hoja">
+    <div class="card">
+      <h3 style="margin-bottom:4px">Stock actual</h3>
+      <p class="hint" style="margin-top:0;margin-bottom:10px">Cuánto tenés ya producido y congelado de cada sabor, ahora mismo. Cargalo acá contando físicamente el freezer. De ahí en más: sube solo cuando marcás "Producido" abajo, y baja solo cada vez que importás un informe de Pedix (te descuenta lo que se vendió). Corregilo a mano cuando hagas un recuento.</p>
+      <div class="search-box" style="margin-bottom:10px"><input id="stock-search" placeholder="Buscar sabor..." autocomplete="off"></div>
+      <div id="stock-actual-list"></div>
+      <div id="stock-actual-total" style="margin-top:10px"></div>
+    </div>
+    <div class="card" id="card-movimiento-semanal" style="display:none">
+      <h3 style="margin-bottom:4px">Movimiento de esta semana</h3>
+      <p class="hint" style="margin-top:0;margin-bottom:10px">Con qué arrancaste la semana, cuánto produjiste, cuánto se vendió (según el último informe importado que caiga en estos días), y con cuánto arrancás la que viene.</p>
+      <div id="movimiento-semanal-list"></div>
+      <div id="movimiento-semanal-total" style="margin-top:10px"></div>
+    </div>
     <div class="card" id="card-resumen-semanal" style="display:none">
       <h3 style="margin-bottom:4px">Resumen semanal — Empanadas</h3>
       <p class="hint" style="margin-top:0;margin-bottom:10px">Sumando el objetivo de todos los días que trabajás, y descontando tu stock actual, esto es lo que hay que producir en total para cubrir toda la semana entrante — repartilo en tus días de producción como te convenga.</p>
@@ -2297,8 +2303,12 @@ function renderStockActual(){
 
   box.innerHTML = lista.map(clave => {
     const cant = state.produccion.stockActual[clave] || 0;
-    return `<div class="obj-row">
-      <span>${esc(etiquetaDe(clave))}</span>
+    const ref = state.produccion.vinculos[clave];
+    const costoUnit = ref ? costoVinculo(ref) : null;
+    const extra = Number(state.produccion.extras[clave])||0;
+    const valorLinea = (costoUnit!==null && cant) ? (costoUnit+extra)*cant : 0;
+    return `<div class="obj-row" style="grid-template-columns:1fr 70px">
+      <span>${esc(etiquetaDe(clave))}${valorLinea>0?` <span style="color:var(--ink-soft);font-size:.72rem">${fmt(valorLinea)}</span>`:''}</span>
       <input class="mono" type="number" inputmode="numeric" value="${cant||''}" placeholder="0" onchange="setStockActual('${clave}',this.value)">
     </div>`;
   }).join('');
@@ -2574,6 +2584,57 @@ document.querySelectorAll('#prod-tipo-toggle .tt-btn').forEach(btn => btn.onclic
   renderHojaProduccion();
 });
 
+/* Reconstruye el movimiento de stock de la semana actual a partir de lo que ya vamos guardando:
+   lo producido día a día (registro) y lo vendido según el último informe importado
+   (stockDescontadoPorFecha). El stock inicial de la semana se despeja algebraicamente:
+   stock_actual = stock_inicio + producido − vendido  =>  stock_inicio = stock_actual − producido + vendido */
+function renderMovimientoSemanal(){
+  const card = document.getElementById('card-movimiento-semanal');
+  const {desde, hasta} = rangoPeriodo('semana');
+  const fechasSemana = [];
+  { let cur = new Date(desde+'T12:00:00'); const fin = new Date(hasta+'T12:00:00');
+    while (cur<=fin){ fechasSemana.push(isoLocal(cur)); cur.setDate(cur.getDate()+1); } }
+
+  const producidoPorClave = {}, vendidoPorClave = {};
+  fechasSemana.forEach(fecha => {
+    const reg = state.produccion.registro[fecha];
+    if (reg) Object.entries(reg).forEach(([clave,r]) => { producidoPorClave[clave] = (producidoPorClave[clave]||0) + (r.producido||0); });
+    const vend = state.produccion.stockDescontadoPorFecha[fecha];
+    if (vend) Object.entries(vend).forEach(([clave,cant]) => { vendidoPorClave[clave] = (vendidoPorClave[clave]||0) + cant; });
+  });
+
+  const claves = new Set([...Object.keys(producidoPorClave), ...Object.keys(vendidoPorClave)]);
+  if (!claves.size){ card.style.display = 'none'; return; }
+  card.style.display = 'block';
+
+  const filas = [...claves].sort((a,b)=>etiquetaDe(a).localeCompare(etiquetaDe(b),'es')).map(clave => {
+    const actual = state.produccion.stockActual[clave] || 0;
+    const producido = producidoPorClave[clave] || 0;
+    const vendido = vendidoPorClave[clave] || 0;
+    const inicio = Math.max(0, actual - producido + vendido);
+    return {clave, inicio, producido, vendido, final: actual};
+  });
+
+  document.getElementById('movimiento-semanal-list').innerHTML = filas.map(f => `
+    <div class="prod-item-row">
+      <span>${esc(etiquetaDe(f.clave))}</span>
+      <span class="mono">${f.inicio} + ${f.producido} − ${f.vendido} = ${f.final}</span>
+    </div>`).join('');
+
+  const totInicio = filas.reduce((a,f)=>a+f.inicio,0);
+  const totProducido = filas.reduce((a,f)=>a+f.producido,0);
+  const totVendido = filas.reduce((a,f)=>a+f.vendido,0);
+  const totFinal = filas.reduce((a,f)=>a+f.final,0);
+  document.getElementById('movimiento-semanal-total').innerHTML = `
+    <div class="resumen-mes-banner">
+      <div class="stat"><div class="cost-banner" style="margin:0"><div><div class="big mono">${totInicio}</div><div class="lbl">Arrancó semana</div></div></div></div>
+      <div class="stat"><div class="cost-banner" style="margin:0;background:var(--green)"><div><div class="big mono">+${totProducido}</div><div class="lbl">Producido</div></div></div></div>
+      <div class="stat"><div class="cost-banner" style="margin:0"><div><div class="big mono">−${totVendido}</div><div class="lbl">Vendido</div></div></div></div>
+    </div>
+    <div class="cost-banner" style="margin-top:10px">
+      <div><div class="big mono">${totFinal}</div><div class="lbl">Con esto arrancás la semana que viene</div></div>
+    </div>`;
+}
 function renderResumenSemanal(){
   const card = document.getElementById('card-resumen-semanal');
   const dias = Object.keys(state.produccion.objetivos||{});
@@ -2826,6 +2887,7 @@ function renderProduccion(){
   renderVincular();
   renderEquipos();
   renderStockActual();
+  renderMovimientoSemanal();
   renderRentabilidadReal();
   renderObjetivos();
   renderResumenSemanal();
