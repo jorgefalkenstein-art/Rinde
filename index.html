@@ -218,6 +218,13 @@ table.prod-tabla input{padding:6px 5px;font-size:.82rem;width:56px;max-width:100
 .tt-btn{flex:1;background:#fff;border:1.5px solid var(--line);border-radius:10px;padding:11px 8px;font-family:inherit;font-size:.82rem;font-weight:700;color:var(--ink-soft);cursor:pointer}
 .tt-btn.active{background:var(--red-soft);border-color:var(--red);color:var(--red)}
 .insumo-row{display:flex;justify-content:space-between;align-items:baseline;padding:8px 2px;border-bottom:1px solid var(--line);font-size:.85rem}
+.chart-bars{display:flex;align-items:flex-end;gap:5px;height:150px;margin:14px 0 4px;padding:0 2px}
+.chart-bars .barra-mes{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;height:100%;min-width:0}
+.chart-bars .barra{width:100%;border-radius:5px 5px 2px 2px;background:var(--line);transition:height .3s ease}
+.chart-bars .barra.con-datos{background:var(--red)}
+.chart-bars .barra.con-datos.mejor{background:var(--green)}
+.chart-bars .barra-valor{font-size:.55rem;color:var(--ink-soft);margin-bottom:3px;font-weight:700;white-space:nowrap}
+.chart-bars .barra-label{font-size:.58rem;color:var(--ink-soft);margin-top:5px;font-weight:700;text-transform:uppercase}
 .insumo-row:last-child{border-bottom:none}
 .insumo-row .in-cant{font-weight:700;color:var(--red);white-space:nowrap}
 
@@ -553,6 +560,14 @@ table.prod-tabla input{padding:6px 5px;font-size:.82rem;width:56px;max-width:100
       <div class="card" id="card-detalle-productos" style="display:none">
         <h3 style="margin-bottom:10px">Detalle por producto</h3>
         <div id="prod-detalle-productos"></div>
+      </div>
+      <div class="card" id="card-vista-anual" style="display:none">
+        <h3>Vista anual<button type="button" class="help-btn" onclick="toggleAyuda('ayuda-vista-anual')">?</button></h3>
+        <div class="help-text" id="ayuda-vista-anual">Comparación de todos los meses del año que tengas cargados (los que hayas importado en algún momento — los que faltan quedan en gris, sin barra). Tocá un año para cambiar.</div>
+        <div class="day-tabs" id="anual-tabs"></div>
+        <div id="anual-chart" class="chart-bars"></div>
+        <div id="anual-resumen" style="margin-top:10px"></div>
+        <div id="anual-lista" style="margin-top:12px"></div>
       </div>
       <div class="empty" id="ganancia-vacio">Importá un informe mensual (pestaña Importar) para ver la ganancia real.</div>
     </div>
@@ -2966,6 +2981,62 @@ document.getElementById('btn-add-equipo').onclick = () => {
 };
 
 let mesGananciaSeleccionado = null;
+/* ================= VISTA ANUAL ================= */
+const MESES_CORTOS = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
+function fmtCorto(n){
+  const abs = Math.abs(n);
+  if (abs>=1000000) return '$'+(n/1000000).toFixed(abs>=10000000?0:1).replace('.0','')+'M';
+  if (abs>=1000) return '$'+(n/1000).toFixed(0)+'k';
+  return fmt(n);
+}
+let anioActivo = null;
+function renderVistaAnual(){
+  const card = document.getElementById('card-vista-anual');
+  const hist = state.produccion.historico;
+  if (!hist.length){ card.style.display='none'; return; }
+  card.style.display = 'block';
+
+  const anios = [...new Set(hist.map(h=>h.mes.slice(0,4)))].sort((a,b)=>b.localeCompare(a));
+  if (!anioActivo || !anios.includes(anioActivo)) anioActivo = anios[0];
+  document.getElementById('anual-tabs').innerHTML = anios.map(a =>
+    `<button class="${a===anioActivo?'active':''}" onclick="setAnioActivo('${a}')">${a}</button>`).join('');
+
+  const mesesDelAnio = MESES_CORTOS.map((nombre,idx) => {
+    const mesStr = `${anioActivo}-${String(idx+1).padStart(2,'0')}`;
+    const h = hist.find(x=>x.mes===mesStr);
+    return { mesStr, nombre, ingreso: h?h.ingresoTotal:0, costo: h?h.costoTotal:0, ganancia: h?h.gananciaTotal:0, conDatos: !!h };
+  });
+  const maxIngreso = Math.max(...mesesDelAnio.map(m=>m.ingreso), 1);
+  const mejorMes = mesesDelAnio.reduce((best,m)=> (m.conDatos && m.ingreso>(best?best.ingreso:-1)) ? m : best, null);
+
+  document.getElementById('anual-chart').innerHTML = mesesDelAnio.map(m => {
+    const alturaPct = m.conDatos ? Math.max(6, Math.round(m.ingreso/maxIngreso*100)) : 3;
+    const esMejor = mejorMes && m.mesStr===mejorMes.mesStr;
+    return `<div class="barra-mes">
+      ${m.conDatos ? `<div class="barra-valor">${fmtCorto(m.ingreso)}</div>` : ''}
+      <div class="barra ${m.conDatos?'con-datos':''} ${esMejor?'mejor':''}" style="height:${alturaPct}%" title="${m.nombre}: ${fmt(m.ingreso)}"></div>
+      <div class="barra-label">${m.nombre}</div>
+    </div>`;
+  }).join('');
+
+  const mesesConDatos = mesesDelAnio.filter(m=>m.conDatos);
+  const totalIngreso = mesesConDatos.reduce((a,m)=>a+m.ingreso,0);
+  const totalCosto = mesesConDatos.reduce((a,m)=>a+m.costo,0);
+  const totalGanancia = totalIngreso-totalCosto;
+  document.getElementById('anual-resumen').innerHTML = `
+    <div class="resumen-mes-banner">
+      <div class="stat"><div class="cost-banner" style="margin:0"><div><div class="big mono">${fmt(totalIngreso)}</div><div class="lbl">Ingreso del año</div></div></div></div>
+      <div class="stat"><div class="cost-banner" style="margin:0;background:var(--green)"><div><div class="big mono">${fmt(totalGanancia)}</div><div class="lbl">Ganancia del año</div></div></div></div>
+    </div>
+    <p class="hint" style="margin-top:0">${mesesConDatos.length} de 12 meses con datos cargados${mejorMes?` · mejor mes: ${mejorMes.nombre} (${fmt(mejorMes.ingreso)})`:''}.</p>
+  `;
+  document.getElementById('anual-lista').innerHTML = mesesConDatos.length ? mesesConDatos.map(m => {
+    const pct = m.ingreso>0 ? (m.ganancia/m.ingreso*100) : 0;
+    return `<div class="prod-item-row"><span>${m.nombre}</span><span class="mono">${fmt(m.ingreso)} · ${pct.toFixed(0)}%</span></div>`;
+  }).join('') : '';
+}
+window.setAnioActivo = a => { anioActivo = a; renderVistaAnual(); };
+
 function renderRentabilidadReal(){
   const card = document.getElementById('card-rentabilidad-real');
   const cardNeta = document.getElementById('card-ganancia-neta');
@@ -3603,6 +3674,7 @@ function renderProduccion(){
   renderStockActual();
   renderMovimientoSemanal();
   renderRentabilidadReal();
+  renderVistaAnual();
   renderObjetivos();
   renderResumenSemanal();
   renderHojaProduccion();
