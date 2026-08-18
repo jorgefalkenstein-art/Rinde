@@ -3274,19 +3274,24 @@ function renderMovimientoSemanal(){
       <div><div class="big mono">${totFinal}</div><div class="lbl">Con esto arrancás la semana que viene</div></div>
     </div>`;
 }
-function renderResumenSemanal(){
-  const card = document.getElementById('card-resumen-semanal');
-  const dias = Object.keys(state.produccion.objetivos||{});
-  if (!dias.length){ card.style.display = 'none'; return; }
-
-  /* sumamos el objetivo de cada sabor de empanada en TODOS los días que trabajás */
+/* Suma el objetivo de empanadas de todos los días de venta que tenés cargados — se reutiliza como
+   referencia en días sin ventas propias (lunes, martes, etc.) donde igual se produce. */
+function objetivoSemanalEmpanadas(){
   const totalPorSabor = {};
-  dias.forEach(dia => {
+  Object.keys(state.produccion.objetivos||{}).forEach(dia => {
     Object.entries(state.produccion.objetivos[dia]||{}).forEach(([clave,obj]) => {
       if (!claveEsEmpanada(clave)) return;
       totalPorSabor[clave] = (totalPorSabor[clave]||0) + obj;
     });
   });
+  return totalPorSabor;
+}
+function renderResumenSemanal(){
+  const card = document.getElementById('card-resumen-semanal');
+  const dias = Object.keys(state.produccion.objetivos||{});
+  if (!dias.length){ card.style.display = 'none'; return; }
+
+  const totalPorSabor = objetivoSemanalEmpanadas();
   const claves = Object.keys(totalPorSabor);
   if (!claves.length){ card.style.display = 'none'; return; }
   card.style.display = 'block';
@@ -3328,18 +3333,27 @@ function renderHojaProduccion(){
 
   if (prodTipoActual === 'empanadas'){
     hint.textContent = 'Las empanadas se producen y se congelan con anticipación. Cargá cuánto tenés en el freezer (stock inicial) y calcula cuánto falta producir para llegar al objetivo.';
-    const sabores = Object.entries(objetivosDia).filter(([clave])=>claveEsEmpanada(clave)).sort((a,b)=>etiquetaDe(a[0]).localeCompare(etiquetaDe(b[0]),'es'));
+    let sabores = Object.entries(objetivosDia).filter(([clave])=>claveEsEmpanada(clave)).sort((a,b)=>etiquetaDe(a[0]).localeCompare(etiquetaDe(b[0]),'es'));
+    let esDiaSinVentasPropias = false;
     if (!sabores.length){
-      box.innerHTML = `<div class="empty">No hay objetivos de empanadas para ${DIA_LABEL[dia]}, o los sabores todavía no están vinculados a una receta de empanada.</div>`;
+      /* Este día no tiene ventas históricas propias (ej: lunes, martes) — igual se produce esos días,
+         así que usamos el objetivo SEMANAL como referencia y dejamos cargar "Producido" igual. */
+      const semanal = objetivoSemanalEmpanadas();
+      sabores = Object.entries(semanal).sort((a,b)=>etiquetaDe(a[0]).localeCompare(etiquetaDe(b[0]),'es'));
+      esDiaSinVentasPropias = true;
+    }
+    if (!sabores.length){
+      box.innerHTML = `<div class="empty">Todavía no hay objetivos calculados. Importá un informe de ventas o un plan de producción primero.</div>`;
       document.getElementById('print-area').innerHTML = '';
       return;
     }
     state.produccion.registro[fechaIso] = state.produccion.registro[fechaIso] || {};
     const reg = state.produccion.registro[fechaIso];
     box.innerHTML = `
+      ${esDiaSinVentasPropias ? `<div class="notice show" style="margin-bottom:10px">${DIA_LABEL[dia]} nunca tuvo ventas registradas, así que no tiene objetivo propio. Te mostramos como referencia el <b>objetivo semanal completo</b> (la suma de todos los días de venta) — igual podés cargar lo que produzcas hoy.</div>` : ''}
       <div class="tabla-scroll">
       <table class="prod-tabla">
-        <thead><tr><th>Sabor</th><th>Objetivo</th><th>Stock inicial</th><th>Producir</th><th>Producido</th></tr></thead>
+        <thead><tr><th>Sabor</th><th>Objetivo${esDiaSinVentasPropias?' semana':''}</th><th>Stock inicial</th><th>Producir</th><th>Producido</th></tr></thead>
         <tbody>
           ${sabores.map(([clave,obj]) => {
             const r = reg[clave] || {stockInicial: state.produccion.stockActual[clave]||0, producido:0};
