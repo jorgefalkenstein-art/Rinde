@@ -3824,8 +3824,9 @@ function permisoDeSeccion(seccionKey){
 
 function renderUsuarios(){
   const u = usuarioActivo();
-  document.getElementById('usuarios-login').style.display = u ? 'none' : 'block';
-  document.getElementById('usuarios-panel').style.display = u ? 'block' : 'none';
+  const mostrarPanel = !!u || usuariosAdminDesbloqueado;
+  document.getElementById('usuarios-login').style.display = mostrarPanel ? 'none' : 'block';
+  document.getElementById('usuarios-panel').style.display = mostrarPanel ? 'block' : 'none';
 
   if (u){
     document.getElementById('usuarios-sesion-info').innerHTML = `<div class="prod-item-row"><span>${esc(u.nombre)}</span><span class="mono" style="color:var(--ink-soft);font-size:.78rem">acceso limitado</span></div>`;
@@ -3858,6 +3859,7 @@ document.getElementById('btn-login-admin').onclick = () => {
     alert('PIN incorrecto.');
   }
 };
+document.getElementById('login-admin-pin').onkeydown = e => { if (e.key==='Enter') document.getElementById('btn-login-admin').click(); };
 window.intentarLoginUsuario = id => {
   const u = state.seguridad.usuarios.find(x=>x.id===id);
   if (!u) return;
