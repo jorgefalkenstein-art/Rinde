@@ -152,6 +152,8 @@ select{font-family:'Montserrat',sans-serif;font-weight:500}
 .help-btn:active{background:var(--red-soft);border-color:var(--red);color:var(--red)}
 .help-text{display:none;background:var(--bg);border-radius:10px;padding:11px 13px;font-size:.78rem;color:var(--ink-soft);line-height:1.55;margin:2px 0 12px}
 .help-text.show{display:block}
+body.modo-operario .del{display:none!important}
+body.modo-operario #tab-inicio .del{display:inline-block!important}
 .caja-row{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:9px 2px;border-bottom:1px solid var(--line)}
 .caja-row:last-child{border-bottom:none}
 .notice.show{display:block}
@@ -249,13 +251,17 @@ table.prod-tabla input{padding:6px 5px;font-size:.82rem;width:56px;max-width:100
 </div>
 
 <div class="scrim" id="scrim"></div>
+<div id="banner-operario" style="display:none;background:#1a1a1d;color:#fff;padding:9px 16px;font-size:.78rem;font-weight:700;text-align:center;position:sticky;top:0;z-index:39">
+  👷 Modo operario activo <button id="btn-salir-operario" style="margin-left:10px;background:#fff;color:#1a1a1d;border:none;border-radius:6px;padding:5px 10px;font-weight:800;font-size:.72rem;cursor:pointer">Salir</button>
+</div>
 <aside class="sidebar" id="sidebar">
   <div class="sidebar-head">
     <div class="logo">R</div>
     <div><div style="font-weight:900;font-size:1.3rem">Rinde</div><div class="sub">Costos y márgenes</div></div>
   </div>
   <nav class="nav" id="nav">
-    <button data-tab="ingredientes" class="active"><span class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 8v13H3V8"/><path d="M1 3h22v5H1z"/><path d="M10 12h4"/></svg></span> Ingredientes</button>
+    <button data-tab="inicio" class="active"><span class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg></span> Inicio</button>
+    <button data-tab="ingredientes"><span class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 8v13H3V8"/><path d="M1 3h22v5H1z"/><path d="M10 12h4"/></svg></span> Ingredientes</button>
     <button data-tab="preparaciones"><span class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22V8"/><path d="M9 8c0-2.2 1.3-4 3-4s3 1.8 3 4-1.3 3-3 3-3-1-3-3Z"/><path d="M7 12.5c0-1.4.8-2.8 2-2.8M17 12.5c0-1.4-.8-2.8-2-2.8"/><path d="M6 16.5c0-1.4.8-2.8 2-2.8M18 16.5c0-1.4-.8-2.8-2-2.8"/></svg></span> Preparaciones</button>
     <div class="nav-group">
       <button class="nav-group-toggle" id="toggle-productos" type="button">
@@ -285,7 +291,62 @@ table.prod-tabla input{padding:6px 5px;font-size:.82rem;width:56px;max-width:100
 
 <main>
   <!-- INGREDIENTES -->
-  <section id="tab-ingredientes">
+  <!-- INICIO / PERFIL -->
+  <section id="tab-inicio">
+    <div class="page-title">Inicio</div>
+    <div class="page-sub">Datos del comercio y accesos rápidos.</div>
+
+    <div class="card" id="card-perfil-resumen" style="text-align:center;padding:22px 16px">
+      <img id="perfil-logo-preview" src="" alt="" style="display:none;width:84px;height:84px;object-fit:cover;border-radius:16px;margin:0 auto 12px;box-shadow:var(--shadow)">
+      <div id="perfil-nombre-preview" style="font-size:1.3rem;font-weight:800"></div>
+      <div id="perfil-datos-preview" style="color:var(--ink-soft);font-size:.82rem;margin-top:6px;line-height:1.6"></div>
+    </div>
+
+    <div class="card">
+      <h3>Datos del comercio<button type="button" class="help-btn" onclick="toggleAyuda('ayuda-perfil')">?</button></h3>
+      <div class="help-text" id="ayuda-perfil">Esto aparece en la pantalla de Inicio y en los membretes de lo que imprimís o compartís. No afecta ningún cálculo de la app, es solo información de identificación del negocio.</div>
+      <div class="stack">
+        <div class="field"><label>Logo</label>
+          <div style="display:flex;align-items:center;gap:12px">
+            <img id="perfil-logo-mini" src="" alt="" style="display:none;width:48px;height:48px;object-fit:cover;border-radius:10px">
+            <button class="btn ghost sm" id="btn-subir-logo" type="button">Subir logo</button>
+            <input type="file" id="file-logo" accept="image/*" style="display:none">
+          </div>
+        </div>
+        <div class="field"><label>Nombre del comercio</label><input id="perfil-nombre" placeholder="Troppo"></div>
+        <div class="grid2">
+          <div class="field"><label>CUIT</label><input id="perfil-cuit" placeholder="20-12345678-9"></div>
+          <div class="field"><label>Condición frente al IVA</label>
+            <select id="perfil-condicion-iva">
+              <option value="">— elegir —</option>
+              <option value="Monotributo">Monotributo</option>
+              <option value="Responsable Inscripto">Responsable Inscripto</option>
+              <option value="Exento">Exento</option>
+              <option value="Consumidor Final">Consumidor Final</option>
+            </select>
+          </div>
+        </div>
+        <div class="field"><label>Ingresos Brutos (número de inscripción)</label><input id="perfil-iibb" placeholder="Número de Ingresos Brutos"></div>
+        <div class="field"><label>Domicilio</label><input id="perfil-domicilio" placeholder="Calle 123, Santa Rosa, La Pampa"></div>
+        <div class="grid2">
+          <div class="field"><label>Teléfono</label><input id="perfil-telefono" placeholder="(02954) 000-0000"></div>
+          <div class="field"><label>Email</label><input id="perfil-email" type="email" placeholder="contacto@troppo.com"></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h3>Modo operario<button type="button" class="help-btn" onclick="toggleAyuda('ayuda-modo-operario')">?</button></h3>
+      <div class="help-text" id="ayuda-modo-operario">Pensado para cuando le prestás el celu/tablet a un empleado: oculta las pestañas que no marques abajo y esconde los botones de borrar, para evitar errores por accidente. <b>No es seguridad real</b> — cualquiera que sepa usar las herramientas de desarrollador del navegador puede saltearlo. Si necesitás protección de verdad (usuarios reales, permisos, biometría), es un proyecto aparte que requiere conectar la app a un sistema de login real.</div>
+      <div class="field" style="margin-bottom:10px"><label>PIN para salir del modo operario</label><input id="seg-pin" inputmode="numeric" placeholder="Ej: 1234"></div>
+      <p class="hint" style="margin-top:0;margin-bottom:8px">Pestañas visibles en modo operario:</p>
+      <div id="seg-secciones-list" style="margin-bottom:12px"></div>
+      <button class="btn" id="btn-activar-operario">Activar modo operario</button>
+      <div class="notice" id="notice-operario"></div>
+    </div>
+  </section>
+
+  <section id="tab-ingredientes" hidden>
     <div class="page-title">Ingredientes</div>
     <div class="page-sub">Cargá cada producto como lo comprás. El sistema calcula el costo por gramo, ml o unidad.</div>
 
@@ -767,7 +828,7 @@ function migrarGastosViejos(proy){
 }
 const PRODUCCION_DEFAULT = {vinculos:{}, objetivos:{}, promedios:{}, extras:{}, historico:[], ultimoImport:null, registro:{}, etiquetas:{}, origenes:{}, stockActual:{}, mesesReconciliados:{}, ventasPorFecha:{}, stockDescontadoPorFecha:{}};
 const PERSONAL_DEFAULT = {empleados:[], turnos:[]};
-const ESTADO_DEFAULT = {ingredientes:[],preparaciones:[],productos:[],ventas:[],margenObj:60,proyeccion:null,produccion:null,personal:null,equipos:null,caja:null};
+const ESTADO_DEFAULT = {ingredientes:[],preparaciones:[],productos:[],ventas:[],margenObj:60,proyeccion:null,produccion:null,personal:null,equipos:null,caja:null,perfil:null,seguridad:null};
 function estadoBase(datos){
   const base = Object.assign({}, ESTADO_DEFAULT, datos);
   base.proyeccion = Object.assign({}, PROYECCION_DEFAULT, datos && datos.proyeccion || {});
@@ -779,6 +840,8 @@ function estadoBase(datos){
   base.caja = Object.assign({socios:[], registros:{}}, datos && datos.caja || {});
   base.caja.socios = (datos && datos.caja && datos.caja.socios) || [];
   base.caja.registros = (datos && datos.caja && datos.caja.registros) || {};
+  base.perfil = Object.assign({nombre:'', logo:'', cuit:'', ingresosBrutos:'', condicionIVA:'', domicilio:'', telefono:'', email:''}, datos && datos.perfil || {});
+  base.seguridad = Object.assign({pin:'', seccionesOperario:['produccion','personal','caja'], modoOperarioActivo:false}, datos && datos.seguridad || {});
   base.proyeccion.gastos = (datos && datos.proyeccion && datos.proyeccion.gastos) || [];
   base.proyeccion.items = (datos && datos.proyeccion && datos.proyeccion.items) || [];
   migrarGastosViejos(base.proyeccion);
@@ -962,7 +1025,7 @@ function cerrarMenu(){ sidebar.classList.remove('open'); scrim.classList.remove(
 document.getElementById('hamb').onclick = abrirMenu;
 scrim.onclick = cerrarMenu;
 
-const SECCIONES = {ingredientes:'Ingredientes', preparaciones:'Preparaciones', empanadas:'Empanadas', pizzas:'Pizzas', rentabilidad:'Precios sugeridos', produccion:'Producción', personal:'Personal', caja:'Caja', proyecciones:'Proyecciones'};
+const SECCIONES = {inicio:'Inicio', ingredientes:'Ingredientes', preparaciones:'Preparaciones', empanadas:'Empanadas', pizzas:'Pizzas', rentabilidad:'Precios sugeridos', produccion:'Producción', personal:'Personal', caja:'Caja', proyecciones:'Proyecciones'};
 document.querySelectorAll('#nav button[data-tab]').forEach(t => t.onclick = () => {
   document.querySelectorAll('#nav button[data-tab]').forEach(x=>x.classList.remove('active'));
   t.classList.add('active');
@@ -3615,7 +3678,116 @@ function renderCaja(){
   renderCajaResumen();
 }
 
-function renderAll(){ renderIngredientes(); renderPreparaciones(); renderEmpanadas(); renderPizzas(); renderRentabilidad(); renderProduccion(); renderPersonal(); renderCaja(); renderProyecciones(); }
+/* ================= PERFIL DEL COMERCIO ================= */
+function renderPerfil(){
+  const p = state.perfil;
+  document.getElementById('perfil-nombre').value = p.nombre || '';
+  document.getElementById('perfil-cuit').value = p.cuit || '';
+  document.getElementById('perfil-condicion-iva').value = p.condicionIVA || '';
+  document.getElementById('perfil-iibb').value = p.ingresosBrutos || '';
+  document.getElementById('perfil-domicilio').value = p.domicilio || '';
+  document.getElementById('perfil-telefono').value = p.telefono || '';
+  document.getElementById('perfil-email').value = p.email || '';
+
+  const preview = document.getElementById('perfil-logo-preview');
+  const mini = document.getElementById('perfil-logo-mini');
+  if (p.logo){ preview.src = p.logo; preview.style.display='block'; mini.src = p.logo; mini.style.display='block'; }
+  else { preview.style.display='none'; mini.style.display='none'; }
+
+  document.getElementById('perfil-nombre-preview').textContent = p.nombre || 'Tu comercio';
+  const datos = [];
+  if (p.condicionIVA) datos.push(p.condicionIVA);
+  if (p.cuit) datos.push('CUIT ' + p.cuit);
+  if (p.domicilio) datos.push(p.domicilio);
+  if (p.telefono) datos.push(p.telefono);
+  document.getElementById('perfil-datos-preview').innerHTML = datos.length ? datos.join(' · ') : 'Completá los datos del comercio abajo.';
+}
+['nombre','cuit','condicion-iva','iibb','domicilio','telefono','email'].forEach(campo => {
+  const id = 'perfil-'+campo;
+  const key = {nombre:'nombre',cuit:'cuit','condicion-iva':'condicionIVA',iibb:'ingresosBrutos',domicilio:'domicilio',telefono:'telefono',email:'email'}[campo];
+  const el = document.getElementById(id);
+  if (el) el.onchange = e => { state.perfil[key] = e.target.value.trim(); save(); renderPerfil(); };
+});
+document.getElementById('btn-subir-logo').onclick = () => document.getElementById('file-logo').click();
+document.getElementById('file-logo').onchange = e => {
+  const f = e.target.files[0]; if (!f) return;
+  const img = new Image();
+  const reader = new FileReader();
+  reader.onload = ev => {
+    img.onload = () => {
+      const max = 200;
+      let w = img.width, h = img.height;
+      if (w>h && w>max){ h = h*(max/w); w = max; } else if (h>max){ w = w*(max/h); h = max; }
+      const canvas = document.createElement('canvas');
+      canvas.width = w; canvas.height = h;
+      canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+      state.perfil.logo = canvas.toDataURL('image/jpeg', 0.85);
+      save(); renderPerfil();
+    };
+    img.src = ev.target.result;
+  };
+  reader.readAsDataURL(f);
+  e.target.value = '';
+};
+
+/* ================= MODO OPERARIO (freno de conveniencia, no seguridad real) ================= */
+const SECCIONES_ELEGIBLES_OPERARIO = {
+  produccion:'Producción', personal:'Personal', caja:'Caja', ingredientes:'Ingredientes',
+  preparaciones:'Preparaciones', empanadas:'Empanadas', pizzas:'Pizzas',
+  rentabilidad:'Precios sugeridos', proyecciones:'Proyecciones'
+};
+function renderSeguridad(){
+  document.getElementById('seg-pin').value = state.seguridad.pin || '';
+  const box = document.getElementById('seg-secciones-list');
+  box.innerHTML = Object.entries(SECCIONES_ELEGIBLES_OPERARIO).map(([key,label]) => {
+    const marcado = state.seguridad.seccionesOperario.includes(key);
+    return `<label style="display:flex;align-items:center;gap:8px;padding:7px 2px;font-size:.88rem">
+      <input type="checkbox" ${marcado?'checked':''} onchange="toggleSeccionOperario('${key}',this.checked)" style="width:auto">
+      ${esc(label)}
+    </label>`;
+  }).join('');
+}
+window.toggleSeccionOperario = (key, marcado) => {
+  const set = new Set(state.seguridad.seccionesOperario);
+  if (marcado) set.add(key); else set.delete(key);
+  state.seguridad.seccionesOperario = [...set];
+  save();
+};
+document.getElementById('seg-pin').onchange = e => { state.seguridad.pin = e.target.value.trim(); save(); };
+document.getElementById('btn-activar-operario').onclick = () => {
+  if (!state.seguridad.pin){ aviso('notice-operario','Cargá primero un PIN para poder salir del modo operario después.'); return; }
+  if (!state.seguridad.seccionesOperario.length){ aviso('notice-operario','Marcá al menos una pestaña visible.'); return; }
+  state.seguridad.modoOperarioActivo = true;
+  save(); aplicarModoOperario();
+};
+document.getElementById('btn-salir-operario').onclick = () => {
+  const intento = prompt('PIN para salir del modo operario:');
+  if (intento === null) return;
+  if (intento === state.seguridad.pin){
+    state.seguridad.modoOperarioActivo = false;
+    save(); aplicarModoOperario();
+  } else {
+    alert('PIN incorrecto.');
+  }
+};
+function aplicarModoOperario(){
+  const activo = state.seguridad.modoOperarioActivo;
+  document.body.classList.toggle('modo-operario', activo);
+  document.getElementById('banner-operario').style.display = activo ? 'block' : 'none';
+  document.querySelectorAll('#nav button[data-tab]').forEach(btn => {
+    const tab = btn.dataset.tab;
+    const permitido = !activo || tab==='inicio' || state.seguridad.seccionesOperario.includes(tab);
+    btn.style.display = permitido ? '' : 'none';
+  });
+  if (activo){
+    const tabActual = document.querySelector('#nav button.active')?.dataset.tab;
+    if (tabActual && tabActual!=='inicio' && !state.seguridad.seccionesOperario.includes(tabActual)){
+      document.querySelector('#nav button[data-tab="inicio"]').click();
+    }
+  }
+}
+
+function renderAll(){ renderIngredientes(); renderPreparaciones(); renderEmpanadas(); renderPizzas(); renderRentabilidad(); renderProduccion(); renderPersonal(); renderCaja(); renderProyecciones(); renderPerfil(); renderSeguridad(); aplicarModoOperario(); }
 renderAll();
 cargarNube();
 
