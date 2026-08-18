@@ -656,13 +656,13 @@ table.prod-tabla input{padding:6px 5px;font-size:.82rem;width:56px;max-width:100
       <p class="hint" id="prod-tipo-hint" style="margin-bottom:12px"></p>
       <div class="field" style="margin-bottom:6px"><label>Día a producir</label>
         <select id="prod-dia-select">
+          <option value="lunes">Lunes</option>
+          <option value="martes">Martes</option>
           <option value="miercoles">Miércoles</option>
           <option value="jueves">Jueves</option>
           <option value="viernes">Viernes</option>
           <option value="sabado">Sábado</option>
           <option value="domingo">Domingo</option>
-          <option value="lunes">Lunes</option>
-          <option value="martes">Martes</option>
         </select>
       </div>
       <p class="hint" id="prod-fecha-resuelta" style="margin-top:0;margin-bottom:12px;font-weight:700"></p>
@@ -3397,25 +3397,26 @@ function renderHojaProduccion(){
     let sabores = Object.entries(objetivosDia).filter(([clave])=>claveEsEmpanada(clave)).sort((a,b)=>etiquetaDe(a[0]).localeCompare(etiquetaDe(b[0]),'es'));
     let esDiaSinVentasPropias = false;
     if (!sabores.length){
-      /* Este día no tiene ventas históricas propias (ej: lunes, martes) — igual se produce esos días,
-         así que usamos el objetivo SEMANAL como referencia y dejamos cargar "Producido" igual. */
-      const semanal = objetivoSemanalEmpanadas();
-      sabores = Object.entries(semanal).sort((a,b)=>etiquetaDe(a[0]).localeCompare(etiquetaDe(b[0]),'es'));
+      /* Este día no tiene ventas históricas propias (ej: lunes, martes) — igual se produce esos días.
+         Mostramos todos los sabores conocidos con Objetivo en 0 (no corresponde inventarle un objetivo
+         a este día prestándolo de otro), pero dejamos cargar "Producido" igual — eso sí suma a la semana. */
+      const clavesConocidas = Object.keys(state.produccion.vinculos).filter(c=>claveEsEmpanada(c));
+      sabores = clavesConocidas.map(c=>[c,0]).sort((a,b)=>etiquetaDe(a[0]).localeCompare(etiquetaDe(b[0]),'es'));
       esDiaSinVentasPropias = true;
     }
     if (!sabores.length){
-      box.innerHTML = `<div class="empty">Todavía no hay objetivos calculados. Importá un informe de ventas o un plan de producción primero.</div>`;
+      box.innerHTML = `<div class="empty">Todavía no hay sabores de empanada vinculados. Importá un informe de ventas o vinculá sabores primero.</div>`;
       document.getElementById('print-area').innerHTML = '';
       return;
     }
     state.produccion.registro[fechaIso] = state.produccion.registro[fechaIso] || {};
     const reg = state.produccion.registro[fechaIso];
     box.innerHTML = `
-      ${esDiaSinVentasPropias ? `<div class="notice show" style="margin-bottom:10px">${DIA_LABEL[dia]} nunca tuvo ventas registradas, así que no tiene objetivo propio. Te mostramos como referencia el <b>objetivo semanal completo</b> (la suma de todos los días de venta) — igual podés cargar lo que produzcas hoy.</div>` : ''}
+      ${esDiaSinVentasPropias ? `<div class="notice show" style="margin-bottom:10px">${DIA_LABEL[dia]} nunca tuvo ventas registradas, así que no tiene objetivo propio (queda en 0) — pero podés cargar acá lo que produzcas igual, y suma normal a la semana.</div>` : ''}
       ${!esHoy ? `<div class="notice show" style="margin-bottom:10px">Esta fecha todavía no llegó — la columna "Stock inicial" te muestra tu <b>stock actual de ahora</b> como vista previa (nadie cargó nada específico para ese día todavía). Va a seguir cambiando a medida que produzcas y vendas hasta que llegue esa fecha. Para cargar lo de <b>hoy</b>, elegí el día de la semana que coincide con hoy.</div>` : ''}
       <div class="tabla-scroll">
       <table class="prod-tabla">
-        <thead><tr><th>Sabor</th><th>Objetivo${esDiaSinVentasPropias?' semana':''}</th><th>Stock inicial</th><th>Producir</th><th>Producido</th></tr></thead>
+        <thead><tr><th>Sabor</th><th>Objetivo</th><th>Stock inicial</th><th>Producir</th><th>Producido</th></tr></thead>
         <tbody>
           ${sabores.map(([clave,obj]) => {
             const r = reg[clave] || {stockInicial: state.produccion.stockActual[clave]||0, producido:0};
