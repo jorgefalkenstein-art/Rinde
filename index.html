@@ -2939,15 +2939,19 @@ document.getElementById('btn-resetear-stock').onclick = e => {
   const btn = e.target;
   if (!btn.classList.contains('confirm')){
     btn.classList.add('confirm');
-    btn.textContent = '¿Seguro? Tocá de nuevo para borrar todo';
+    btn.textContent = '¿Seguro? Borra stock Y los registros de cada día — tocá de nuevo para confirmar';
     setTimeout(()=>{ btn.classList.remove('confirm'); btn.textContent = '↺ Resetear todo el stock a cero'; }, 3500);
     return;
   }
   state.produccion.stockActual = {};
   state.produccion.stockDesde = isoLocal(new Date());
+  /* Limpiamos también los registros de "stock inicial/producido" día por día que hayas cargado
+     antes del reset — si no, quedan pegados y muestran números viejos en la Hoja del día en vez
+     de reflejar el conteo fresco. Un reset es "empezar de cero" de verdad. */
+  state.produccion.registro = {};
   btn.classList.remove('confirm');
   btn.textContent = '↺ Resetear todo el stock a cero';
-  save(); renderStockActual(); renderRentabilidadReal(); renderResumenSemanal(); renderMovimientoSemanal();
+  save(); renderAll();
 };
 
 /* ================= EQUIPOS (fondo de amortización) ================= */
