@@ -440,6 +440,11 @@ table.prod-tabla input{padding:6px 5px;font-size:.82rem;width:56px;max-width:100
       <div class="card">
         <h3 style="margin-bottom:3px">Objetivos de producción</h3>
         <p class="hint" style="margin-top:0;margin-bottom:10px">Calculados automáticamente al importar. Podés ajustarlos a mano.</p>
+        <div class="tipo-toggle" id="obj-tipo-toggle">
+          <button class="tt-btn active" data-tipo="empanadas">Empanadas</button>
+          <button class="tt-btn" data-tipo="pizzas">Pizzas</button>
+          <button class="tt-btn" data-tipo="bebidas">Bebidas</button>
+        </div>
         <div class="day-tabs" id="obj-day-tabs"></div>
         <div id="prod-objetivos"><div class="empty">Importá un informe mensual para calcular los objetivos.</div></div>
       </div>
@@ -2213,6 +2218,13 @@ function procesarAnalisisProduccion(fechasNuevas){
 }
 
 let objDiaActivo = null;
+let objTipoActivo = 'empanadas';
+document.querySelectorAll('#obj-tipo-toggle .tt-btn').forEach(btn => btn.onclick = () => {
+  document.querySelectorAll('#obj-tipo-toggle .tt-btn').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+  objTipoActivo = btn.dataset.tipo;
+  renderObjetivos();
+});
 function renderObjetivos(){
   const tabs = document.getElementById('obj-day-tabs');
   const box = document.getElementById('prod-objetivos');
@@ -2226,12 +2238,13 @@ function renderObjetivos(){
   if (!objDiaActivo || !dias.includes(objDiaActivo)) objDiaActivo = dias[0];
   tabs.innerHTML = dias.map(dia =>
     `<button class="${dia===objDiaActivo?'active':''}" onclick="setObjDiaActivo('${dia}')">${DIA_LABEL[dia]}</button>`).join('');
-  const sabores = Object.entries(obj[objDiaActivo]).sort((a,b)=>etiquetaDe(a[0]).localeCompare(etiquetaDe(b[0]),'es'));
+  const filtro = objTipoActivo==='empanadas' ? claveEsEmpanada : objTipoActivo==='pizzas' ? claveEsPizza : claveEsBebida;
+  const sabores = Object.entries(obj[objDiaActivo]).filter(([clave])=>filtro(clave)).sort((a,b)=>etiquetaDe(a[0]).localeCompare(etiquetaDe(b[0]),'es'));
   box.innerHTML = sabores.map(([clave,val]) => `
     <div class="obj-row">
       <span>${esc(etiquetaDe(clave))}</span>
       <input class="mono" type="number" inputmode="numeric" value="${val}" onchange="setObjetivo('${objDiaActivo}','${clave}',this.value)">
-    </div>`).join('') || '<div class="empty">Sin sabores para este día.</div>';
+    </div>`).join('') || `<div class="empty">Sin ${objTipoActivo} para ${DIA_LABEL[objDiaActivo]}.</div>`;
 }
 window.setObjDiaActivo = dia => { objDiaActivo = dia; renderObjetivos(); };
 window.setObjetivo = (dia,clave,v) => {
@@ -2653,17 +2666,27 @@ function renderResumenSemanal(){
   card.style.display = 'block';
 
   claves.sort((a,b)=>etiquetaDe(a).localeCompare(etiquetaDe(b),'es'));
-  let totalProducir = 0, totalObjetivo = 0, totalStock = 0;
-  document.getElementById('resumen-semanal-list').innerHTML = claves.map(clave => {
+  let totalProducir = 0, totalObjetivo = 0;
+  let saboresFaltantes = 0;
+  const filasDetalle = claves.map(clave => {
     const objetivoSemana = totalPorSabor[clave];
     const stock = state.produccion.stockActual[clave] || 0;
     const producir = Math.max(0, objetivoSemana - stock);
-    totalProducir += producir; totalObjetivo += objetivoSemana; totalStock += Math.min(stock, objetivoSemana);
+    totalProducir += producir; totalObjetivo += objetivoSemana;
+    if (producir>0) saboresFaltantes++;
     return `<div class="prod-item-row">
       <span>${esc(etiquetaDe(clave))} <span class="pin">objetivo ${objetivoSemana} · stock ${stock}</span></span>
-      <span class="mono">${producir>0 ? 'producir '+producir : '✓ cubierto'}</span>
+      <span class="mono">${producir>0 ? '⚠ producir '+producir : '✓ cubierto'}</span>
     </div>`;
-  }).join('');
+  });
+
+  /* Veredicto simple, arriba de todo: ¿alcanza o no alcanza con lo que ya tengo? */
+  const alcanza = totalProducir === 0;
+  const veredicto = alcanza
+    ? `<div class="cost-banner green" style="margin-top:0"><div><div class="big mono">✓ SÍ ALCANZA</div><div class="lbl">Con lo que tenés en stock cubrís toda la semana, sin producir nada más</div></div></div>`
+    : `<div class="cost-banner" style="margin-top:0"><div><div class="big mono">✗ NO ALCANZA</div><div class="lbl">Faltan ${totalProducir} empanadas en total, de ${saboresFaltantes} sabor(es) distintos</div></div></div>`;
+
+  document.getElementById('resumen-semanal-list').innerHTML = veredicto + filasDetalle.join('');
   document.getElementById('resumen-semanal-total').innerHTML = `
     <div class="cost-banner">
       <div><div class="big mono">${totalObjetivo}</div><div class="lbl">Objetivo total semana</div></div>
