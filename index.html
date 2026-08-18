@@ -995,7 +995,7 @@ function migrarGastosViejos(proy){
     if (Number(monto) > 0) proy.gastos.push({id:uid(), nombre, monto:Number(monto)});
   });
 }
-const PRODUCCION_DEFAULT = {vinculos:{}, objetivos:{}, promedios:{}, extras:{}, historico:[], ultimoImport:null, registro:{}, etiquetas:{}, origenes:{}, stockActual:{}, mesesReconciliados:{}, ventasPorFecha:{}, stockDescontadoPorFecha:{}};
+const PRODUCCION_DEFAULT = {vinculos:{}, objetivos:{}, promedios:{}, extras:{}, historico:[], ultimoImport:null, registro:{}, etiquetas:{}, origenes:{}, stockActual:{}, mesesReconciliados:{}, ventasPorFecha:{}, stockDescontadoPorFecha:{}, stockDesde:null};
 const PERSONAL_DEFAULT = {empleados:[], turnos:[]};
 const ESTADO_DEFAULT = {ingredientes:[],preparaciones:[],productos:[],ventas:[],margenObj:60,proyeccion:null,produccion:null,personal:null,equipos:null,caja:null,perfil:null,seguridad:null,proveedores:null};
 function estadoBase(datos){
@@ -2603,8 +2603,14 @@ function reconciliarStockPorFechas(fechas){
   const hoyIso = isoLocal(new Date());
   const LIMITE_DIAS = 45; // no tiene sentido tocar el stock de hoy por ventas de hace muchos meses
   fechas.forEach(fecha => {
-    const diasAtras = Math.round((new Date(hoyIso) - new Date(fecha)) / 86400000);
-    if (diasAtras > LIMITE_DIAS) return; // demasiado vieja: solo sirve para ganancia/historial, no toca stock
+    /* Si hay una "fecha de arranque" del stock (por ej. un reset con recuento físico),
+       nada de ANTES de esa fecha toca el stock, aunque se importe después — ya se vendió
+       antes de que empezaras a contar, no corresponde restárselo a lo que contaste ahora. */
+    if (state.produccion.stockDesde && fecha < state.produccion.stockDesde) return;
+    if (!state.produccion.stockDesde){
+      const diasAtras = Math.round((new Date(hoyIso) - new Date(fecha)) / 86400000);
+      if (diasAtras > LIMITE_DIAS) return; // demasiado vieja: solo sirve para ganancia/historial, no toca stock
+    }
 
     const previo = state.produccion.stockDescontadoPorFecha[fecha];
     if (previo){
@@ -2912,6 +2918,7 @@ function renderResumenTotalesStock(){
   const sinPlata = ocultarSensible('produccion');
   const problemas = sinPlata ? [] : diagnosticoStockSinValorizar();
   return `
+    ${state.produccion.stockDesde ? `<p class="hint" style="margin-top:0;margin-bottom:10px">📅 Contando en serio desde el <b>${state.produccion.stockDesde}</b> — nada de ventas anteriores a esa fecha toca este stock, aunque las importes después.</p>` : ''}
     <div class="resumen-mes-banner" style="margin-bottom:10px">
       ${sinPlata ? '' : `<div class="stat"><div class="cost-banner" style="margin:0"><div><div class="big mono">${fmt(valorStockActual())}</div><div class="lbl">Valor total del stock</div></div></div></div>`}
       <div class="stat"><div class="cost-banner" style="margin:0;background:var(--green)"><div><div class="big mono">${totalUnidadesEmp}</div><div class="lbl">Unidades de empanadas (todos los sabores)</div></div></div></div>
@@ -2937,6 +2944,7 @@ document.getElementById('btn-resetear-stock').onclick = e => {
     return;
   }
   state.produccion.stockActual = {};
+  state.produccion.stockDesde = isoLocal(new Date());
   btn.classList.remove('confirm');
   btn.textContent = '↺ Resetear todo el stock a cero';
   save(); renderStockActual(); renderRentabilidadReal(); renderResumenSemanal(); renderMovimientoSemanal();
