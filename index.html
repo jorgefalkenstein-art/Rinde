@@ -252,7 +252,7 @@ table.prod-tabla input{padding:6px 5px;font-size:.82rem;width:56px;max-width:100
 
 <div class="scrim" id="scrim"></div>
 <div id="banner-operario" style="display:none;background:#1a1a1d;color:#fff;padding:9px 16px;font-size:.78rem;font-weight:700;text-align:center;position:sticky;top:0;z-index:39">
-  👷 Modo operario activo <button id="btn-salir-operario" style="margin-left:10px;background:#fff;color:#1a1a1d;border:none;border-radius:6px;padding:5px 10px;font-weight:800;font-size:.72rem;cursor:pointer">Salir</button>
+  👤 Sesión limitada: <span id="banner-operario-nombre"></span> <button id="btn-salir-operario" style="margin-left:10px;background:#fff;color:#1a1a1d;border:none;border-radius:6px;padding:5px 10px;font-weight:800;font-size:.72rem;cursor:pointer">Salir</button>
 </div>
 <aside class="sidebar" id="sidebar">
   <div class="sidebar-head">
@@ -276,6 +276,7 @@ table.prod-tabla input{padding:6px 5px;font-size:.82rem;width:56px;max-width:100
     <button data-tab="produccion"><span class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 21V10l6 4v-4l6 4V7l6 4v10H3Z"/><path d="M3 21h18"/></svg></span> Producción</button>
     <button data-tab="personal"><span class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg></span> Personal</button>
     <button data-tab="caja"><span class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="1" y="4" width="22" height="16" rx="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg></span> Caja</button>
+    <button data-tab="usuarios"><span class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg></span> Usuarios</button>
     <button data-tab="proyecciones"><span class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/></svg></span> Proyecciones</button>
   </nav>
   <div class="sidebar-foot">
@@ -303,46 +304,54 @@ table.prod-tabla input{padding:6px 5px;font-size:.82rem;width:56px;max-width:100
     </div>
 
     <div class="card">
-      <h3>Datos del comercio<button type="button" class="help-btn" onclick="toggleAyuda('ayuda-perfil')">?</button></h3>
-      <div class="help-text" id="ayuda-perfil">Esto aparece en la pantalla de Inicio y en los membretes de lo que imprimís o compartís. No afecta ningún cálculo de la app, es solo información de identificación del negocio.</div>
-      <div class="stack">
-        <div class="field"><label>Logo</label>
-          <div style="display:flex;align-items:center;gap:12px">
-            <img id="perfil-logo-mini" src="" alt="" style="display:none;width:48px;height:48px;object-fit:cover;border-radius:10px">
-            <button class="btn ghost sm" id="btn-subir-logo" type="button">Subir logo</button>
-            <input type="file" id="file-logo" accept="image/*" style="display:none">
+      <div class="prod-header" style="margin-bottom:6px">
+        <h3 style="flex:1">Datos del comercio<button type="button" class="help-btn" onclick="toggleAyuda('ayuda-perfil')">?</button></h3>
+        <button class="btn edit sm" id="btn-editar-perfil">Editar</button>
+      </div>
+      <div class="help-text" id="ayuda-perfil">Esto aparece en la pantalla de Inicio y en los membretes de lo que imprimís o compartís. No afecta ningún cálculo de la app. Tocá "Editar" para cambiar algo — así nadie lo modifica sin querer solo por estar mirando esta pantalla.</div>
+
+      <div id="perfil-vista"></div>
+
+      <div id="perfil-edicion" style="display:none">
+        <div class="stack">
+          <div class="field"><label>Logo</label>
+            <div style="display:flex;align-items:center;gap:12px">
+              <img id="perfil-logo-mini" src="" alt="" style="display:none;width:48px;height:48px;object-fit:cover;border-radius:10px">
+              <button class="btn ghost sm" id="btn-subir-logo" type="button">Subir logo</button>
+              <input type="file" id="file-logo" accept="image/*" style="display:none">
+            </div>
+          </div>
+          <div class="field"><label>Nombre del comercio</label><input id="perfil-nombre" placeholder="Troppo"></div>
+          <div class="grid2">
+            <div class="field"><label>CUIT</label><input id="perfil-cuit" placeholder="20-12345678-9"></div>
+            <div class="field"><label>Condición frente al IVA</label>
+              <select id="perfil-condicion-iva">
+                <option value="">— elegir —</option>
+                <option value="Monotributo">Monotributo</option>
+                <option value="Responsable Inscripto">Responsable Inscripto</option>
+                <option value="Exento">Exento</option>
+                <option value="Consumidor Final">Consumidor Final</option>
+              </select>
+            </div>
+          </div>
+          <div class="field"><label>Ingresos Brutos (número de inscripción)</label><input id="perfil-iibb" placeholder="Número de Ingresos Brutos"></div>
+          <div class="field"><label>Domicilio</label><input id="perfil-domicilio" placeholder="Calle 123, Santa Rosa, La Pampa"></div>
+          <div class="grid2">
+            <div class="field"><label>Teléfono</label><input id="perfil-telefono" placeholder="(02954) 000-0000"></div>
+            <div class="field"><label>Email</label><input id="perfil-email" type="email" placeholder="contacto@troppo.com"></div>
           </div>
         </div>
-        <div class="field"><label>Nombre del comercio</label><input id="perfil-nombre" placeholder="Troppo"></div>
-        <div class="grid2">
-          <div class="field"><label>CUIT</label><input id="perfil-cuit" placeholder="20-12345678-9"></div>
-          <div class="field"><label>Condición frente al IVA</label>
-            <select id="perfil-condicion-iva">
-              <option value="">— elegir —</option>
-              <option value="Monotributo">Monotributo</option>
-              <option value="Responsable Inscripto">Responsable Inscripto</option>
-              <option value="Exento">Exento</option>
-              <option value="Consumidor Final">Consumidor Final</option>
-            </select>
-          </div>
-        </div>
-        <div class="field"><label>Ingresos Brutos (número de inscripción)</label><input id="perfil-iibb" placeholder="Número de Ingresos Brutos"></div>
-        <div class="field"><label>Domicilio</label><input id="perfil-domicilio" placeholder="Calle 123, Santa Rosa, La Pampa"></div>
-        <div class="grid2">
-          <div class="field"><label>Teléfono</label><input id="perfil-telefono" placeholder="(02954) 000-0000"></div>
-          <div class="field"><label>Email</label><input id="perfil-email" type="email" placeholder="contacto@troppo.com"></div>
+        <div class="act-row" style="margin-top:12px">
+          <button class="btn done sm" id="btn-guardar-perfil">Guardar</button>
+          <button class="btn edit sm" id="btn-cancelar-perfil">Cancelar</button>
         </div>
       </div>
     </div>
 
     <div class="card">
-      <h3>Modo operario<button type="button" class="help-btn" onclick="toggleAyuda('ayuda-modo-operario')">?</button></h3>
-      <div class="help-text" id="ayuda-modo-operario">Pensado para cuando le prestás el celu/tablet a un empleado: oculta las pestañas que no marques abajo y esconde los botones de borrar, para evitar errores por accidente. <b>No es seguridad real</b> — cualquiera que sepa usar las herramientas de desarrollador del navegador puede saltearlo. Si necesitás protección de verdad (usuarios reales, permisos, biometría), es un proyecto aparte que requiere conectar la app a un sistema de login real.</div>
-      <div class="field" style="margin-bottom:10px"><label>PIN para salir del modo operario</label><input id="seg-pin" inputmode="numeric" placeholder="Ej: 1234"></div>
-      <p class="hint" style="margin-top:0;margin-bottom:8px">Pestañas visibles en modo operario:</p>
-      <div id="seg-secciones-list" style="margin-bottom:12px"></div>
-      <button class="btn" id="btn-activar-operario">Activar modo operario</button>
-      <div class="notice" id="notice-operario"></div>
+      <h3>Usuarios y permisos<button type="button" class="help-btn" onclick="toggleAyuda('ayuda-ir-usuarios')">?</button></h3>
+      <div class="help-text" id="ayuda-ir-usuarios">Para crear usuarios con permisos por sección, o entrar como empleado con acceso limitado, andá a la pestaña <b>Usuarios</b> del menú.</div>
+      <p class="hint" style="margin-top:0">Entrá a la pestaña <b>Usuarios</b> (menú lateral) para gestionar accesos.</p>
     </div>
   </section>
 
@@ -742,6 +751,46 @@ table.prod-tabla input{padding:6px 5px;font-size:.82rem;width:56px;max-width:100
     </div>
   </section>
 
+  <!-- USUARIOS -->
+  <section id="tab-usuarios" hidden>
+    <div class="page-title">Usuarios</div>
+    <div class="page-sub">Entrá como administrador para gestionar accesos, o elegí tu usuario si ya lo cargaron.</div>
+
+    <div id="usuarios-login">
+      <div class="card">
+        <h3>¿Quién sos?<button type="button" class="help-btn" onclick="toggleAyuda('ayuda-usuarios-login')">?</button></h3>
+        <div class="help-text" id="ayuda-usuarios-login">Como administrador tenés acceso a todo y podés crear usuarios con permisos limitados por sección. Recordá: esto es un freno para errores accidentales, no seguridad real — cualquiera con conocimientos técnicos puede saltearlo abriendo las herramientas de desarrollador del navegador.</div>
+        <div class="field" style="margin-bottom:12px"><label>PIN de administrador</label><input id="login-admin-pin" type="password" inputmode="numeric" placeholder="PIN"></div>
+        <button class="btn" id="btn-login-admin" style="margin-bottom:16px">Entrar como administrador</button>
+        <p class="hint" style="margin-top:0;margin-bottom:8px">O elegí tu usuario:</p>
+        <div id="usuarios-login-list"></div>
+      </div>
+    </div>
+
+    <div id="usuarios-panel" style="display:none">
+      <div class="card">
+        <div class="prod-header">
+          <h3 style="flex:1">Sesión activa</h3>
+        </div>
+        <div id="usuarios-sesion-info"></div>
+        <button class="btn ghost sm" id="btn-cerrar-sesion" style="margin-top:10px">Cerrar sesión</button>
+      </div>
+
+      <div class="card" id="card-admin-usuarios" style="display:none">
+        <h3>PIN de administrador<button type="button" class="help-btn" onclick="toggleAyuda('ayuda-admin-pin')">?</button></h3>
+        <div class="help-text" id="ayuda-admin-pin">Con este PIN entrás como administrador. Guardalo bien — si lo perdés, cualquiera con acceso al archivo puede editar el estado guardado directamente (recordá: no hay seguridad real detrás).</div>
+        <div class="field"><label>PIN de administrador</label><input id="admin-pin-set" inputmode="numeric" placeholder="Ej: 1234"></div>
+      </div>
+
+      <div class="card" id="card-usuarios-lista" style="display:none">
+        <h3>Usuarios cargados<button type="button" class="help-btn" onclick="toggleAyuda('ayuda-usuarios-lista')">?</button></h3>
+        <div class="help-text" id="ayuda-usuarios-lista">Cada usuario tiene su propio PIN y, sección por sección, uno de tres niveles: <b>Sin acceso</b> (no ve la pestaña), <b>Solo ver</b> (ve todo, puede imprimir/compartir, pero no puede tipear ni borrar nada), o <b>Acceso completo</b> (igual que vos).</div>
+        <div id="usuarios-list"></div>
+        <button class="btn ghost sm" id="btn-add-usuario" style="margin-top:8px">+ Usuario</button>
+      </div>
+    </div>
+  </section>
+
   <section id="tab-proyecciones" hidden>
     <div class="page-title">Proyecciones</div>
     <div class="page-sub">Estimá ingresos y ganancia neta de un período. La mano de obra se calcula sola desde Personal.</div>
@@ -841,7 +890,8 @@ function estadoBase(datos){
   base.caja.socios = (datos && datos.caja && datos.caja.socios) || [];
   base.caja.registros = (datos && datos.caja && datos.caja.registros) || {};
   base.perfil = Object.assign({nombre:'', logo:'', cuit:'', ingresosBrutos:'', condicionIVA:'', domicilio:'', telefono:'', email:''}, datos && datos.perfil || {});
-  base.seguridad = Object.assign({pin:'', seccionesOperario:['produccion','personal','caja'], modoOperarioActivo:false}, datos && datos.seguridad || {});
+  base.seguridad = Object.assign({adminPin:'', usuarios:[], sesionUsuarioId:null}, datos && datos.seguridad || {});
+  base.seguridad.usuarios = (datos && datos.seguridad && datos.seguridad.usuarios) || [];
   base.proyeccion.gastos = (datos && datos.proyeccion && datos.proyeccion.gastos) || [];
   base.proyeccion.items = (datos && datos.proyeccion && datos.proyeccion.items) || [];
   migrarGastosViejos(base.proyeccion);
@@ -1025,7 +1075,7 @@ function cerrarMenu(){ sidebar.classList.remove('open'); scrim.classList.remove(
 document.getElementById('hamb').onclick = abrirMenu;
 scrim.onclick = cerrarMenu;
 
-const SECCIONES = {inicio:'Inicio', ingredientes:'Ingredientes', preparaciones:'Preparaciones', empanadas:'Empanadas', pizzas:'Pizzas', rentabilidad:'Precios sugeridos', produccion:'Producción', personal:'Personal', caja:'Caja', proyecciones:'Proyecciones'};
+const SECCIONES = {inicio:'Inicio', ingredientes:'Ingredientes', preparaciones:'Preparaciones', empanadas:'Empanadas', pizzas:'Pizzas', rentabilidad:'Precios sugeridos', produccion:'Producción', personal:'Personal', caja:'Caja', usuarios:'Usuarios', proyecciones:'Proyecciones'};
 document.querySelectorAll('#nav button[data-tab]').forEach(t => t.onclick = () => {
   document.querySelectorAll('#nav button[data-tab]').forEach(x=>x.classList.remove('active'));
   t.classList.add('active');
@@ -3679,6 +3729,7 @@ function renderCaja(){
 }
 
 /* ================= PERFIL DEL COMERCIO ================= */
+let perfilEditando = false;
 function renderPerfil(){
   const p = state.perfil;
   document.getElementById('perfil-nombre').value = p.nombre || '';
@@ -3701,13 +3752,36 @@ function renderPerfil(){
   if (p.domicilio) datos.push(p.domicilio);
   if (p.telefono) datos.push(p.telefono);
   document.getElementById('perfil-datos-preview').innerHTML = datos.length ? datos.join(' · ') : 'Completá los datos del comercio abajo.';
+
+  document.getElementById('perfil-edicion').style.display = perfilEditando ? 'block' : 'none';
+  document.getElementById('btn-editar-perfil').style.display = perfilEditando ? 'none' : '';
+  const vista = document.getElementById('perfil-vista');
+  const hayDatos = p.nombre || p.cuit || p.condicionIVA || p.ingresosBrutos || p.domicilio || p.telefono || p.email;
+  vista.style.display = perfilEditando ? 'none' : 'block';
+  vista.innerHTML = hayDatos ? `
+    <div class="read-row"><span class="r-name">Nombre</span><span class="r-cost">${esc(p.nombre)||'—'}</span></div>
+    <div class="read-row"><span class="r-name">CUIT</span><span class="r-cost">${esc(p.cuit)||'—'}</span></div>
+    <div class="read-row"><span class="r-name">Condición IVA</span><span class="r-cost">${esc(p.condicionIVA)||'—'}</span></div>
+    <div class="read-row"><span class="r-name">Ingresos Brutos</span><span class="r-cost">${esc(p.ingresosBrutos)||'—'}</span></div>
+    <div class="read-row"><span class="r-name">Domicilio</span><span class="r-cost">${esc(p.domicilio)||'—'}</span></div>
+    <div class="read-row"><span class="r-name">Teléfono</span><span class="r-cost">${esc(p.telefono)||'—'}</span></div>
+    <div class="read-row"><span class="r-name">Email</span><span class="r-cost">${esc(p.email)||'—'}</span></div>
+  ` : '<div class="empty">Todavía no cargaste los datos del comercio. Tocá "Editar" para completarlos.</div>';
 }
-['nombre','cuit','condicion-iva','iibb','domicilio','telefono','email'].forEach(campo => {
-  const id = 'perfil-'+campo;
-  const key = {nombre:'nombre',cuit:'cuit','condicion-iva':'condicionIVA',iibb:'ingresosBrutos',domicilio:'domicilio',telefono:'telefono',email:'email'}[campo];
-  const el = document.getElementById(id);
-  if (el) el.onchange = e => { state.perfil[key] = e.target.value.trim(); save(); renderPerfil(); };
-});
+document.getElementById('btn-editar-perfil').onclick = () => { perfilEditando = true; renderPerfil(); };
+document.getElementById('btn-cancelar-perfil').onclick = () => { perfilEditando = false; renderPerfil(); };
+document.getElementById('btn-guardar-perfil').onclick = () => {
+  const p = state.perfil;
+  p.nombre = document.getElementById('perfil-nombre').value.trim();
+  p.cuit = document.getElementById('perfil-cuit').value.trim();
+  p.condicionIVA = document.getElementById('perfil-condicion-iva').value;
+  p.ingresosBrutos = document.getElementById('perfil-iibb').value.trim();
+  p.domicilio = document.getElementById('perfil-domicilio').value.trim();
+  p.telefono = document.getElementById('perfil-telefono').value.trim();
+  p.email = document.getElementById('perfil-email').value.trim();
+  perfilEditando = false;
+  save(); renderPerfil();
+};
 document.getElementById('btn-subir-logo').onclick = () => document.getElementById('file-logo').click();
 document.getElementById('file-logo').onchange = e => {
   const f = e.target.files[0]; if (!f) return;
@@ -3730,64 +3804,182 @@ document.getElementById('file-logo').onchange = e => {
   e.target.value = '';
 };
 
-/* ================= MODO OPERARIO (freno de conveniencia, no seguridad real) ================= */
-const SECCIONES_ELEGIBLES_OPERARIO = {
-  produccion:'Producción', personal:'Personal', caja:'Caja', ingredientes:'Ingredientes',
-  preparaciones:'Preparaciones', empanadas:'Empanadas', pizzas:'Pizzas',
-  rentabilidad:'Precios sugeridos', proyecciones:'Proyecciones'
+/* ================= USUARIOS Y PERMISOS (freno de conveniencia, no seguridad real) ================= */
+const SECCIONES_CON_PERMISO = {
+  ingredientes:'Ingredientes', preparaciones:'Preparaciones', empanadas:'Empanadas', pizzas:'Pizzas',
+  rentabilidad:'Precios sugeridos', produccion:'Producción', personal:'Personal', caja:'Caja', proyecciones:'Proyecciones'
 };
-function renderSeguridad(){
-  document.getElementById('seg-pin').value = state.seguridad.pin || '';
-  const box = document.getElementById('seg-secciones-list');
-  box.innerHTML = Object.entries(SECCIONES_ELEGIBLES_OPERARIO).map(([key,label]) => {
-    const marcado = state.seguridad.seccionesOperario.includes(key);
-    return `<label style="display:flex;align-items:center;gap:8px;padding:7px 2px;font-size:.88rem">
-      <input type="checkbox" ${marcado?'checked':''} onchange="toggleSeccionOperario('${key}',this.checked)" style="width:auto">
-      ${esc(label)}
-    </label>`;
-  }).join('');
+let usuariosAdminDesbloqueado = false;
+let usuarioEditando = null;
+
+function usuarioActivo(){
+  if (!state.seguridad.sesionUsuarioId) return null;
+  return state.seguridad.usuarios.find(u=>u.id===state.seguridad.sesionUsuarioId) || null;
 }
-window.toggleSeccionOperario = (key, marcado) => {
-  const set = new Set(state.seguridad.seccionesOperario);
-  if (marcado) set.add(key); else set.delete(key);
-  state.seguridad.seccionesOperario = [...set];
-  save();
-};
-document.getElementById('seg-pin').onchange = e => { state.seguridad.pin = e.target.value.trim(); save(); };
-document.getElementById('btn-activar-operario').onclick = () => {
-  if (!state.seguridad.pin){ aviso('notice-operario','Cargá primero un PIN para poder salir del modo operario después.'); return; }
-  if (!state.seguridad.seccionesOperario.length){ aviso('notice-operario','Marcá al menos una pestaña visible.'); return; }
-  state.seguridad.modoOperarioActivo = true;
-  save(); aplicarModoOperario();
-};
-document.getElementById('btn-salir-operario').onclick = () => {
-  const intento = prompt('PIN para salir del modo operario:');
-  if (intento === null) return;
-  if (intento === state.seguridad.pin){
-    state.seguridad.modoOperarioActivo = false;
-    save(); aplicarModoOperario();
+function permisoDeSeccion(seccionKey){
+  const u = usuarioActivo();
+  if (!u) return 'completo'; // sin sesión de usuario restringido = sos vos, el dueño, acceso total
+  return (u.permisos && u.permisos[seccionKey]) || 'ninguno';
+}
+
+function renderUsuarios(){
+  const u = usuarioActivo();
+  document.getElementById('usuarios-login').style.display = u ? 'none' : 'block';
+  document.getElementById('usuarios-panel').style.display = u ? 'block' : 'none';
+
+  if (u){
+    document.getElementById('usuarios-sesion-info').innerHTML = `<div class="prod-item-row"><span>${esc(u.nombre)}</span><span class="mono" style="color:var(--ink-soft);font-size:.78rem">acceso limitado</span></div>`;
+    document.getElementById('card-admin-usuarios').style.display = 'none';
+    document.getElementById('card-usuarios-lista').style.display = 'none';
+    return;
+  }
+
+  const listaLogin = document.getElementById('usuarios-login-list');
+  listaLogin.innerHTML = state.seguridad.usuarios.length
+    ? state.seguridad.usuarios.map(x => `<button class="btn ghost sm" style="margin:4px 6px 4px 0" onclick="intentarLoginUsuario('${x.id}')">${esc(x.nombre)}</button>`).join('')
+    : '<div class="empty">Todavía no hay usuarios cargados.</div>';
+
+  document.getElementById('admin-pin-set').value = state.seguridad.adminPin || '';
+  document.getElementById('card-admin-usuarios').style.display = usuariosAdminDesbloqueado ? 'block' : 'none';
+  document.getElementById('card-usuarios-lista').style.display = usuariosAdminDesbloqueado ? 'block' : 'none';
+  document.getElementById('usuarios-sesion-info').innerHTML = usuariosAdminDesbloqueado
+    ? `<div class="prod-item-row"><span>Administrador</span><span class="mono" style="color:var(--green);font-size:.78rem">acceso total</span></div>`
+    : '<div class="empty">Todavía no entraste.</div>';
+
+  if (usuariosAdminDesbloqueado) renderListaUsuarios();
+}
+document.getElementById('btn-login-admin').onclick = () => {
+  const intento = document.getElementById('login-admin-pin').value;
+  if (!state.seguridad.adminPin || intento === state.seguridad.adminPin){
+    usuariosAdminDesbloqueado = true;
+    document.getElementById('login-admin-pin').value = '';
+    renderUsuarios();
   } else {
     alert('PIN incorrecto.');
   }
 };
-function aplicarModoOperario(){
-  const activo = state.seguridad.modoOperarioActivo;
-  document.body.classList.toggle('modo-operario', activo);
-  document.getElementById('banner-operario').style.display = activo ? 'block' : 'none';
+window.intentarLoginUsuario = id => {
+  const u = state.seguridad.usuarios.find(x=>x.id===id);
+  if (!u) return;
+  const intento = prompt(`PIN de ${u.nombre}:`);
+  if (intento === null) return;
+  if (intento === u.pin){
+    state.seguridad.sesionUsuarioId = u.id;
+    save(); aplicarPermisos(); renderUsuarios();
+  } else {
+    alert('PIN incorrecto.');
+  }
+};
+document.getElementById('btn-cerrar-sesion').onclick = () => {
+  const u = usuarioActivo();
+  if (u){
+    const intento = prompt('PIN de administrador para cerrar esta sesión:');
+    if (intento === null) return;
+    if (intento !== state.seguridad.adminPin){ alert('PIN incorrecto.'); return; }
+    state.seguridad.sesionUsuarioId = null;
+  } else {
+    usuariosAdminDesbloqueado = false;
+  }
+  save(); aplicarPermisos(); renderUsuarios();
+};
+document.getElementById('admin-pin-set').onchange = e => { state.seguridad.adminPin = e.target.value.trim(); save(); };
+
+function renderListaUsuarios(){
+  const box = document.getElementById('usuarios-list');
+  if (!state.seguridad.usuarios.length){ box.innerHTML = '<div class="empty">Sin usuarios cargados. Tocá "+ Usuario".</div>'; return; }
+  box.innerHTML = state.seguridad.usuarios.map(u => {
+    if (usuarioEditando === u.id){
+      return `<div class="ing-item" style="display:block">
+        <div class="field" style="margin-bottom:8px"><label>Nombre</label><input id="edit-usr-nom-${u.id}" value="${esc(u.nombre)}" placeholder="Nombre del empleado"></div>
+        <div class="field" style="margin-bottom:10px"><label>PIN</label><input id="edit-usr-pin-${u.id}" value="${esc(u.pin||'')}" placeholder="Ej: 4321"></div>
+        <p class="hint" style="margin-top:0;margin-bottom:6px">Permisos por sección:</p>
+        ${Object.entries(SECCIONES_CON_PERMISO).map(([key,label]) => `
+          <div class="field" style="margin-bottom:8px"><label>${esc(label)}</label>
+            <select onchange="setPermisoUsuario('${u.id}','${key}',this.value)">
+              <option value="ninguno" ${((u.permisos&&u.permisos[key])||'ninguno')==='ninguno'?'selected':''}>Sin acceso</option>
+              <option value="ver" ${(u.permisos&&u.permisos[key])==='ver'?'selected':''}>Solo ver</option>
+              <option value="completo" ${(u.permisos&&u.permisos[key])==='completo'?'selected':''}>Acceso completo</option>
+            </select>
+          </div>`).join('')}
+        <div class="act-row">
+          <button class="btn done sm" onclick="guardarEdicionUsuario('${u.id}')">Listo</button>
+          <button class="del" onclick="delUsuario(this,'${u.id}')" aria-label="Eliminar" style="margin-left:auto">✕</button>
+        </div>
+      </div>`;
+    }
+    const permisos = Object.entries(u.permisos||{}).filter(([,v])=>v!=='ninguno');
+    return `<div class="ing-item">
+      <div style="flex:1">
+        <div class="ing-name">${esc(u.nombre)||'(sin nombre)'}</div>
+        <div class="ing-detail">${permisos.length ? permisos.length+' sección(es) con acceso' : 'Sin permisos asignados todavía'}</div>
+      </div>
+      <button class="btn edit sm" onclick="editarUsuario('${u.id}')">Editar</button>
+    </div>`;
+  }).join('');
+}
+window.editarUsuario = id => { usuarioEditando = id; renderListaUsuarios(); };
+window.guardarEdicionUsuario = id => {
+  const nombre = document.getElementById('edit-usr-nom-'+id).value.trim();
+  const pin = document.getElementById('edit-usr-pin-'+id).value.trim();
+  if (!nombre || !pin){ return; }
+  const u = state.seguridad.usuarios.find(x=>x.id===id);
+  u.nombre = nombre; u.pin = pin;
+  usuarioEditando = null; save(); renderListaUsuarios();
+};
+window.setPermisoUsuario = (id, seccion, valor) => {
+  const u = state.seguridad.usuarios.find(x=>x.id===id);
+  u.permisos = u.permisos || {};
+  u.permisos[seccion] = valor;
+  save();
+};
+window.delUsuario = (btn,id) => {
+  if (!btn.classList.contains('confirm')){ armarConfirm(btn); return; }
+  state.seguridad.usuarios = state.seguridad.usuarios.filter(x=>x.id!==id);
+  usuarioEditando = null; save(); renderListaUsuarios();
+};
+document.getElementById('btn-add-usuario').onclick = () => {
+  const nid = uid();
+  state.seguridad.usuarios.push({id:nid, nombre:'', pin:'', permisos:{}});
+  usuarioEditando = nid;
+  save(); renderListaUsuarios();
+};
+
+/* Aplica las restricciones al resto de la app según el usuario con sesión activa (si hay alguno) */
+function aplicarPermisos(){
+  const u = usuarioActivo();
+  document.body.classList.toggle('modo-operario', !!u);
+  document.getElementById('banner-operario').style.display = u ? 'block' : 'none';
+  document.getElementById('banner-operario-nombre').textContent = u ? u.nombre : '';
+
   document.querySelectorAll('#nav button[data-tab]').forEach(btn => {
     const tab = btn.dataset.tab;
-    const permitido = !activo || tab==='inicio' || state.seguridad.seccionesOperario.includes(tab);
-    btn.style.display = permitido ? '' : 'none';
+    if (tab==='inicio' || tab==='usuarios'){ btn.style.display=''; return; }
+    btn.style.display = permisoDeSeccion(tab)==='ninguno' ? 'none' : '';
   });
-  if (activo){
+
+  Object.keys(SECCIONES_CON_PERMISO).forEach(key => {
+    const el = document.getElementById('tab-'+key);
+    if (!el) return;
+    const soloVer = permisoDeSeccion(key) === 'ver';
+    el.querySelectorAll('input,select,textarea').forEach(campo => {
+      if (campo.id && /search/i.test(campo.id)) return; // el buscador siempre queda activo
+      campo.disabled = soloVer;
+    });
+    el.querySelectorAll('button').forEach(btn => {
+      const esSeguro = /imprimir|compartir|help-btn|buscar|search/i.test(btn.id+' '+btn.className) || btn.classList.contains('day-tabs') || btn.closest('.day-tabs') || btn.closest('.tipo-toggle');
+      if (soloVer && !esSeguro) btn.disabled = true; else if (!soloVer) btn.disabled = false;
+    });
+  });
+
+  if (u){
     const tabActual = document.querySelector('#nav button.active')?.dataset.tab;
-    if (tabActual && tabActual!=='inicio' && !state.seguridad.seccionesOperario.includes(tabActual)){
+    if (tabActual && tabActual!=='inicio' && tabActual!=='usuarios' && permisoDeSeccion(tabActual)==='ninguno'){
       document.querySelector('#nav button[data-tab="inicio"]').click();
     }
   }
 }
 
-function renderAll(){ renderIngredientes(); renderPreparaciones(); renderEmpanadas(); renderPizzas(); renderRentabilidad(); renderProduccion(); renderPersonal(); renderCaja(); renderProyecciones(); renderPerfil(); renderSeguridad(); aplicarModoOperario(); }
+function renderAll(){ renderIngredientes(); renderPreparaciones(); renderEmpanadas(); renderPizzas(); renderRentabilidad(); renderProduccion(); renderPersonal(); renderCaja(); renderProyecciones(); renderPerfil(); renderUsuarios(); aplicarPermisos(); }
 renderAll();
 cargarNube();
 
