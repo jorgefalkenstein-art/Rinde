@@ -398,8 +398,11 @@ table.prod-tabla input{padding:6px 5px;font-size:.82rem;width:56px;max-width:100
 
       <div class="card">
         <h3 style="margin-bottom:8px">Importar plan de producción (Excel)</h3>
-        <p class="hint" style="margin-top:0;margin-bottom:12px">Para cargar objetivos a mano sin tipear sabor por sabor: subí un Excel con una solapa por día (ej. "Miércoles", "Jueves"...), y en cada una dos columnas: <b>Sabor</b> y <b>Objetivo</b>. Reemplaza el objetivo de ese día completo por lo que traiga el archivo.</p>
-        <button class="btn ghost" id="btn-plan-xlsx">Importar plan de producción</button>
+        <p class="hint" style="margin-top:0;margin-bottom:12px">Para cargar objetivos a mano sin tipear sabor por sabor: descargá la plantilla, completala (o pasala al resto del equipo), y volvé a subirla. Tiene una solapa por día y columnas <b>Sabor</b> / <b>Objetivo</b>. Reemplaza el objetivo de ese día completo por lo que traiga el archivo.</p>
+        <div class="btn-row">
+          <button class="btn ghost" id="btn-descargar-plantilla">⬇ Descargar plantilla</button>
+          <button class="btn" id="btn-plan-xlsx">⬆ Subir plan completado</button>
+        </div>
         <input type="file" id="file-plan-xlsx" accept=".xlsx,.xls" style="display:none">
         <div class="notice" id="notice-plan-xlsx"></div>
       </div>
@@ -478,6 +481,11 @@ table.prod-tabla input{padding:6px 5px;font-size:.82rem;width:56px;max-width:100
     <div class="card">
       <h3 style="margin-bottom:4px">Stock actual</h3>
       <p class="hint" style="margin-top:0;margin-bottom:10px">Cuánto tenés ya producido y congelado de cada sabor, ahora mismo. Cargalo acá contando físicamente el freezer. De ahí en más: sube solo cuando marcás "Producido" abajo, y baja solo cada vez que importás un informe de Pedix (te descuenta lo que se vendió). Corregilo a mano cuando hagas un recuento.</p>
+      <div class="tipo-toggle" id="stock-tipo-toggle">
+        <button class="tt-btn active" data-tipo="empanadas">Empanadas</button>
+        <button class="tt-btn" data-tipo="pizzas">Pizzas</button>
+        <button class="tt-btn" data-tipo="bebidas">Bebidas</button>
+      </div>
       <div class="search-box" style="margin-bottom:10px"><input id="stock-search" placeholder="Buscar sabor..." autocomplete="off"></div>
       <div id="stock-actual-list"></div>
       <div id="stock-actual-total" style="margin-top:10px"></div>
@@ -2077,6 +2085,35 @@ document.getElementById('file-prod-xlsx').onchange = e => {
   e.target.value = '';
 };
 
+/* Descargar plantilla para completar a mano: una solapa por día, con los sabores de empanada
+   que ya conocemos y su objetivo actual (o 0 si es la primera vez) — así solo hay que corregir
+   números, no armar la planilla desde cero. Formato .xls (Excel 97-2003) para que abra en
+   cualquier versión de Office, sin importar cuál tenga cada uno instalada. */
+document.getElementById('btn-descargar-plantilla').onclick = () => {
+  const wb = XLSX.utils.book_new();
+  const diasBase = ['miercoles','jueves','viernes','sabado'];
+  const diasDisponibles = Object.keys(state.produccion.objetivos||{}).length
+    ? Object.keys(state.produccion.objetivos).sort((a,b)=>DIAS_SEMANA.indexOf(a)-DIAS_SEMANA.indexOf(b))
+    : diasBase;
+  const clavesEmpanada = new Set();
+  Object.keys(state.produccion.etiquetas||{}).forEach(c => { if (claveEsEmpanada(c)) clavesEmpanada.add(c); });
+  Object.values(state.produccion.objetivos||{}).forEach(sabores => Object.keys(sabores).forEach(c => { if (claveEsEmpanada(c)) clavesEmpanada.add(c); }));
+  const clavesOrdenadas = [...clavesEmpanada].sort((a,b)=>etiquetaDe(a).localeCompare(etiquetaDe(b),'es'));
+  diasDisponibles.forEach(dia => {
+    const objetivosDia = state.produccion.objetivos[dia] || {};
+    const filas = [['Sabor','Objetivo']];
+    if (clavesOrdenadas.length){
+      clavesOrdenadas.forEach(clave => filas.push([etiquetaDe(clave), objetivosDia[clave]||0]));
+    } else {
+      filas.push(['Burguer', 24], ['Jamon y Queso', 24], ['Verdura', 24]);
+    }
+    const ws = XLSX.utils.aoa_to_sheet(filas);
+    ws['!cols'] = [{wch:28},{wch:12}];
+    XLSX.utils.book_append_sheet(wb, ws, DIA_LABEL[dia]);
+  });
+  XLSX.writeFile(wb, 'Plantilla-plan-produccion-Troppo.xls', {bookType:'xls'});
+};
+
 /* Importar plan de producción manual: un Excel con una solapa por día, columnas Sabor/Objetivo */
 document.getElementById('btn-plan-xlsx').onclick = () => document.getElementById('file-plan-xlsx').click();
 document.getElementById('file-plan-xlsx').onchange = e => {
@@ -2452,6 +2489,13 @@ function valorStockActual(){
   return total;
 }
 let stockFiltro = '';
+let stockTipoActivo = 'empanadas';
+document.querySelectorAll('#stock-tipo-toggle .tt-btn').forEach(btn => btn.onclick = () => {
+  document.querySelectorAll('#stock-tipo-toggle .tt-btn').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+  stockTipoActivo = btn.dataset.tipo;
+  renderStockActual();
+});
 function renderStockActual(){
   const box = document.getElementById('stock-actual-list');
   if (!box) return;
@@ -2459,12 +2503,13 @@ function renderStockActual(){
   const claves = new Set();
   Object.values(state.produccion.objetivos||{}).forEach(sabores => Object.keys(sabores).forEach(c=>claves.add(c)));
   Object.keys(state.produccion.stockActual||{}).forEach(c=>claves.add(c));
-  let lista = [...claves].filter(c=>state.produccion.vinculos[c]);
+  const filtroTipo = stockTipoActivo==='empanadas' ? claveEsEmpanada : stockTipoActivo==='pizzas' ? claveEsPizza : claveEsBebida;
+  let lista = [...claves].filter(c=>state.produccion.vinculos[c] && filtroTipo(c));
   const f = stockFiltro.trim().toLowerCase();
   if (f) lista = lista.filter(c => etiquetaDe(c).toLowerCase().includes(f));
   lista.sort((a,b)=>etiquetaDe(a).localeCompare(etiquetaDe(b),'es'));
 
-  if (!lista.length){ box.innerHTML = '<div class="empty">Todavía no hay sabores vinculados. Importá un informe mensual y vinculá sabores primero.</div>'; document.getElementById('stock-actual-total').innerHTML=''; return; }
+  if (!lista.length){ box.innerHTML = `<div class="empty">Sin ${stockTipoActivo} vinculados todavía.</div>`; document.getElementById('stock-actual-total').innerHTML = renderResumenTotalesStock(); return; }
 
   box.innerHTML = lista.map(clave => {
     const cant = state.produccion.stockActual[clave] || 0;
