@@ -2477,8 +2477,25 @@ function renderStockActual(){
       <input class="mono" type="number" inputmode="numeric" value="${cant||''}" placeholder="0" onchange="setStockActual('${clave}',this.value)">
     </div>`;
   }).join('');
-  document.getElementById('stock-actual-total').innerHTML =
-    `<div class="cost-banner" style="margin:0"><div><div class="big mono">${fmt(valorStockActual())}</div><div class="lbl">Valor total del stock actual</div></div></div>`;
+  document.getElementById('stock-actual-total').innerHTML = renderResumenTotalesStock();
+}
+/* Total de unidades de empanada (todos los sabores juntos) + su equivalente en docenas, además del valor $ */
+function renderResumenTotalesStock(){
+  let totalUnidadesEmp = 0;
+  Object.entries(state.produccion.stockActual||{}).forEach(([clave,cant]) => {
+    if (claveEsEmpanada(clave)) totalUnidadesEmp += (cant||0);
+  });
+  const docenas = Math.floor(totalUnidadesEmp/12);
+  const sueltas = totalUnidadesEmp % 12;
+  return `
+    <div class="resumen-mes-banner" style="margin-bottom:10px">
+      <div class="stat"><div class="cost-banner" style="margin:0"><div><div class="big mono">${fmt(valorStockActual())}</div><div class="lbl">Valor total del stock</div></div></div></div>
+      <div class="stat"><div class="cost-banner" style="margin:0;background:var(--green)"><div><div class="big mono">${totalUnidadesEmp}</div><div class="lbl">Unidades de empanadas (todos los sabores)</div></div></div></div>
+    </div>
+    <div class="cost-banner">
+      <div><div class="big mono">${docenas}</div><div class="lbl">Docenas completas</div></div>
+      <div><div class="big mono">${sueltas}</div><div class="lbl">Unidades sueltas</div></div>
+    </div>`;
 }
 window.setStockActual = (clave, v) => {
   const n = Math.max(0, parseInt(v)||0);
@@ -3062,6 +3079,10 @@ function renderPrintAreaStock(){
   Object.keys(state.produccion.stockActual||{}).forEach(c=>claves.add(c));
   let lista = [...claves].filter(c=>state.produccion.vinculos[c]);
   lista.sort((a,b)=>etiquetaDe(a).localeCompare(etiquetaDe(b),'es'));
+  let totalUnidadesEmp = 0;
+  Object.entries(state.produccion.stockActual||{}).forEach(([clave,cant]) => { if (claveEsEmpanada(clave)) totalUnidadesEmp += (cant||0); });
+  const docenas = Math.floor(totalUnidadesEmp/12);
+  const sueltas = totalUnidadesEmp % 12;
   const filas = lista.map(clave => {
     const cant = state.produccion.stockActual[clave]||0;
     const ref = state.produccion.vinculos[clave];
@@ -3079,7 +3100,8 @@ function renderPrintAreaStock(){
       </tr></thead>
       <tbody>${filas}</tbody>
     </table>
-    <p style="font-family:Montserrat,sans-serif;font-weight:700;margin-top:14px">Valor total del stock: ${fmt(valorStockActual())}</p>`;
+    <p style="font-family:Montserrat,sans-serif;font-weight:700;margin-top:14px">Valor total del stock: ${fmt(valorStockActual())}</p>
+    <p style="font-family:Montserrat,sans-serif;font-weight:700;margin-top:4px">Empanadas: ${totalUnidadesEmp} unidades (${docenas} docenas + ${sueltas} sueltas)</p>`;
   armarPrintArea('Stock actual', isoLocal(new Date()), cuerpo);
 }
 document.getElementById('btn-imprimir-stock').onclick = () => { renderPrintAreaStock(); setTimeout(()=>window.print(),80); };
