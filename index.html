@@ -263,6 +263,11 @@ table.prod-tabla input{padding:6px 5px;font-size:.82rem;width:56px;max-width:100
       <button class="btn" id="gate-btn-admin" style="margin-bottom:18px">Entrar como administrador</button>
       <p class="hint" style="margin-top:0;margin-bottom:8px">O elegí tu usuario:</p>
       <div id="gate-usuarios-list"></div>
+      <div id="gate-usuario-pin-box" style="display:none;margin-top:10px">
+        <div class="field"><label id="gate-usuario-pin-label">PIN</label><input type="password" inputmode="numeric" id="gate-usuario-pin"></div>
+        <button class="btn" id="gate-usuario-pin-confirmar" style="margin-top:8px">Entrar</button>
+        <div class="notice" id="gate-usuario-pin-error"></div>
+      </div>
     </div>
   </div>
 </div>
@@ -787,7 +792,7 @@ table.prod-tabla input{padding:6px 5px;font-size:.82rem;width:56px;max-width:100
 
     <div class="card" id="card-usuarios-lista" style="display:none">
       <h3>Usuarios cargados<button type="button" class="help-btn" onclick="toggleAyuda('ayuda-usuarios-lista')">?</button></h3>
-      <div class="help-text" id="ayuda-usuarios-lista">Cada usuario tiene su propio PIN y, sección por sección, uno de tres niveles: <b>Sin acceso</b> (no ve la pestaña), <b>Solo ver</b> (ve todo, puede imprimir/compartir, pero no puede tipear ni borrar nada), o <b>Acceso completo</b> (igual que vos).</div>
+      <div class="help-text" id="ayuda-usuarios-lista">Cada usuario tiene su propio PIN y, sección por sección, uno de tres niveles: <b>Sin acceso</b> (no ve la pestaña), <b>Solo ver</b> (ve todo, puede imprimir/compartir, pero no puede tipear ni borrar nada), o <b>Acceso completo</b> (igual que vos). En Ingredientes, Personal y Producción además podés tildar "Ocultar precios/costos/ganancia" para que ese usuario vea lo operativo (cantidades, stock, turnos) sin ver la plata. En Precios sugeridos, Proyecciones y el Resumen de Caja no se puede separar — ahí es todo o nada.</div>
       <div id="usuarios-list"></div>
       <button class="btn ghost sm" id="btn-add-usuario" style="margin-top:8px">+ Usuario</button>
     </div>
@@ -1137,7 +1142,7 @@ function renderIngredientes(){
     return `<div class="ing-item">
       <div style="flex:1;min-width:120px">
         <div class="ing-name">${esc(ing.nombre)}</div>
-        <div class="ing-detail">${fmt(ing.precio)} por ${ing.cantidad} ${ing.unidad} · <span class="ing-unit-cost mono">${fmt(costoBase(ing))}/${baseDe(ing)}</span></div>
+        <div class="ing-detail">${ocultarSensible('ingredientes') ? `${ing.cantidad} ${ing.unidad}` : `${fmt(ing.precio)} por ${ing.cantidad} ${ing.unidad} · <span class="ing-unit-cost mono">${fmt(costoBase(ing))}/${baseDe(ing)}</span>`}</div>
       </div>
       <button class="btn edit sm" onclick="editarIng('${ing.id}')">Editar</button>
     </div>`;
@@ -1724,7 +1729,7 @@ function renderEmpleados(){
     return `<div class="ing-item">
       <div style="flex:1;min-width:120px">
         <div class="ing-name">${esc(e.nombre)}</div>
-        <div class="ing-detail">${esc(e.categoria||'Sin categoría')} · <span class="ing-unit-cost mono">${fmt(e.valorHora||0)}/hora</span></div>
+        <div class="ing-detail">${esc(e.categoria||'Sin categoría')}${ocultarSensible('personal') ? '' : ` · <span class="ing-unit-cost mono">${fmt(e.valorHora||0)}/hora</span>`}</div>
       </div>
       <button class="btn edit sm" onclick="editarEmp('${e.id}')">Editar</button>
     </div>`;
@@ -1835,11 +1840,11 @@ function renderPersonalResumen(){
   const filas = Object.values(r.porEmpleado).sort((a,b)=>b.costo-a.costo);
   box.innerHTML = `
     ${filas.length ? filas.map(f => `
-      <div class="insumo-row"><span>${esc(f.nombre)}</span><span class="in-cant mono">${f.horas.toFixed(1)} h · ${fmt(f.costo)}</span></div>
+      <div class="insumo-row"><span>${esc(f.nombre)}</span><span class="in-cant mono">${f.horas.toFixed(1)} h${ocultarSensible('personal')?'':' · '+fmt(f.costo)}</span></div>
     `).join('') : '<div class="empty">Sin turnos cargados en este período.</div>'}
     <div class="cost-banner" style="margin-top:12px">
       <div><div class="big mono">${r.horasTotal.toFixed(1)} h</div><div class="lbl">Total horas</div></div>
-      <div><div class="big mono">${fmt(r.costoTotal)}</div><div class="lbl">Costo total</div></div>
+      ${ocultarSensible('personal') ? '' : `<div><div class="big mono">${fmt(r.costoTotal)}</div><div class="lbl">Costo total</div></div>`}
     </div>`;
 }
 window.setPersonalPeriodo = p => { personalPeriodoActivo = p; renderPersonalResumen(); };
@@ -2732,7 +2737,7 @@ function renderStockActual(){
     const extra = Number(state.produccion.extras[clave])||0;
     const valorLinea = (costoUnit!==null && cant) ? (costoUnit+extra)*cant : 0;
     return `<div class="obj-row" style="grid-template-columns:1fr 70px">
-      <span>${esc(etiquetaDe(clave))}${valorLinea>0?` <span style="color:var(--ink-soft);font-size:.72rem">${fmt(valorLinea)}</span>`:''}</span>
+      <span>${esc(etiquetaDe(clave))}${(valorLinea>0 && !ocultarSensible('produccion'))?` <span style="color:var(--ink-soft);font-size:.72rem">${fmt(valorLinea)}</span>`:''}</span>
       <input class="mono" type="number" inputmode="numeric" value="${cant||''}" placeholder="0" onchange="setStockActual('${clave}',this.value)">
     </div>`;
   }).join('');
@@ -2746,9 +2751,10 @@ function renderResumenTotalesStock(){
   });
   const docenas = Math.floor(totalUnidadesEmp/12);
   const sueltas = totalUnidadesEmp % 12;
+  const sinPlata = ocultarSensible('produccion');
   return `
     <div class="resumen-mes-banner" style="margin-bottom:10px">
-      <div class="stat"><div class="cost-banner" style="margin:0"><div><div class="big mono">${fmt(valorStockActual())}</div><div class="lbl">Valor total del stock</div></div></div></div>
+      ${sinPlata ? '' : `<div class="stat"><div class="cost-banner" style="margin:0"><div><div class="big mono">${fmt(valorStockActual())}</div><div class="lbl">Valor total del stock</div></div></div></div>`}
       <div class="stat"><div class="cost-banner" style="margin:0;background:var(--green)"><div><div class="big mono">${totalUnidadesEmp}</div><div class="lbl">Unidades de empanadas (todos los sabores)</div></div></div></div>
     </div>
     <div class="cost-banner">
@@ -3825,6 +3831,13 @@ function permisoDeSeccion(seccionKey){
   if (!u) return 'completo'; // sin PIN configurado en toda la app = sin restricciones (comportamiento de siempre)
   return (u.permisos && u.permisos[seccionKey]) || 'ninguno';
 }
+/* Para las secciones donde se puede separar lo operativo de la plata: true = ocultar precios/costos/ganancia */
+function ocultarSensible(seccionKey){
+  if (esAdmin()) return false;
+  const u = usuarioActivo();
+  if (!u) return false;
+  return !!(u.permisosSensible && u.permisosSensible[seccionKey]);
+}
 
 /* Pantalla de bloqueo al abrir la app */
 function mostrarGateSiCorresponde(){
@@ -3836,8 +3849,9 @@ function mostrarGateSiCorresponde(){
   if (p.logo){ logo.src = p.logo; logo.style.display = 'block'; } else { logo.style.display = 'none'; }
   const box = document.getElementById('gate-usuarios-list');
   box.innerHTML = state.seguridad.usuarios.length
-    ? state.seguridad.usuarios.map(x => `<button class="btn ghost sm" style="margin:4px 6px 4px 0" onclick="intentarLoginGateUsuario('${x.id}')">${esc(x.nombre)}</button>`).join('')
+    ? state.seguridad.usuarios.map(x => `<button class="btn ghost sm" style="margin:4px 6px 4px 0" onclick="seleccionarUsuarioGate('${x.id}')">${esc(x.nombre)}</button>`).join('')
     : '<div class="empty">Sin usuarios cargados todavía.</div>';
+  document.getElementById('gate-usuario-pin-box').style.display = 'none';
   document.getElementById('login-gate').style.display = 'block';
 }
 document.getElementById('gate-btn-admin').onclick = () => {
@@ -3846,25 +3860,38 @@ document.getElementById('gate-btn-admin').onclick = () => {
     sesionActual = {tipo:'admin'};
     document.getElementById('gate-admin-pin').value = '';
     document.getElementById('login-gate').style.display = 'none';
-    aplicarPermisos(); renderUsuarios();
+    renderAll();
   } else {
-    alert('PIN incorrecto.');
+    document.getElementById('gate-admin-pin').value = '';
+    document.getElementById('gate-admin-pin').placeholder = 'PIN incorrecto, probá de nuevo';
   }
 };
 document.getElementById('gate-admin-pin').onkeydown = e => { if (e.key==='Enter') document.getElementById('gate-btn-admin').click(); };
-window.intentarLoginGateUsuario = id => {
+
+let gateUsuarioSeleccionado = null;
+window.seleccionarUsuarioGate = id => {
+  gateUsuarioSeleccionado = id;
   const u = state.seguridad.usuarios.find(x=>x.id===id);
   if (!u) return;
-  const intento = prompt(`PIN de ${u.nombre}:`);
-  if (intento === null) return;
+  document.getElementById('gate-usuario-pin-label').textContent = 'PIN de ' + u.nombre;
+  document.getElementById('gate-usuario-pin').value = '';
+  document.getElementById('gate-usuario-pin-error').classList.remove('show');
+  document.getElementById('gate-usuario-pin-box').style.display = 'block';
+  document.getElementById('gate-usuario-pin').focus();
+};
+document.getElementById('gate-usuario-pin-confirmar').onclick = () => {
+  const u = state.seguridad.usuarios.find(x=>x.id===gateUsuarioSeleccionado);
+  if (!u) return;
+  const intento = document.getElementById('gate-usuario-pin').value;
   if (intento === u.pin){
     sesionActual = {tipo:'usuario', usuarioId:u.id};
     document.getElementById('login-gate').style.display = 'none';
-    aplicarPermisos(); renderUsuarios();
+    renderAll();
   } else {
-    alert('PIN incorrecto.');
+    aviso('gate-usuario-pin-error', 'PIN incorrecto, probá de nuevo.');
   }
 };
+document.getElementById('gate-usuario-pin').onkeydown = e => { if (e.key==='Enter') document.getElementById('gate-usuario-pin-confirmar').click(); };
 
 function renderUsuarios(){
   document.getElementById('usuarios-sesion-info').innerHTML = esAdmin()
@@ -3881,12 +3908,12 @@ function renderUsuarios(){
 document.getElementById('admin-pin-set').onchange = e => { state.seguridad.adminPin = e.target.value.trim(); save(); };
 document.getElementById('btn-cerrar-sesion').onclick = () => {
   sesionActual = null;
-  mostrarGateSiCorresponde();
-  aplicarPermisos(); renderUsuarios();
+  renderAll();
 };
 
 function renderListaUsuarios(){
   const box = document.getElementById('usuarios-list');
+  const SECCIONES_CON_OCULTAR_PLATA = new Set(['ingredientes','personal','produccion']);
   if (!state.seguridad.usuarios.length){ box.innerHTML = '<div class="empty">Sin usuarios cargados. Tocá "+ Usuario".</div>'; return; }
   box.innerHTML = state.seguridad.usuarios.map(u => {
     if (usuarioEditando === u.id){
@@ -3894,14 +3921,22 @@ function renderListaUsuarios(){
         <div class="field" style="margin-bottom:8px"><label>Nombre</label><input id="edit-usr-nom-${u.id}" value="${esc(u.nombre)}" placeholder="Nombre del empleado"></div>
         <div class="field" style="margin-bottom:10px"><label>PIN</label><input id="edit-usr-pin-${u.id}" value="${esc(u.pin||'')}" placeholder="Ej: 4321"></div>
         <p class="hint" style="margin-top:0;margin-bottom:6px">Permisos por sección:</p>
-        ${Object.entries(SECCIONES_CON_PERMISO).map(([key,label]) => `
-          <div class="field" style="margin-bottom:8px"><label>${esc(label)}</label>
+        ${Object.entries(SECCIONES_CON_PERMISO).map(([key,label]) => {
+          const nivel = (u.permisos&&u.permisos[key])||'ninguno';
+          const puedeOcultarPlata = SECCIONES_CON_OCULTAR_PLATA.has(key) && nivel!=='ninguno';
+          return `
+          <div class="field" style="margin-bottom:${puedeOcultarPlata?'4px':'8px'}"><label>${esc(label)}</label>
             <select onchange="setPermisoUsuario('${u.id}','${key}',this.value)">
-              <option value="ninguno" ${((u.permisos&&u.permisos[key])||'ninguno')==='ninguno'?'selected':''}>Sin acceso</option>
-              <option value="ver" ${(u.permisos&&u.permisos[key])==='ver'?'selected':''}>Solo ver</option>
-              <option value="completo" ${(u.permisos&&u.permisos[key])==='completo'?'selected':''}>Acceso completo</option>
+              <option value="ninguno" ${nivel==='ninguno'?'selected':''}>Sin acceso</option>
+              <option value="ver" ${nivel==='ver'?'selected':''}>Solo ver</option>
+              <option value="completo" ${nivel==='completo'?'selected':''}>Acceso completo</option>
             </select>
-          </div>`).join('')}
+          </div>
+          ${puedeOcultarPlata ? `<label style="display:flex;align-items:center;gap:7px;padding:2px 2px 12px;font-size:.8rem;color:var(--ink-soft)">
+            <input type="checkbox" style="width:auto" ${(u.permisosSensible&&u.permisosSensible[key])?'checked':''} onchange="setOcultarSensibleUsuario('${u.id}','${key}',this.checked)">
+            Ocultar precios/costos/ganancia en ${esc(label).toLowerCase()}
+          </label>` : ''}`;
+        }).join('')}
         <div class="act-row">
           <button class="btn done sm" onclick="guardarEdicionUsuario('${u.id}')">Listo</button>
           <button class="del" onclick="delUsuario(this,'${u.id}')" aria-label="Eliminar" style="margin-left:auto">✕</button>
@@ -3931,6 +3966,12 @@ window.setPermisoUsuario = (id, seccion, valor) => {
   const u = state.seguridad.usuarios.find(x=>x.id===id);
   u.permisos = u.permisos || {};
   u.permisos[seccion] = valor;
+  save(); renderListaUsuarios();
+};
+window.setOcultarSensibleUsuario = (id, seccion, marcado) => {
+  const u = state.seguridad.usuarios.find(x=>x.id===id);
+  u.permisosSensible = u.permisosSensible || {};
+  u.permisosSensible[seccion] = marcado;
   save();
 };
 window.delUsuario = (btn,id) => {
@@ -3975,6 +4016,16 @@ function aplicarPermisos(){
   const tabActual = document.querySelector('#nav button.active')?.dataset.tab;
   if (u && tabActual && tabActual!=='inicio' && tabActual!=='usuarios' && permisoDeSeccion(tabActual)==='ninguno'){
     document.querySelector('#nav button[data-tab="inicio"]').click();
+  }
+
+  /* Producción: si hay que ocultar sensible, sacamos la sub-pestaña Ganancia entera (ahí vive todo lo financiero) */
+  const btnGanancia = document.querySelector('#prod-subtabs .tt-btn[data-sub="ganancia"]');
+  if (btnGanancia){
+    const ocultar = ocultarSensible('produccion');
+    btnGanancia.style.display = ocultar ? 'none' : '';
+    if (ocultar && btnGanancia.classList.contains('active')){
+      document.querySelector('#prod-subtabs .tt-btn[data-sub="hoja"]')?.click();
+    }
   }
 }
 
