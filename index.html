@@ -260,6 +260,21 @@ table.prod-tabla input{padding:6px 5px;font-size:.82rem;width:56px;max-width:100
 </div>
 
 <div class="scrim" id="scrim"></div>
+<div id="cloud-auth-gate" style="display:none;position:fixed;inset:0;background:var(--bg);z-index:110;overflow-y:auto;padding:env(safe-area-inset-top) 16px 40px">
+  <div style="max-width:420px;margin:0 auto;padding-top:60px">
+    <div style="text-align:center;margin-bottom:22px">
+      <div style="font-weight:900;font-size:1.4rem">Rinde</div>
+      <p class="hint" style="margin-top:4px">Iniciá sesión para acceder a tus datos</p>
+    </div>
+    <div class="card">
+      <div class="field" style="margin-bottom:10px"><label>Email</label><input type="email" id="cloud-auth-email" placeholder="tu@email.com" autocomplete="username"></div>
+      <div class="field" style="margin-bottom:14px"><label>Contraseña</label><input type="password" id="cloud-auth-pass" placeholder="Contraseña" autocomplete="current-password"></div>
+      <button class="btn" id="cloud-auth-btn" style="width:100%">Ingresar</button>
+      <div class="notice" id="cloud-auth-error"></div>
+      <p class="hint" style="margin-top:14px;margin-bottom:0">¿Primera vez? El usuario se crea desde el panel de Supabase, no desde acá — pedile a quien administra la cuenta que te dé de alta.</p>
+    </div>
+  </div>
+</div>
 <div id="login-gate" style="display:none;position:fixed;inset:0;background:var(--bg);z-index:100;overflow-y:auto;padding:env(safe-area-inset-top) 16px 40px">
   <div style="max-width:420px;margin:0 auto;padding-top:60px">
     <div style="text-align:center;margin-bottom:22px">
@@ -394,6 +409,11 @@ table.prod-tabla input{padding:6px 5px;font-size:.82rem;width:56px;max-width:100
       <h3>Usuarios y permisos<button type="button" class="help-btn" onclick="toggleAyuda('ayuda-ir-usuarios')">?</button></h3>
       <div class="help-text" id="ayuda-ir-usuarios">Para crear usuarios con permisos por sección, o entrar como empleado con acceso limitado, andá a la pestaña <b>Usuarios</b> del menú.</div>
       <p class="hint" style="margin-top:0">Entrá a la pestaña <b>Usuarios</b> (menú lateral) para gestionar accesos.</p>
+    </div>
+    <div class="card">
+      <h3>Acceso a la nube<button type="button" class="help-btn" onclick="toggleAyuda('ayuda-sesion-nube')">?</button></h3>
+      <div class="help-text" id="ayuda-sesion-nube">Esta es tu sesión real de Supabase (email + contraseña) — la que protege que nadie más pueda leer o escribir tus datos, aunque tenga el archivo de la app. Es distinta del sistema de Usuarios/PIN, que solo controla qué ve cada empleado dentro de la app ya abierta.</div>
+      <button class="btn ghost sm" onclick="cerrarSesionNube()">Cerrar sesión de la nube</button>
     </div>
   </section>
 
@@ -837,19 +857,32 @@ table.prod-tabla input{padding:6px 5px;font-size:.82rem;width:56px;max-width:100
         </div>
 
         <div id="prov-mov-bloque-compra">
-          <div class="field" style="margin-bottom:8px"><label>Ingrediente relacionado (opcional)</label>
-            <select id="prov-mov-ingrediente"><option value="">— ninguno / otro gasto —</option></select>
-          </div>
-          <div id="prov-mov-cantidad-precio" style="display:none">
-            <div class="grid2" style="margin-bottom:8px">
-              <div class="field"><label id="prov-mov-cantidad-label">Cantidad</label><input type="number" inputmode="decimal" id="prov-mov-cantidad" placeholder="Ej: 25"></div>
-              <div class="field"><label>Precio por unidad $</label><input type="number" inputmode="decimal" id="prov-mov-precio-unitario" placeholder="Ej: 1500"></div>
+          <div class="grid2" style="margin-bottom:8px">
+            <div class="field"><label>Tipo de comprobante</label>
+              <select id="prov-factura-tipo">
+                <option value="">— sin comprobante —</option>
+                <option value="A">Factura A</option>
+                <option value="B">Factura B</option>
+                <option value="C">Factura C</option>
+                <option value="X">Factura X</option>
+                <option value="remito">Remito</option>
+                <option value="otro">Otro</option>
+              </select>
             </div>
+            <div class="field"><label>N° de comprobante</label><input id="prov-factura-numero" placeholder="0001-00012345"></div>
           </div>
-          <div class="field" id="prov-mov-monto-box" style="margin-bottom:8px">
-            <label id="prov-mov-monto-label">Monto total $</label>
-            <input type="number" inputmode="decimal" id="prov-mov-monto" placeholder="0">
+
+          <p class="hint" style="margin-top:0;margin-bottom:8px">Detalle de productos comprados (de tu lista de Ingredientes):</p>
+          <div id="prov-factura-items"></div>
+          <button class="btn ghost sm" id="btn-add-item-factura" style="margin:6px 0 12px">+ Agregar producto</button>
+
+          <div class="field" style="margin-bottom:8px"><label>Otros gastos de la factura (opcional, sin ingrediente — ej: flete)</label>
+            <input type="number" inputmode="decimal" id="prov-factura-otros" placeholder="0"></div>
+
+          <div class="cost-banner" style="margin-bottom:10px">
+            <div><div class="big mono" id="prov-factura-total-display">$0</div><div class="lbl">Total de la compra</div></div>
           </div>
+
           <div class="field" style="margin-bottom:8px"><label>Forma de pago</label>
             <select id="prov-mov-forma-pago">
               <option value="cuenta_corriente">Cuenta corriente (queda a deber)</option>
@@ -1075,7 +1108,7 @@ function save(){
   saveTimer = setTimeout(guardarNube, 900);
 }
 async function guardarNube(){
-  if (!sb) return;
+  if (!sb || !sesionSupabaseActual) return;
   try {
     const { error } = await sb.from('app_data')
       .upsert({ id: ROW_ID, data: state, updated_at: new Date().toISOString() });
@@ -1282,8 +1315,8 @@ window.registrarCompraDesdeIngrediente = id => {
   document.querySelector('#prov-subtabs .tt-btn[data-psub="movimiento"]').click();
   document.getElementById('prov-mov-tipo').value = 'compra';
   document.getElementById('prov-mov-tipo').dispatchEvent(new Event('change'));
-  document.getElementById('prov-mov-ingrediente').value = id;
-  document.getElementById('prov-mov-ingrediente').dispatchEvent(new Event('change'));
+  facturaItemsActual = [{id:uid(), ingredienteId:id, cantidad:'', precioUnitario:''}];
+  renderFacturaItems();
 };
 window.cancelarEdicionIng = () => { ingEditando = null; renderIngredientes(); };
 window.guardarEdicionIng = id => {
@@ -4091,49 +4124,67 @@ function renderMovimientosProveedores(){
   const movs = [...state.proveedores.movimientos].sort((a,b)=>b.fecha.localeCompare(a.fecha));
   box.innerHTML = movs.length ? movs.slice(0,40).map(m => {
     const p = proveedorById(m.proveedorId);
-    const ing = m.ingredienteId ? ingById(m.ingredienteId) : null;
     const tipoTxt = m.tipo==='compra' ? (m.formaPago==='contado'?'Compra (contado)':'Compra (cta cte)') : 'Pago';
+    const nItems = (m.items||[]).length;
+    const facturaTxt = m.facturaNumero ? `${m.facturaTipo?('Fact. '+m.facturaTipo+' '):''}${m.facturaNumero}` : '';
     return `<div class="prod-item-row">
-      <span>${esc(p?p.nombre:'(eliminado)')} <span class="pin">${m.fecha} · ${tipoTxt}${m.descripcion?' · '+esc(m.descripcion):''}${ing?' · actualizó '+esc(ing.nombre):''}${m.vencimiento?' · vence '+m.vencimiento:''}</span></span>
+      <span>${esc(p?p.nombre:'(eliminado)')} <span class="pin">${m.fecha} · ${tipoTxt}${facturaTxt?' · '+esc(facturaTxt):''}${nItems?' · '+nItems+' producto(s)':''}${m.descripcion?' · '+esc(m.descripcion):''}${m.vencimiento?' · vence '+m.vencimiento:''}</span></span>
       <span class="mono" style="color:${m.tipo==='compra'&&m.formaPago!=='contado'?'var(--red)':'var(--ink-soft)'}">${m.tipo==='compra'?'+':'-'}${fmt(m.monto)} <button class="del" onclick="delMovProveedor('${m.id}')" aria-label="Eliminar" style="margin-left:6px">✕</button></span>
     </div>`;
   }).join('') : '<div class="empty">Sin movimientos cargados todavía.</div>';
-
-  const selIng = document.getElementById('prov-mov-ingrediente');
-  const actual = selIng.value;
-  selIng.innerHTML = '<option value="">— ninguno / otro gasto —</option>' +
-    [...state.ingredientes].sort((a,b)=>a.nombre.localeCompare(b.nombre,'es')).map(i=>`<option value="${i.id}" ${i.id===actual?'selected':''}>${esc(i.nombre)}</option>`).join('');
 }
 document.getElementById('prov-mov-tipo').onchange = e => {
   const esCompra = e.target.value==='compra';
   document.getElementById('prov-mov-bloque-compra').style.display = esCompra ? 'block' : 'none';
   document.getElementById('prov-mov-bloque-pago').style.display = esCompra ? 'none' : 'block';
 };
-function recalcularMontoDesdeCantidad(){
-  const cant = parseFloat(document.getElementById('prov-mov-cantidad').value)||0;
-  const unit = parseFloat(document.getElementById('prov-mov-precio-unitario').value)||0;
-  if (cant>0 && unit>0) document.getElementById('prov-mov-monto').value = Math.round(cant*unit*100)/100;
-}
-document.getElementById('prov-mov-ingrediente').onchange = e => {
-  const cajaCP = document.getElementById('prov-mov-cantidad-precio');
-  const montoLabel = document.getElementById('prov-mov-monto-label');
-  if (e.target.value){
-    const ing = ingById(e.target.value);
-    document.getElementById('prov-mov-cantidad-label').textContent = `Cantidad (en ${ing.unidad})`;
-    document.getElementById('prov-mov-cantidad').value = '';
-    document.getElementById('prov-mov-precio-unitario').value = '';
-    cajaCP.style.display = 'block';
-    montoLabel.textContent = 'Monto total $ (calculado)';
-  } else {
-    cajaCP.style.display = 'none';
-    montoLabel.textContent = 'Monto total $';
-  }
-};
-document.getElementById('prov-mov-cantidad').oninput = recalcularMontoDesdeCantidad;
-document.getElementById('prov-mov-precio-unitario').oninput = recalcularMontoDesdeCantidad;
 document.getElementById('prov-mov-forma-pago').onchange = e => {
   document.getElementById('prov-mov-vencimiento-box').style.display = e.target.value==='cuenta_corriente' ? 'block' : 'none';
 };
+
+/* ---- Ítems de la factura (varios productos por compra) ---- */
+let facturaItemsActual = [];
+function nuevaFacturaItem(){ return {id:uid(), ingredienteId:'', cantidad:'', precioUnitario:''}; }
+function renderFacturaItems(){
+  if (!facturaItemsActual.length) facturaItemsActual.push(nuevaFacturaItem());
+  const opcionesIng = [...state.ingredientes].sort((a,b)=>a.nombre.localeCompare(b.nombre,'es'));
+  document.getElementById('prov-factura-items').innerHTML = facturaItemsActual.map(it => {
+    const ing = it.ingredienteId ? ingById(it.ingredienteId) : null;
+    const subtotal = (parseFloat(it.cantidad)||0) * (parseFloat(it.precioUnitario)||0);
+    return `<div class="ing-item" style="flex-wrap:wrap">
+      <select style="flex:2;min-width:140px" onchange="setFacturaItem('${it.id}','ingredienteId',this.value)">
+        <option value="">— elegir producto —</option>
+        ${opcionesIng.map(i=>`<option value="${i.id}" ${i.id===it.ingredienteId?'selected':''}>${esc(i.nombre)}</option>`).join('')}
+      </select>
+      <input class="mono" type="number" inputmode="decimal" style="width:80px" placeholder="Cant.${ing?(' ('+ing.unidad+')'):''}" value="${it.cantidad}" onchange="setFacturaItem('${it.id}','cantidad',this.value)">
+      <input class="mono" type="number" inputmode="decimal" style="width:100px" placeholder="Precio unit." value="${it.precioUnitario}" onchange="setFacturaItem('${it.id}','precioUnitario',this.value)">
+      <span class="mono" style="min-width:70px;text-align:right">${fmt(subtotal)}</span>
+      <button class="del" onclick="quitarFacturaItem('${it.id}')" aria-label="Quitar">✕</button>
+    </div>`;
+  }).join('');
+  actualizarTotalFactura();
+}
+window.setFacturaItem = (id, campo, valor) => {
+  const it = facturaItemsActual.find(x=>x.id===id);
+  if (!it) return;
+  it[campo] = valor;
+  renderFacturaItems();
+};
+window.quitarFacturaItem = id => {
+  facturaItemsActual = facturaItemsActual.filter(x=>x.id!==id);
+  renderFacturaItems();
+};
+document.getElementById('btn-add-item-factura').onclick = () => {
+  facturaItemsActual.push(nuevaFacturaItem());
+  renderFacturaItems();
+};
+function actualizarTotalFactura(){
+  const totalItems = facturaItemsActual.reduce((a,it)=>a+(parseFloat(it.cantidad)||0)*(parseFloat(it.precioUnitario)||0), 0);
+  const otros = parseFloat(document.getElementById('prov-factura-otros').value)||0;
+  document.getElementById('prov-factura-total-display').textContent = fmt(totalItems+otros);
+}
+document.getElementById('prov-factura-otros').oninput = actualizarTotalFactura;
+
 document.getElementById('btn-add-mov-proveedor').onclick = () => {
   const proveedorId = document.getElementById('prov-mov-proveedor').value;
   const tipo = document.getElementById('prov-mov-tipo').value;
@@ -4144,41 +4195,49 @@ document.getElementById('btn-add-mov-proveedor').onclick = () => {
     const monto = parseFloat(document.getElementById('prov-mov-monto-pago').value)||0;
     const fecha = document.getElementById('prov-mov-fecha-pago').value || isoLocal(new Date());
     if (!monto){ aviso('notice-prov-mov','Cargá un monto.'); return; }
-    state.proveedores.movimientos.push({id:uid(), proveedorId, tipo:'pago', monto, fecha, vencimiento:'', descripcion, ingredienteId:null, formaPago:''});
+    state.proveedores.movimientos.push({id:uid(), proveedorId, tipo:'pago', monto, fecha, vencimiento:'', descripcion, items:[], formaPago:''});
     document.getElementById('prov-mov-monto-pago').value = '';
-  } else {
-    const monto = parseFloat(document.getElementById('prov-mov-monto').value)||0;
-    const fecha = document.getElementById('prov-mov-fecha').value || isoLocal(new Date());
-    const formaPago = document.getElementById('prov-mov-forma-pago').value;
-    const vencimiento = formaPago==='cuenta_corriente' ? document.getElementById('prov-mov-vencimiento').value : '';
-    const ingredienteId = document.getElementById('prov-mov-ingrediente').value;
-    const cantidad = parseFloat(document.getElementById('prov-mov-cantidad').value)||0;
-    const precioUnitario = parseFloat(document.getElementById('prov-mov-precio-unitario').value)||0;
-    if (!monto){ aviso('notice-prov-mov','Cargá el monto (o cantidad y precio por unidad si elegiste un ingrediente).'); return; }
-
-    let avisoExtra = '';
-    if (ingredienteId && cantidad>0 && precioUnitario>0){
-      const ing = ingById(ingredienteId);
-      ing.precio = precioUnitario;
-      ing.cantidad = 1;
-      avisoExtra = ` Precio de "${ing.nombre}" actualizado a ${fmt(precioUnitario)}/${ing.unidad}.`;
-    }
-
-    state.proveedores.movimientos.push({id:uid(), proveedorId, tipo:'compra', monto, fecha, vencimiento, descripcion, ingredienteId: ingredienteId||null, formaPago});
-    document.getElementById('prov-mov-monto').value = '';
-    document.getElementById('prov-mov-vencimiento').value = '';
-    document.getElementById('prov-mov-ingrediente').value = '';
-    document.getElementById('prov-mov-cantidad').value = '';
-    document.getElementById('prov-mov-precio-unitario').value = '';
-    document.getElementById('prov-mov-cantidad-precio').style.display = 'none';
-    save(); renderProveedores(); renderMovimientosProveedores(); renderVencimientosProveedores(); renderIngredientes();
     document.getElementById('prov-mov-desc').value = '';
-    aviso('notice-prov-mov','Movimiento cargado.'+avisoExtra);
+    save(); renderProveedores(); renderMovimientosProveedores(); renderVencimientosProveedores();
+    aviso('notice-prov-mov','Pago cargado.');
     return;
   }
+
+  const fecha = document.getElementById('prov-mov-fecha').value || isoLocal(new Date());
+  const formaPago = document.getElementById('prov-mov-forma-pago').value;
+  const vencimiento = formaPago==='cuenta_corriente' ? document.getElementById('prov-mov-vencimiento').value : '';
+  const facturaTipo = document.getElementById('prov-factura-tipo').value;
+  const facturaNumero = document.getElementById('prov-factura-numero').value.trim();
+  const otros = parseFloat(document.getElementById('prov-factura-otros').value)||0;
+
+  const itemsValidos = facturaItemsActual.filter(it => it.ingredienteId && (parseFloat(it.cantidad)||0)>0 && (parseFloat(it.precioUnitario)||0)>0);
+  const totalItems = itemsValidos.reduce((a,it)=>a+(parseFloat(it.cantidad)*parseFloat(it.precioUnitario)), 0);
+  const monto = totalItems + otros;
+  if (!monto){ aviso('notice-prov-mov','Cargá al menos un producto con cantidad y precio, o un monto en "Otros gastos".'); return; }
+
+  let actualizados = 0;
+  itemsValidos.forEach(it => {
+    const ing = ingById(it.ingredienteId);
+    ing.precio = parseFloat(it.precioUnitario);
+    ing.cantidad = 1;
+    actualizados++;
+  });
+
+  state.proveedores.movimientos.push({
+    id:uid(), proveedorId, tipo:'compra', monto, fecha, vencimiento, descripcion, formaPago,
+    facturaTipo, facturaNumero,
+    items: itemsValidos.map(it=>({ingredienteId:it.ingredienteId, cantidad:parseFloat(it.cantidad), precioUnitario:parseFloat(it.precioUnitario)}))
+  });
+
+  facturaItemsActual = [];
+  document.getElementById('prov-factura-tipo').value = '';
+  document.getElementById('prov-factura-numero').value = '';
+  document.getElementById('prov-factura-otros').value = '';
+  document.getElementById('prov-mov-vencimiento').value = '';
   document.getElementById('prov-mov-desc').value = '';
-  save(); renderProveedores(); renderMovimientosProveedores(); renderVencimientosProveedores();
-  aviso('notice-prov-mov','Movimiento cargado.');
+  renderFacturaItems();
+  save(); renderProveedores(); renderMovimientosProveedores(); renderVencimientosProveedores(); renderIngredientes();
+  aviso('notice-prov-mov', `Factura cargada.${actualizados?' Se actualizó el precio de '+actualizados+' ingrediente(s).':''}`);
 };
 window.delMovProveedor = id => {
   state.proveedores.movimientos = state.proveedores.movimientos.filter(m=>m.id!==id);
@@ -4209,6 +4268,7 @@ function renderProveedoresAll(){
   renderProveedores();
   renderMovimientosProveedores();
   renderVencimientosProveedores();
+  renderFacturaItems();
 }
 
 /* ================= DASHBOARD DE INICIO ================= */
@@ -4560,8 +4620,52 @@ function aplicarPermisos(){
 }
 
 function renderAll(){ renderIngredientes(); renderPreparaciones(); renderEmpanadas(); renderPizzas(); renderRentabilidad(); renderProduccion(); renderPersonal(); renderCaja(); renderProveedoresAll(); renderProyecciones(); renderPerfil(); mostrarGateSiCorresponde(); renderUsuarios(); renderDashboardInicio(); aplicarPermisos(); }
+/* ================= LOGIN REAL DE SUPABASE (protege los datos, no solo la pantalla) ================= */
+let sesionSupabaseActual = null;
+async function verificarSesionNube(){
+  if (!sb){ document.getElementById('cloud-auth-gate').style.display = 'none'; cargarNube(); return; }
+  try {
+    const { data } = await sb.auth.getSession();
+    if (data && data.session){
+      sesionSupabaseActual = data.session;
+      document.getElementById('cloud-auth-gate').style.display = 'none';
+      cargarNube();
+    } else {
+      document.getElementById('cloud-auth-gate').style.display = 'block';
+    }
+  } catch(e){
+    console.error('Error verificando sesión', e);
+    document.getElementById('cloud-auth-gate').style.display = 'block';
+  }
+}
+document.getElementById('cloud-auth-btn').onclick = async () => {
+  const email = document.getElementById('cloud-auth-email').value.trim();
+  const pass = document.getElementById('cloud-auth-pass').value;
+  if (!email || !pass){ aviso('cloud-auth-error','Completá email y contraseña.'); return; }
+  const btn = document.getElementById('cloud-auth-btn');
+  btn.disabled = true; btn.textContent = 'Ingresando…';
+  try {
+    const { data, error } = await sb.auth.signInWithPassword({ email, password: pass });
+    if (error) throw error;
+    sesionSupabaseActual = data.session;
+    document.getElementById('cloud-auth-gate').style.display = 'none';
+    document.getElementById('cloud-auth-pass').value = '';
+    cargarNube();
+  } catch(e){
+    aviso('cloud-auth-error', 'No pude iniciar sesión: revisá el email y la contraseña.');
+  } finally {
+    btn.disabled = false; btn.textContent = 'Ingresar';
+  }
+};
+document.getElementById('cloud-auth-pass').onkeydown = e => { if (e.key==='Enter') document.getElementById('cloud-auth-btn').click(); };
+window.cerrarSesionNube = async () => {
+  if (sb) { try { await sb.auth.signOut(); } catch(e){} }
+  sesionSupabaseActual = null;
+  location.reload();
+};
+
 renderAll();
-cargarNube();
+verificarSesionNube();
 
 /* Al volver a la app (cambiar de pestaña del navegador o reabrir), refresca desde la nube —
    salvo que estés en medio de escribir algo, para no pisarte lo no guardado. */
@@ -4580,7 +4684,7 @@ document.addEventListener('visibilitychange', () => {
   }
 });
 async function recargarDesdeNube(){
-  if (!sb) return;
+  if (!sb || !sesionSupabaseActual) return;
   if (hayEdicionEnCurso()) return;
   try {
     const { data, error } = await sb.from('app_data').select('data').eq('id', ROW_ID).maybeSingle();
