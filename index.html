@@ -355,8 +355,14 @@ table.prod-tabla input{padding:6px 5px;font-size:.82rem;width:56px;max-width:100
     </div>
 
     <div class="card">
-      <h3>Resumen<button type="button" class="help-btn" onclick="toggleAyuda('ayuda-dashboard-resumen')">?</button></h3>
-      <div class="help-text" id="ayuda-dashboard-resumen">Un vistazo rápido: lo vendido hoy y esta semana (según el último informe de Pedix importado), cómo cerró la caja de hoy, y la ganancia del último mes con informe cargado.</div>
+      <h3 style="display:flex;align-items:center;gap:2px">
+        <span style="flex:1">Resumen</span>
+        <button type="button" class="help-btn" onclick="toggleAyuda('ayuda-dashboard-resumen')">?</button>
+        <button type="button" id="btn-ojo-dashboard" aria-label="Mostrar/ocultar montos" style="background:none;border:none;cursor:pointer;color:var(--ink-soft);padding:2px 4px;margin-left:4px">
+          <svg id="icono-ojo" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:19px;height:19px"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+        </button>
+      </h3>
+      <div class="help-text" id="ayuda-dashboard-resumen">Un vistazo rápido: lo vendido hoy y esta semana (según el último informe de Pedix importado), cómo cerró la caja de hoy, y la ganancia del último mes con informe cargado. Arranca oculto por privacidad — tocá el ojito para verlo.</div>
       <div id="dashboard-resumen"></div>
     </div>
 
@@ -4409,6 +4415,12 @@ function ingredientesConStockBajo(){
     i.stockMinimo!=null && i.stockMinimo!=='' &&
     Number(i.stockActual) <= Number(i.stockMinimo));
 }
+let dashboardOculto = true;
+document.getElementById('btn-ojo-dashboard').onclick = () => {
+  dashboardOculto = !dashboardOculto;
+  renderDashboardInicio();
+};
+function fmtOcultable(n){ return dashboardOculto ? '••••••' : fmt(n); }
 function renderDashboardInicio(){
   const cardAlertas = document.getElementById('card-dashboard-alertas');
   const boxAlertas = document.getElementById('dashboard-alertas-list');
@@ -4425,9 +4437,14 @@ function renderDashboardInicio(){
       stockBajo.map(i => `<div class="prod-item-row"><span>⚠ ${esc(i.nombre)} <span class="pin">stock ${i.stockActual} ${baseDe(i)}, mínimo ${i.stockMinimo}</span></span><span class="mono" style="color:var(--red)">bajo</span></div>`).join('') +
       vencProv.map(m => {
         const p = proveedorById(m.proveedorId);
-        return `<div class="prod-item-row"><span>${m.vencido?'🔴':'🟡'} ${esc(p?p.nombre:'—')} <span class="pin">vence ${m.vencimiento}</span></span><span class="mono">${fmt(m.monto)}</span></div>`;
+        return `<div class="prod-item-row"><span>${m.vencido?'🔴':'🟡'} ${esc(p?p.nombre:'—')} <span class="pin">vence ${m.vencimiento}</span></span><span class="mono">${dashboardOculto?'••••':fmt(m.monto)}</span></div>`;
       }).join('');
   }
+
+  const icono = document.getElementById('icono-ojo');
+  icono.innerHTML = dashboardOculto
+    ? '<path d="M17.94 17.94A10.94 10.94 0 0 1 12 20c-7 0-11-8-11-8a21.8 21.8 0 0 1 5.06-6.06M9.9 4.24A10.94 10.94 0 0 1 12 4c7 0 11 8 11 8a21.8 21.8 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/>'
+    : '<path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/>';
 
   const box = document.getElementById('dashboard-resumen');
   const hoy = isoLocal(new Date());
@@ -4443,13 +4460,13 @@ function renderDashboardInicio(){
 
   box.innerHTML = `
     <div class="resumen-mes-banner" style="margin-bottom:10px">
-      <div class="stat"><div class="cost-banner" style="margin:0"><div><div class="big mono">${fmt(ventasHoy)}</div><div class="lbl">Vendido hoy</div></div></div></div>
-      <div class="stat"><div class="cost-banner" style="margin:0"><div><div class="big mono">${fmt(ventasSemana)}</div><div class="lbl">Vendido esta semana</div></div></div></div>
+      <div class="stat"><div class="cost-banner" style="margin:0"><div><div class="big mono">${fmtOcultable(ventasHoy)}</div><div class="lbl">Vendido hoy</div></div></div></div>
+      <div class="stat"><div class="cost-banner" style="margin:0"><div><div class="big mono">${fmtOcultable(ventasSemana)}</div><div class="lbl">Vendido esta semana</div></div></div></div>
     </div>
-    ${resCaja ? `<div class="cost-banner ${Math.abs(resCaja.diferencia)<1?'green':''}" style="margin-bottom:10px">
-      <div><div class="big mono">${fmt(resCaja.diferencia)}</div><div class="lbl">Diferencia de caja hoy</div></div>
+    ${resCaja ? `<div class="cost-banner ${(!dashboardOculto && Math.abs(resCaja.diferencia)<1)?'green':''}" style="margin-bottom:10px">
+      <div><div class="big mono">${fmtOcultable(resCaja.diferencia)}</div><div class="lbl">Diferencia de caja hoy</div></div>
     </div>` : '<p class="hint" style="margin:0 0 10px">Todavía no cargaste la caja de hoy.</p>'}
-    ${ultimoMes ? `<div class="cost-banner"><div><div class="big mono">${fmt(ultimoMes.gananciaTotal)}</div><div class="lbl">Ganancia bruta · ${ultimoMes.mes}</div></div></div>` : ''}
+    ${ultimoMes ? `<div class="cost-banner"><div><div class="big mono">${fmtOcultable(ultimoMes.gananciaTotal)}</div><div class="lbl">Ganancia bruta · ${ultimoMes.mes}</div></div></div>` : ''}
   `;
 }
 
