@@ -579,6 +579,11 @@ table.prod-tabla input{padding:6px 5px;font-size:.82rem;width:56px;max-width:100
         <button class="btn ghost sm" id="btn-add-equipo" style="margin-top:8px">+ Equipo</button>
         <div id="equipos-total" style="margin-top:12px"></div>
       </div>
+      <div class="card" id="card-capital-inmovilizado" style="display:none">
+        <h3>Ganancia vs. plata parada en stock<button type="button" class="help-btn" onclick="toggleAyuda('ayuda-capital-inmovilizado')">?</button></h3>
+        <div class="help-text" id="ayuda-capital-inmovilizado">La "Ganancia" mide lo que vendiste, no lo que tenés en el banco. Si compraste materia prima o producto terminado de más y todavía no lo vendiste, esa plata sigue siendo tuya pero está convertida en stock, no en efectivo. Restá el "Total parado" de tu ganancia para tener una idea más realista de cuánta plata líquida tenés de verdad.</div>
+        <div id="capital-inmovilizado-box"></div>
+      </div>
       <div class="card" id="card-detalle-productos" style="display:none">
         <h3 style="margin-bottom:10px">Detalle por producto</h3>
         <div id="prod-detalle-productos"></div>
@@ -642,6 +647,19 @@ table.prod-tabla input{padding:6px 5px;font-size:.82rem;width:56px;max-width:100
         <button class="btn ghost sm" id="btn-compartir-stock">📤 Compartir</button>
       </div>
       <div class="notice" id="notice-compartir-stock"></div>
+    </div>
+
+    <div class="card">
+      <h3>Consumo interno<button type="button" class="help-btn" onclick="toggleAyuda('ayuda-consumo-interno')">?</button></h3>
+      <div class="help-text" id="ayuda-consumo-interno">Empanadas o pizzas que se comen ustedes o el personal, no se venden. Cargalo acá para que se descuente del stock igual que una venta — si no, el stock te queda inflado con algo que en realidad ya no está. No entra en la Ganancia (no es venta), pero sirve para llevar la cuenta de cuánto representa ese consumo en costo.</div>
+      <div class="grid2" style="margin-bottom:8px">
+        <div class="field"><label>Sabor</label><select id="consumo-sabor"></select></div>
+        <div class="field"><label>Cantidad</label><input type="number" inputmode="numeric" id="consumo-cantidad" placeholder="Ej: 6"></div>
+      </div>
+      <div class="field" style="margin-bottom:10px"><label>Motivo (opcional)</label><input id="consumo-motivo" placeholder="Ej: comida del personal"></div>
+      <button class="btn ghost sm" id="btn-add-consumo">+ Registrar consumo</button>
+      <div id="consumo-interno-list" style="margin-top:12px"></div>
+      <div id="consumo-interno-total" style="margin-top:10px"></div>
     </div>
     </div>
 
@@ -1030,7 +1048,7 @@ function migrarGastosViejos(proy){
     if (Number(monto) > 0) proy.gastos.push({id:uid(), nombre, monto:Number(monto)});
   });
 }
-const PRODUCCION_DEFAULT = {vinculos:{}, objetivos:{}, promedios:{}, extras:{}, historico:[], ultimoImport:null, registro:{}, etiquetas:{}, origenes:{}, stockActual:{}, mesesReconciliados:{}, ventasPorFecha:{}, stockDescontadoPorFecha:{}, stockDesde:null};
+const PRODUCCION_DEFAULT = {vinculos:{}, objetivos:{}, promedios:{}, extras:{}, historico:[], ultimoImport:null, registro:{}, etiquetas:{}, origenes:{}, stockActual:{}, mesesReconciliados:{}, ventasPorFecha:{}, stockDescontadoPorFecha:{}, stockDesde:null, consumoInterno:[]};
 const PERSONAL_DEFAULT = {empleados:[], turnos:[]};
 const ESTADO_DEFAULT = {ingredientes:[],preparaciones:[],productos:[],ventas:[],margenObj:60,proyeccion:null,produccion:null,personal:null,equipos:null,caja:null,perfil:null,seguridad:null,proveedores:null};
 function estadoBase(datos){
@@ -1061,6 +1079,7 @@ function estadoBase(datos){
   base.produccion.mesesReconciliados = Object.assign({}, PRODUCCION_DEFAULT.mesesReconciliados, (datos && datos.produccion && datos.produccion.mesesReconciliados) || {});
   base.produccion.ventasPorFecha = Object.assign({}, PRODUCCION_DEFAULT.ventasPorFecha, (datos && datos.produccion && datos.produccion.ventasPorFecha) || {});
   base.produccion.stockDescontadoPorFecha = Object.assign({}, PRODUCCION_DEFAULT.stockDescontadoPorFecha, (datos && datos.produccion && datos.produccion.stockDescontadoPorFecha) || {});
+  base.produccion.consumoInterno = (datos && datos.produccion && datos.produccion.consumoInterno) || [];
   base.produccion.registro = Object.assign({}, PRODUCCION_DEFAULT.registro, (datos && datos.produccion && datos.produccion.registro) || {});
   base.produccion.etiquetas = Object.assign({}, PRODUCCION_DEFAULT.etiquetas, (datos && datos.produccion && datos.produccion.etiquetas) || {});
   base.produccion.origenes = Object.assign({}, PRODUCCION_DEFAULT.origenes, (datos && datos.produccion && datos.produccion.origenes) || {});
@@ -2894,6 +2913,19 @@ function valorStockActual(){
   });
   return total;
 }
+/* Plata "parada" en materia prima cruda sin usar todavía (harina, cajas, etc. — solo cuenta
+   ingredientes donde cargaste Stock actual en la pestaña Ingredientes). */
+function valorStockIngredientes(){
+  let total = 0;
+  state.ingredientes.forEach(ing => {
+    if (ing.stockActual==null || ing.stockActual==='') return;
+    total += costoBase(ing) * Number(ing.stockActual);
+  });
+  return total;
+}
+function capitalInmovilizadoTotal(){
+  return valorStockActual() + valorStockIngredientes();
+}
 /* Diagnóstico: sabores con stock cargado que NO están sumando al valor, y por qué */
 function diagnosticoStockSinValorizar(){
   const problemas = [];
@@ -2914,6 +2946,66 @@ document.querySelectorAll('#stock-tipo-toggle .tt-btn').forEach(btn => btn.oncli
   stockTipoActivo = btn.dataset.tipo;
   renderStockActual();
 });
+/* ================= CONSUMO INTERNO ================= */
+function renderConsumoInterno(){
+  const sel = document.getElementById('consumo-sabor');
+  const actual = sel.value;
+  const claves = Object.keys(state.produccion.vinculos).sort((a,b)=>etiquetaDe(a).localeCompare(etiquetaDe(b),'es'));
+  sel.innerHTML = claves.length
+    ? claves.map(c=>`<option value="${c}" ${c===actual?'selected':''}>${esc(etiquetaDe(c))}</option>`).join('')
+    : '<option value="">— vinculá sabores primero —</option>';
+
+  const sinPlata = ocultarSensible('produccion');
+  const box = document.getElementById('consumo-interno-list');
+  const registros = [...(state.produccion.consumoInterno||[])].sort((a,b)=>b.fecha.localeCompare(a.fecha));
+  box.innerHTML = registros.length ? registros.slice(0,25).map(c => {
+    const ref = state.produccion.vinculos[c.clave];
+    const costoUnit = ref ? costoVinculo(ref) : null;
+    const precioUnit = precioEstimadoParaProyeccion(ref, c.clave);
+    const costoLinea = costoUnit!==null ? costoUnit*c.cantidad : null;
+    const ventaLinea = precioUnit>0 ? precioUnit*c.cantidad : null;
+    return `<div class="prod-item-row">
+      <span>${esc(etiquetaDe(c.clave))} <span class="pin">${c.fecha}${c.motivo?' · '+esc(c.motivo):''}</span></span>
+      <span class="mono">× ${c.cantidad}${(!sinPlata && costoLinea!==null)?` · costo ${fmt(costoLinea)}`:''} <button class="del" onclick="delConsumoInterno('${c.id}')" aria-label="Eliminar" style="margin-left:6px">✕</button></span>
+    </div>`;
+  }).join('') : '<div class="empty">Sin consumo interno registrado todavía.</div>';
+
+  let costoTotal = 0, ventaTotal = 0, unidadesTotal = 0;
+  registros.forEach(c => {
+    unidadesTotal += c.cantidad;
+    const ref = state.produccion.vinculos[c.clave];
+    const costoUnit = ref ? costoVinculo(ref) : null;
+    const precioUnit = precioEstimadoParaProyeccion(ref, c.clave);
+    if (costoUnit!==null) costoTotal += costoUnit * c.cantidad;
+    if (precioUnit>0) ventaTotal += precioUnit * c.cantidad;
+  });
+  document.getElementById('consumo-interno-total').innerHTML = registros.length ? `
+    <div class="cost-banner" style="margin:0 0 8px"><div><div class="big mono">${unidadesTotal}</div><div class="lbl">Unidades consumidas (total histórico)</div></div></div>
+    ${sinPlata ? '' : `
+    <div class="resumen-mes-banner">
+      <div class="stat"><div class="cost-banner" style="margin:0"><div><div class="big mono">${fmt(costoTotal)}</div><div class="lbl">Costo real (lo que salió del bolsillo)</div></div></div></div>
+      <div class="stat"><div class="cost-banner" style="margin:0;background:var(--ink-soft)"><div><div class="big mono">${fmt(ventaTotal)}</div><div class="lbl">Si se vendía, a precio de venta</div></div></div></div>
+    </div>`}
+  ` : '';
+}
+document.getElementById('btn-add-consumo').onclick = () => {
+  const clave = document.getElementById('consumo-sabor').value;
+  const cantidad = Math.max(0, parseInt(document.getElementById('consumo-cantidad').value)||0);
+  const motivo = document.getElementById('consumo-motivo').value.trim();
+  if (!clave || !cantidad) return;
+  state.produccion.consumoInterno.push({id:uid(), fecha:isoLocal(new Date()), clave, cantidad, motivo});
+  state.produccion.stockActual[clave] = Math.max(0, (state.produccion.stockActual[clave]||0) - cantidad);
+  document.getElementById('consumo-cantidad').value = '';
+  document.getElementById('consumo-motivo').value = '';
+  save(); renderConsumoInterno(); renderStockActual(); renderMovimientoSemanal(); renderResumenSemanal();
+};
+window.delConsumoInterno = id => {
+  const c = state.produccion.consumoInterno.find(x=>x.id===id);
+  if (c){ state.produccion.stockActual[c.clave] = (state.produccion.stockActual[c.clave]||0) + c.cantidad; } // deshace el descuento
+  state.produccion.consumoInterno = state.produccion.consumoInterno.filter(x=>x.id!==id);
+  save(); renderConsumoInterno(); renderStockActual(); renderMovimientoSemanal(); renderResumenSemanal();
+};
+
 function renderStockActual(){
   const box = document.getElementById('stock-actual-list');
   if (!box) return;
@@ -3121,6 +3213,29 @@ function renderVistaAnual(){
 }
 window.setAnioActivo = a => { anioActivo = a; renderVistaAnual(); };
 
+/* Compara la ganancia contable del mes con la plata que quedó "parada" en stock sin vender */
+function renderCapitalInmovilizado(){
+  const card = document.getElementById('card-capital-inmovilizado');
+  if (ocultarSensible('produccion')){ card.style.display = 'none'; return; }
+  const ultimo = state.produccion.historico[0];
+  if (!ultimo){ card.style.display = 'none'; return; }
+  card.style.display = 'block';
+  const valorTerminado = valorStockActual();
+  const valorIngredientes = valorStockIngredientes();
+  const totalParado = valorTerminado + valorIngredientes;
+  const gananciaAjustada = ultimo.gananciaTotal - totalParado;
+  document.getElementById('capital-inmovilizado-box').innerHTML = `
+    <div class="resumen-mes-banner" style="margin-bottom:10px">
+      <div class="stat"><div class="cost-banner" style="margin:0"><div><div class="big mono">${fmt(valorTerminado)}</div><div class="lbl">Producto terminado en stock</div></div></div></div>
+      <div class="stat"><div class="cost-banner" style="margin:0"><div><div class="big mono">${fmt(valorIngredientes)}</div><div class="lbl">Materia prima cruda en stock</div></div></div></div>
+    </div>
+    <div class="cost-banner">
+      <div><div class="big mono">${fmt(totalParado)}</div><div class="lbl">Total parado en stock</div></div>
+      <div><div class="big mono">${fmt(gananciaAjustada)}</div><div class="lbl">Ganancia ${ultimo.mes} descontando lo parado</div></div>
+    </div>
+    <p class="hint" style="margin-top:10px">Solo cuenta ingredientes donde cargaste "Stock actual" en Ingredientes — si no lo cargás para un ingrediente, no entra en esta cuenta.</p>
+  `;
+}
 function renderRentabilidadReal(){
   const card = document.getElementById('card-rentabilidad-real');
   const cardNeta = document.getElementById('card-ganancia-neta');
@@ -3784,8 +3899,10 @@ function renderProduccion(){
   renderVincular();
   renderEquipos();
   renderStockActual();
+  renderConsumoInterno();
   renderMovimientoSemanal();
   renderRentabilidadReal();
+  renderCapitalInmovilizado();
   renderVistaAnual();
   renderObjetivos();
   renderResumenSemanal();
