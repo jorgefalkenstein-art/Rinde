@@ -779,7 +779,7 @@ table.prod-tabla input{padding:6px 5px;font-size:.82rem;width:56px;max-width:100
     <div id="caja-sub-dia">
       <div class="card">
         <h3>Caja del día<button type="button" class="help-btn" onclick="toggleAyuda('ayuda-caja-dia')">?</button></h3>
-        <div class="help-text" id="ayuda-caja-dia">Todos los días arrancás con un monto en efectivo (Apertura). Durante el día entra plata en efectivo y por medios electrónicos (Point, transferencia, QR), y puede salir plata en Retiros (alguien se lleva efectivo). Al cerrar, contás físicamente el cajón (Cierre contado) y la app te dice si coincide con lo que "debería" haber, según lo vendido, lo retirado y lo cobrado electrónico.</div>
+        <div class="help-text" id="ayuda-caja-dia">Todos los días arrancás con un monto en efectivo (Apertura) — se autocompleta sola con lo que contaste al cerrar el día anterior, porque esa plata sigue físicamente en el cajón, no se resetea. Podés corregirla a mano si hiciste un recuento distinto. Durante el día entra plata en efectivo y por medios electrónicos (Point, transferencia, QR), y puede salir plata en Retiros (alguien se lleva efectivo). Al cerrar, contás físicamente el cajón (Cierre contado) y la app te dice si coincide con lo que "debería" haber, según lo vendido, lo retirado y lo cobrado electrónico.</div>
         <div class="field" style="margin-bottom:12px"><label>Día</label><input type="date" id="caja-fecha"></div>
         <div class="grid2" style="margin-bottom:8px">
           <div class="field"><label>Apertura (efectivo inicial) $</label><input type="number" inputmode="decimal" id="caja-apertura" placeholder="0"></div>
@@ -3995,7 +3995,14 @@ document.getElementById('btn-add-socio').onclick = () => {
 };
 
 function registroCajaDe(fecha){
-  state.caja.registros[fecha] = state.caja.registros[fecha] || {apertura:0, cierreContado:0, retiros:[], electronico:{point:0,transferencia:0,qr:0}};
+  if (!state.caja.registros[fecha]){
+    /* Si es un día nuevo, la apertura arranca sola con lo que quedó contado el día hábil
+       anterior — la plata física no se resetea sola de un día a otro. */
+    const fechas = Object.keys(state.caja.registros).filter(f=>f<fecha).sort();
+    const anterior = fechas.length ? state.caja.registros[fechas[fechas.length-1]] : null;
+    const aperturaSugerida = (anterior && anterior.cierreContado) ? anterior.cierreContado : 0;
+    state.caja.registros[fecha] = {apertura:aperturaSugerida, cierreContado:0, retiros:[], electronico:{point:0,transferencia:0,qr:0}};
+  }
   return state.caja.registros[fecha];
 }
 function ventasDelDia(fecha){
@@ -4118,6 +4125,7 @@ function renderCajaResumen(){
   const fechas = Object.keys(state.caja.registros).filter(f=>f>=desde && f<=hasta);
 
   const porSocio = {};
+  const retirosDetalle = [];
   let totalVentas=0, totalElectronico=0, totalRetiros=0, totalCierres=0, diasConCierre=0;
   fechas.forEach(fecha => {
     const res = calcularResultadoCaja(fecha);
@@ -4129,15 +4137,21 @@ function renderCajaResumen(){
       const s = socioById(x.socioId);
       const nombre = s ? s.nombre : '(socio eliminado)';
       porSocio[nombre] = (porSocio[nombre]||0) + (Number(x.monto)||0);
+      retirosDetalle.push({fecha, nombre, monto:Number(x.monto)||0, motivo:x.motivo});
     });
   });
+  retirosDetalle.sort((a,b)=>b.fecha.localeCompare(a.fecha));
 
   const boxSocios = document.getElementById('caja-resumen-socios');
   const nombresSocios = Object.keys(porSocio);
-  boxSocios.innerHTML = `<p class="hint" style="margin-top:0;font-weight:700;color:var(--ink)">Retirado por socio</p>` +
+  boxSocios.innerHTML = `<p class="hint" style="margin-top:0;font-weight:700;color:var(--ink)">Retirado por socio (total del período)</p>` +
     (nombresSocios.length
       ? nombresSocios.map(n=>`<div class="prod-item-row"><span>${esc(n)}</span><span class="mono">${fmt(porSocio[n])}</span></div>`).join('')
-      : '<div class="empty">Sin retiros en este período.</div>');
+      : '<div class="empty">Sin retiros en este período.</div>') +
+    (retirosDetalle.length ? `
+    <p class="hint" style="margin-top:14px;margin-bottom:6px;font-weight:700;color:var(--ink)">Detalle de cada retiro</p>
+    ${retirosDetalle.map(r=>`<div class="prod-item-row"><span>${esc(r.nombre)} <span class="pin">${r.fecha}${r.motivo?' · '+esc(r.motivo):''}</span></span><span class="mono">${fmt(r.monto)}</span></div>`).join('')}
+    ` : '');
 
   const boxConc = document.getElementById('caja-resumen-conciliacion');
   boxConc.innerHTML = `
