@@ -564,7 +564,7 @@ table.prod-tabla input{padding:6px 5px;font-size:.82rem;width:56px;max-width:100
     <div id="prod-sub-ganancia" hidden>
       <div class="card" id="card-rentabilidad-real" style="display:none">
         <h3 style="margin-bottom:10px">Ganancia real del mes<button type="button" class="help-btn" onclick="toggleAyuda('ayuda-ganancia-real')">?</button></h3>
-        <div class="help-text" id="ayuda-ganancia-real">Solo ingredientes (sin mano de obra ni gastos fijos todavía, eso está más abajo en "Ganancia neta"). Usa el costo real de cada sabor dentro de cada docena, no un % promedio parejo para todo.</div>
+        <div class="help-text" id="ayuda-ganancia-real">Solo ingredientes (sin mano de obra ni gastos fijos todavía, eso está más abajo en "Ganancia neta"). Usa el costo real de cada sabor dentro de cada docena, no un % promedio parejo para todo. El mes en curso queda "Abierto" y se recalcula solo con los precios de Ingredientes más actuales. En cuanto termina el mes calendario (empieza el siguiente), se cierra y congela solo, sin que tengas que tocar nada — de ahí en más, aunque actualices precios, ese mes no se mueve más. Si necesitás corregir algo de un mes ya cerrado, tocá "🔓 Reabrir este mes".</div>
         <div class="day-tabs" id="mes-tabs"></div>
         <div id="prod-resumen-mes"></div>
       </div>
@@ -817,7 +817,7 @@ table.prod-tabla input{padding:6px 5px;font-size:.82rem;width:56px;max-width:100
 
       <div class="card">
         <h3>Resultado del día<button type="button" class="help-btn" onclick="toggleAyuda('ayuda-caja-resultado')">?</button></h3>
-        <div class="help-text" id="ayuda-caja-resultado">"Efectivo esperado" = Apertura + (lo vendido en efectivo, es decir ventas totales del día menos lo electrónico) − Retiros. "Diferencia" = lo que contaste al cerrar menos ese esperado. Si da $0, cerró perfecto. Si da negativo, falta plata. Si da positivo, sobra (revisá si cargaste bien los cobros electrónicos).</div>
+        <div class="help-text" id="ayuda-caja-resultado">"Efectivo esperado" = Apertura + (lo vendido en efectivo, es decir ventas totales del día menos lo electrónico) − Retiros. "Diferencia" = lo que contaste al cerrar menos ese esperado. Si da $0, cerró perfecto. Si da negativo, falta plata. Si da positivo, sobra (revisá si cargaste bien los cobros electrónicos). Si hacés algún retiro DESPUÉS de contar la caja, va a aparecer además "Queda en la caja ahora" — te resta ese retiro puntual del conteo, sin importar en qué orden cargaste las cosas.</div>
         <div id="caja-resultado"></div>
         <div class="btn-row" style="margin-top:14px">
           <button class="btn ghost sm" id="btn-imprimir-caja">🖨 Imprimir</button>
@@ -2705,6 +2705,16 @@ function reconciliarStockPorFechas(fechas){
 /* Recalcula objetivos/promedios (del mes más reciente con datos) y la ganancia real de
    CADA mes presente en el acumulado — así julio queda quieto mientras agosto se va llenando
    semana a semana, y el mes activo para producir siempre es el más nuevo. */
+/* Un mes se cierra SOLO cuando termina el mes calendario (ya no es "el mes en curso") —
+   sin que haya que tocar nada. Se puede forzar a mano para casos puntuales:
+   estadoManual 'cerrado' lo congela antes de tiempo, 'abierto' lo mantiene recalculando
+   aunque ya haya pasado el mes (para corregir algo viejo). */
+function mesEstaCerrado(entradaHistorico){
+  if (entradaHistorico.estadoManual === 'cerrado') return true;
+  if (entradaHistorico.estadoManual === 'abierto') return false;
+  const mesActualReal = isoLocal(new Date()).slice(0,7);
+  return entradaHistorico.mes < mesActualReal;
+}
 function recalcularTodoDesdeAcumulado(){
   const fechas = Object.keys(state.produccion.ventasPorFecha).sort();
   if (!fechas.length) return;
@@ -2751,9 +2761,18 @@ function recalcularTodoDesdeAcumulado(){
   state.produccion.objetivos = objetivos;
   state.produccion.promedios = promedios;
 
-  const mesesPresentes = [...new Set(fechas.map(f=>f.slice(0,7)))];
+  const mesesPresentes = new Set(fechas.map(f=>f.slice(0,7)));
+  state.produccion.historico.filter(h=>mesEstaCerrado(h)).forEach(h=>mesesPresentes.add(h.mes)); // los meses cerrados nunca desaparecen, aunque no tengan fechas activas
   const historicoNuevo = [];
-  mesesPresentes.forEach(mes => {
+  [...mesesPresentes].forEach(mes => {
+    const existente = state.produccion.historico.find(h=>h.mes===mes);
+    if (existente && mesEstaCerrado(existente)){
+      /* Mes cerrado (automático porque ya pasó el mes calendario, o forzado a mano): se
+         congeló con el costo de ese momento, no se vuelve a tocar aunque hayan cambiado
+         precios de ingredientes o entren ventas nuevas de esas fechas. */
+      historicoNuevo.push(existente);
+      return;
+    }
     const ventasDeEseMes = todasVentas.filter(v=>v.fechaIso && v.fechaIso.slice(0,7)===mes);
     let ingresoTotal=0, costoTotal=0, sinVincularCant=0;
     const porProducto = {};
@@ -2771,10 +2790,9 @@ function recalcularTodoDesdeAcumulado(){
       porProducto[v.clave].ingreso += v.ingreso;
       porProducto[v.clave].costo += costoLinea;
     });
-    const existente = state.produccion.historico.find(h=>h.mes===mes);
     historicoNuevo.push({
       mes, ingresoTotal, costoTotal, gananciaTotal: ingresoTotal-costoTotal,
-      porProducto, sinVincularCant,
+      porProducto, sinVincularCant, estadoManual: (existente ? existente.estadoManual : null) || null,
       importadoEn: existente ? existente.importadoEn : Date.now()
     });
   });
@@ -3266,15 +3284,21 @@ function renderRentabilidadReal(){
   const ultimo = hist.find(h=>h.mes===mesGananciaSeleccionado) || hist[0];
   const margen = ultimo.ingresoTotal>0 ? (ultimo.gananciaTotal/ultimo.ingresoTotal*100) : 0;
   const resumen = document.getElementById('prod-resumen-mes');
+  const estaCerrado = mesEstaCerrado(ultimo);
   resumen.innerHTML = `
-    <p class="hint" style="margin-top:0;margin-bottom:10px">Mes <b>${ultimo.mes}</b></p>
+    <p class="hint" style="margin-top:0;margin-bottom:10px">Mes <b>${ultimo.mes}</b> ${estaCerrado ? '<span style="color:var(--green);font-weight:700">🔒 Cerrado — congelado, no se mueve aunque actualices precios</span>' : '<span style="color:var(--ink-soft)">Abierto (mes en curso) — se recalcula solo con los precios actuales</span>'}</p>
     <div class="resumen-mes-banner">
       <div class="stat"><div class="cost-banner" style="margin:0"><div><div class="big mono">${fmt(ultimo.ingresoTotal)}</div><div class="lbl">Ingreso</div></div></div></div>
       <div class="stat"><div class="cost-banner" style="margin:0"><div><div class="big mono">${fmt(ultimo.costoTotal)}</div><div class="lbl">Costo ingredientes</div></div></div></div>
       <div class="stat"><div class="cost-banner green" style="margin:0"><div><div class="big mono">${fmt(ultimo.gananciaTotal)}</div><div class="lbl">Ganancia bruta · ${margen.toFixed(0)}%</div></div></div></div>
     </div>
     ${ultimo.sinVincularCant>0 ? `<div class="notice show" style="margin-bottom:10px">Hay ${ultimo.sinVincularCant} unidades vendidas sin vincular a una receta: su costo no está incluido arriba. Vinculalas para un cálculo exacto.</div>` : ''}
-    <button class="btn ghost sm" onclick="borrarMesHistorico('${ultimo.mes}')" style="margin-top:6px">✕ Borrar este mes del historial</button>
+    <div class="act-row">
+      ${estaCerrado
+        ? `<button class="btn edit sm" onclick="reabrirMesHistorico('${ultimo.mes}')">🔓 Reabrir este mes</button>`
+        : `<button class="btn done sm" onclick="cerrarMesHistorico('${ultimo.mes}')">🔒 Cerrar antes de tiempo</button>`}
+      <button class="btn ghost sm" onclick="borrarMesHistorico('${ultimo.mes}')">✕ Borrar del historial</button>
+    </div>
   `;
 
   /* Ganancia neta real: ingredientes (ya calculado) - mano de obra real de ese mes (Personal) - gastos fijos actuales (Proyecciones) */
@@ -3361,6 +3385,19 @@ window.borrarMesHistorico = mes => {
   });
   recalcularTodoDesdeAcumulado();
   mesGananciaSeleccionado = null;
+  save(); renderProduccion();
+};
+window.cerrarMesHistorico = mes => {
+  const h = state.produccion.historico.find(x=>x.mes===mes);
+  if (!h) return;
+  h.estadoManual = 'cerrado';
+  save(); renderRentabilidadReal();
+};
+window.reabrirMesHistorico = mes => {
+  const h = state.produccion.historico.find(x=>x.mes===mes);
+  if (!h) return;
+  h.estadoManual = 'abierto';
+  recalcularTodoDesdeAcumulado(); // al reabrir, recalcula ya mismo con los precios actuales
   save(); renderProduccion();
 };
 
@@ -4034,7 +4071,14 @@ function calcularResultadoCaja(fecha){
   const efectivoEsperado = aperturaEfectiva + ventasEfectivo - totalRetiros;
   const cajaCerrada = r.cierreContado!==null && r.cierreContado!==undefined && r.cierreContado!=='' && Number(r.cierreContado)>0;
   const diferencia = cajaCerrada ? (Number(r.cierreContado) - efectivoEsperado) : null;
-  return {r, aperturaEfectiva, totalRetiros, totalElectronico, ventas, ventasEfectivo, efectivoEsperado, diferencia, cajaCerrada};
+  /* Lo que debería quedar FÍSICAMENTE ahora mismo: lo que contaste, menos SOLO los retiros que
+     se cargaron DESPUÉS de ese conteo (si un retiro ya había pasado antes de contar, ya está
+     reflejado en el número que contaste, y no hay que restarlo de nuevo). */
+  const retirosPosterioresAlConteo = cajaCerrada
+    ? r.retiros.filter(x => (x.creadoEn||0) > (r.contadoEn||0)).reduce((a,x)=>a+(Number(x.monto)||0),0)
+    : 0;
+  const saldoActual = cajaCerrada ? (Number(r.cierreContado) - retirosPosterioresAlConteo) : null;
+  return {r, aperturaEfectiva, totalRetiros, totalElectronico, ventas, ventasEfectivo, efectivoEsperado, diferencia, cajaCerrada, saldoActual, retirosPosterioresAlConteo};
 }
 
 let cajaFechaActiva = null;
@@ -4072,7 +4116,12 @@ function renderCajaDia(){
     ${res.cajaCerrada ? `
     <div class="cost-banner ${Math.abs(res.diferencia)<1?'green':''}" style="margin-top:10px">
       <div><div class="big mono">${fmt(res.diferencia)}</div><div class="lbl">Diferencia (contado − esperado)</div></div>
-    </div>` : `
+    </div>
+    ${res.retirosPosterioresAlConteo>0 ? `
+    <div class="cost-banner green" style="margin-top:10px">
+      <div><div class="big mono">${fmt(res.saldoActual)}</div><div class="lbl">Queda en la caja ahora (después de los retiros posteriores al conteo)</div></div>
+    </div>` : ''}
+    ` : `
     <div class="notice show" style="margin-top:10px">Todavía no cargaste "Cierre contado" hoy — la Diferencia se calcula recién cuando contés la caja al cerrar. El "Efectivo esperado" de arriba ya es válido y se va actualizando solo mientras trabajás.</div>
     `}
     ${!res.ventas ? '<div class="notice show" style="margin-top:10px">No hay ventas importadas para este día — el "efectivo esperado" puede no ser real todavía.</div>' : ''}
@@ -4084,6 +4133,7 @@ function guardarCampoCaja(campo, v){
   const n = Math.max(0, parseFloat(v)||0);
   if (['point','transferencia','qr'].includes(campo)) r.electronico[campo] = n;
   else r[campo] = n;
+  if (campo==='cierreContado') r.contadoEn = Date.now(); // marca cuándo contaste, para saber qué retiros vinieron después
   save(); renderCajaDia();
 }
 document.getElementById('caja-apertura').onchange = e => guardarCampoCaja('apertura', e.target.value);
@@ -4096,7 +4146,7 @@ document.getElementById('btn-add-retiro').onclick = () => {
   const monto = parseFloat(document.getElementById('caja-retiro-monto').value)||0;
   const motivo = document.getElementById('caja-retiro-motivo').value.trim();
   if (!socioId || !monto){ return; }
-  registroCajaDe(cajaFechaActiva).retiros.push({id:uid(), socioId, monto, motivo});
+  registroCajaDe(cajaFechaActiva).retiros.push({id:uid(), socioId, monto, motivo, creadoEn:Date.now()});
   document.getElementById('caja-retiro-monto').value = '';
   document.getElementById('caja-retiro-motivo').value = '';
   save(); renderCajaDia();
