@@ -4009,15 +4009,16 @@ document.getElementById('btn-add-socio').onclick = () => {
 };
 
 function registroCajaDe(fecha){
-  if (!state.caja.registros[fecha]){
-    /* Si es un día nuevo, la apertura arranca sola con lo que quedó contado el día hábil
-       anterior — la plata física no se resetea sola de un día a otro. */
-    const fechas = Object.keys(state.caja.registros).filter(f=>f<fecha).sort();
-    const anterior = fechas.length ? state.caja.registros[fechas[fechas.length-1]] : null;
-    const aperturaSugerida = (anterior && anterior.cierreContado) ? anterior.cierreContado : 0;
-    state.caja.registros[fecha] = {apertura:aperturaSugerida, cierreContado:0, retiros:[], electronico:{point:0,transferencia:0,qr:0}};
-  }
+  state.caja.registros[fecha] = state.caja.registros[fecha] || {apertura:null, cierreContado:0, retiros:[], electronico:{point:0,transferencia:0,qr:0}};
   return state.caja.registros[fecha];
+}
+/* Sugiere la apertura de hoy = lo que quedó contado el último día hábil anterior con datos,
+   recalculado siempre en el momento (no se "congela" la primera vez que se abre la pantalla). */
+function aperturaSugeridaPara(fecha){
+  const fechas = Object.keys(state.caja.registros).filter(f=>f<fecha).sort();
+  if (!fechas.length) return 0;
+  const anterior = state.caja.registros[fechas[fechas.length-1]];
+  return (anterior && anterior.cierreContado) ? Number(anterior.cierreContado) : 0;
 }
 function ventasDelDia(fecha){
   const lineas = state.produccion.ventasPorFecha[fecha] || [];
@@ -4025,13 +4026,15 @@ function ventasDelDia(fecha){
 }
 function calcularResultadoCaja(fecha){
   const r = registroCajaDe(fecha);
+  const aperturaEfectiva = (r.apertura===null || r.apertura===undefined) ? aperturaSugeridaPara(fecha) : Number(r.apertura);
   const totalRetiros = r.retiros.reduce((a,x)=>a+(Number(x.monto)||0),0);
   const totalElectronico = (Number(r.electronico.point)||0)+(Number(r.electronico.transferencia)||0)+(Number(r.electronico.qr)||0);
   const ventas = ventasDelDia(fecha);
   const ventasEfectivo = Math.max(0, ventas - totalElectronico);
-  const efectivoEsperado = (Number(r.apertura)||0) + ventasEfectivo - totalRetiros;
-  const diferencia = (Number(r.cierreContado)||0) - efectivoEsperado;
-  return {r, totalRetiros, totalElectronico, ventas, ventasEfectivo, efectivoEsperado, diferencia};
+  const efectivoEsperado = aperturaEfectiva + ventasEfectivo - totalRetiros;
+  const cajaCerrada = r.cierreContado!==null && r.cierreContado!==undefined && r.cierreContado!=='' && Number(r.cierreContado)>0;
+  const diferencia = cajaCerrada ? (Number(r.cierreContado) - efectivoEsperado) : null;
+  return {r, aperturaEfectiva, totalRetiros, totalElectronico, ventas, ventasEfectivo, efectivoEsperado, diferencia, cajaCerrada};
 }
 
 let cajaFechaActiva = null;
@@ -4039,7 +4042,8 @@ function renderCajaDia(){
   if (!cajaFechaActiva) cajaFechaActiva = isoLocal(new Date());
   document.getElementById('caja-fecha').value = cajaFechaActiva;
   const r = registroCajaDe(cajaFechaActiva);
-  document.getElementById('caja-apertura').value = r.apertura || '';
+  const aperturaMostrada = (r.apertura===null || r.apertura===undefined) ? aperturaSugeridaPara(cajaFechaActiva) : r.apertura;
+  document.getElementById('caja-apertura').value = aperturaMostrada || '';
   document.getElementById('caja-cierre').value = r.cierreContado || '';
   document.getElementById('caja-point').value = r.electronico.point || '';
   document.getElementById('caja-transferencia').value = r.electronico.transferencia || '';
@@ -4065,9 +4069,12 @@ function renderCajaDia(){
       <div><div class="big mono">${fmt(res.efectivoEsperado)}</div><div class="lbl">Efectivo esperado</div></div>
       <div><div class="big mono">${fmt(res.totalRetiros)}</div><div class="lbl">Total retirado</div></div>
     </div>
+    ${res.cajaCerrada ? `
     <div class="cost-banner ${Math.abs(res.diferencia)<1?'green':''}" style="margin-top:10px">
       <div><div class="big mono">${fmt(res.diferencia)}</div><div class="lbl">Diferencia (contado − esperado)</div></div>
-    </div>
+    </div>` : `
+    <div class="notice show" style="margin-top:10px">Todavía no cargaste "Cierre contado" hoy — la Diferencia se calcula recién cuando contés la caja al cerrar. El "Efectivo esperado" de arriba ya es válido y se va actualizando solo mientras trabajás.</div>
+    `}
     ${!res.ventas ? '<div class="notice show" style="margin-top:10px">No hay ventas importadas para este día — el "efectivo esperado" puede no ser real todavía.</div>' : ''}
   `;
 }
@@ -4110,13 +4117,13 @@ function renderPrintAreaCaja(){
   const cuerpo = `
     <table style="width:100%;border-collapse:collapse;font-family:Montserrat,sans-serif;font-size:14px;margin-top:6px">
       <tbody>
-        <tr><td style="padding:5px 4px;font-weight:700">Apertura</td><td style="padding:5px 4px">${fmt(res.r.apertura)}</td></tr>
+        <tr><td style="padding:5px 4px;font-weight:700">Apertura</td><td style="padding:5px 4px">${fmt(res.aperturaEfectiva)}</td></tr>
         <tr><td style="padding:5px 4px;font-weight:700">Ventas del día</td><td style="padding:5px 4px">${fmt(res.ventas)}</td></tr>
         <tr><td style="padding:5px 4px;font-weight:700">Electrónico (Point/Transf/QR)</td><td style="padding:5px 4px">${fmt(res.totalElectronico)}</td></tr>
         <tr><td style="padding:5px 4px;font-weight:700">Total retirado</td><td style="padding:5px 4px">${fmt(res.totalRetiros)}</td></tr>
         <tr><td style="padding:5px 4px;font-weight:700">Efectivo esperado</td><td style="padding:5px 4px">${fmt(res.efectivoEsperado)}</td></tr>
         <tr><td style="padding:5px 4px;font-weight:700">Cierre contado</td><td style="padding:5px 4px">${fmt(res.r.cierreContado)}</td></tr>
-        <tr><td style="padding:5px 4px;font-weight:700">Diferencia</td><td style="padding:5px 4px">${fmt(res.diferencia)}</td></tr>
+        <tr><td style="padding:5px 4px;font-weight:700">Diferencia</td><td style="padding:5px 4px">${res.cajaCerrada ? fmt(res.diferencia) : 'Caja no cerrada'}</td></tr>
       </tbody>
     </table>
     ${filasRetiros ? `<p style="font-family:Montserrat,sans-serif;font-weight:700;font-size:14px;margin:16px 0 4px">Retiros</p>
@@ -4496,9 +4503,9 @@ function renderDashboardInicio(){
       <div class="stat"><div class="cost-banner" style="margin:0"><div><div class="big mono">${fmtOcultable(ventasHoy)}</div><div class="lbl">Vendido hoy</div></div></div></div>
       <div class="stat"><div class="cost-banner" style="margin:0"><div><div class="big mono">${fmtOcultable(ventasSemana)}</div><div class="lbl">Vendido esta semana</div></div></div></div>
     </div>
-    ${resCaja ? `<div class="cost-banner ${(!dashboardOculto && Math.abs(resCaja.diferencia)<1)?'green':''}" style="margin-bottom:10px">
+    ${resCaja && resCaja.cajaCerrada ? `<div class="cost-banner ${(!dashboardOculto && Math.abs(resCaja.diferencia)<1)?'green':''}" style="margin-bottom:10px">
       <div><div class="big mono">${fmtOcultable(resCaja.diferencia)}</div><div class="lbl">Diferencia de caja hoy</div></div>
-    </div>` : '<p class="hint" style="margin:0 0 10px">Todavía no cargaste la caja de hoy.</p>'}
+    </div>` : '<p class="hint" style="margin:0 0 10px">Todavía no cerraste la caja de hoy (falta "Cierre contado").</p>'}
     ${ultimoMes ? `<div class="cost-banner"><div><div class="big mono">${fmtOcultable(ultimoMes.gananciaTotal)}</div><div class="lbl">Ganancia bruta · ${ultimoMes.mes}</div></div></div>` : ''}
   `;
 }
