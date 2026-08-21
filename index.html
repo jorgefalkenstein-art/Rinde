@@ -789,8 +789,12 @@ table.prod-tabla input{padding:6px 5px;font-size:.82rem;width:56px;max-width:100
         <div class="field" style="margin-bottom:12px"><label>Día</label><input type="date" id="caja-fecha"></div>
         <div class="grid2" style="margin-bottom:8px">
           <div class="field"><label>Apertura (efectivo inicial) $</label><input type="number" inputmode="decimal" id="caja-apertura" placeholder="0"></div>
-          <div class="field"><label>Cierre contado (recuento final) $</label><input type="number" inputmode="decimal" id="caja-cierre" placeholder="0"></div>
+          <div class="field"><label>Cierre contado (recuento) $</label><input type="number" inputmode="decimal" id="caja-cierre" placeholder="0"></div>
         </div>
+        <label style="display:flex;align-items:flex-start;gap:8px;font-size:.83rem;color:var(--ink-soft);margin-bottom:4px">
+          <input type="checkbox" id="caja-retiros-despues" style="width:auto;margin-top:3px">
+          Los retiros de hoy los hice <b>después</b> de contar (primero conté, después salió esa plata)
+        </label>
       </div>
 
       <div class="card">
@@ -817,7 +821,7 @@ table.prod-tabla input{padding:6px 5px;font-size:.82rem;width:56px;max-width:100
 
       <div class="card">
         <h3>Resultado del día<button type="button" class="help-btn" onclick="toggleAyuda('ayuda-caja-resultado')">?</button></h3>
-        <div class="help-text" id="ayuda-caja-resultado">"Efectivo esperado" = Apertura + (lo vendido en efectivo, es decir ventas totales del día menos lo electrónico) − Retiros. "Diferencia" = lo que contaste al cerrar menos ese esperado. Si da $0, cerró perfecto. Si da negativo, falta plata. Si da positivo, sobra (revisá si cargaste bien los cobros electrónicos). Si hacés algún retiro DESPUÉS de contar la caja, va a aparecer además "Queda en la caja ahora" — te resta ese retiro puntual del conteo, sin importar en qué orden cargaste las cosas.</div>
+        <div class="help-text" id="ayuda-caja-resultado">Si contás la caja y DESPUÉS hacés los retiros, tildá el check "Los retiros los hice después de contar" — así la Diferencia compara bien (sin restar plata que en ese momento todavía no había salido), y abajo te aparece "Queda en la caja ahora" con lo que debería quedar tras los retiros. Si contás AL FINAL, después de que ya se hicieron todos los retiros (el orden tradicional), dejalo destildado — ahí "Cierre contado" ya es directamente lo que queda, no hace falta otro número.</div>
         <div id="caja-resultado"></div>
         <div class="btn-row" style="margin-top:14px">
           <button class="btn ghost sm" id="btn-imprimir-caja">🖨 Imprimir</button>
@@ -4054,8 +4058,16 @@ function registroCajaDe(fecha){
 function aperturaSugeridaPara(fecha){
   const fechas = Object.keys(state.caja.registros).filter(f=>f<fecha).sort();
   if (!fechas.length) return 0;
-  const anterior = state.caja.registros[fechas[fechas.length-1]];
-  return (anterior && anterior.cierreContado) ? Number(anterior.cierreContado) : 0;
+  const fechaAnterior = fechas[fechas.length-1];
+  const anterior = state.caja.registros[fechaAnterior];
+  if (!anterior || !anterior.cierreContado) return 0;
+  /* Si ese día los retiros fueron DESPUÉS de contar, lo que quedó de verdad en el cajón
+     no es el "Cierre contado" crudo, sino ese número ya menos los retiros. */
+  if (anterior.retirosDespues){
+    const totalRetirosAnterior = (anterior.retiros||[]).reduce((a,x)=>a+(Number(x.monto)||0),0);
+    return Math.max(0, Number(anterior.cierreContado) - totalRetirosAnterior);
+  }
+  return Number(anterior.cierreContado);
 }
 function ventasDelDia(fecha){
   const lineas = state.produccion.ventasPorFecha[fecha] || [];
@@ -4068,17 +4080,17 @@ function calcularResultadoCaja(fecha){
   const totalElectronico = (Number(r.electronico.point)||0)+(Number(r.electronico.transferencia)||0)+(Number(r.electronico.qr)||0);
   const ventas = ventasDelDia(fecha);
   const ventasEfectivo = Math.max(0, ventas - totalElectronico);
-  const efectivoEsperado = aperturaEfectiva + ventasEfectivo - totalRetiros;
   const cajaCerrada = r.cierreContado!==null && r.cierreContado!==undefined && r.cierreContado!=='' && Number(r.cierreContado)>0;
+  const retirosDespues = !!r.retirosDespues;
+
+  /* Si los retiros son de DESPUÉS de contar: "esperado" no los resta todavía (no habían pasado
+     cuando contaste), y por separado calculamos qué queda ahora restándolos del conteo.
+     Si son de ANTES (el flujo tradicional): "esperado" sí los resta, porque tu conteo ya los
+     tiene descontados — ahí "Cierre contado" ES lo que queda, no hace falta un número aparte. */
+  const efectivoEsperado = aperturaEfectiva + ventasEfectivo - (retirosDespues ? 0 : totalRetiros);
   const diferencia = cajaCerrada ? (Number(r.cierreContado) - efectivoEsperado) : null;
-  /* Lo que debería quedar FÍSICAMENTE ahora mismo: lo que contaste, menos SOLO los retiros que
-     se cargaron DESPUÉS de ese conteo (si un retiro ya había pasado antes de contar, ya está
-     reflejado en el número que contaste, y no hay que restarlo de nuevo). */
-  const retirosPosterioresAlConteo = cajaCerrada
-    ? r.retiros.filter(x => (x.creadoEn||0) > (r.contadoEn||0)).reduce((a,x)=>a+(Number(x.monto)||0),0)
-    : 0;
-  const saldoActual = cajaCerrada ? (Number(r.cierreContado) - retirosPosterioresAlConteo) : null;
-  return {r, aperturaEfectiva, totalRetiros, totalElectronico, ventas, ventasEfectivo, efectivoEsperado, diferencia, cajaCerrada, saldoActual, retirosPosterioresAlConteo};
+  const saldoActual = (cajaCerrada && retirosDespues) ? (Number(r.cierreContado) - totalRetiros) : null;
+  return {r, aperturaEfectiva, totalRetiros, totalElectronico, ventas, ventasEfectivo, efectivoEsperado, diferencia, cajaCerrada, saldoActual, retirosDespues};
 }
 
 let cajaFechaActiva = null;
@@ -4092,6 +4104,7 @@ function renderCajaDia(){
   document.getElementById('caja-point').value = r.electronico.point || '';
   document.getElementById('caja-transferencia').value = r.electronico.transferencia || '';
   document.getElementById('caja-qr').value = r.electronico.qr || '';
+  document.getElementById('caja-retiros-despues').checked = !!r.retirosDespues;
 
   const boxRetiros = document.getElementById('caja-retiros-list');
   boxRetiros.innerHTML = r.retiros.length ? r.retiros.map(x => {
@@ -4115,11 +4128,11 @@ function renderCajaDia(){
     </div>
     ${res.cajaCerrada ? `
     <div class="cost-banner ${Math.abs(res.diferencia)<1?'green':''}" style="margin-top:10px">
-      <div><div class="big mono">${fmt(res.diferencia)}</div><div class="lbl">Diferencia (contado − esperado)</div></div>
+      <div><div class="big mono">${fmt(res.diferencia)}</div><div class="lbl">Diferencia (contado − esperado${res.retirosDespues?' antes de retirar':''})</div></div>
     </div>
-    ${res.retirosPosterioresAlConteo>0 ? `
+    ${res.retirosDespues ? `
     <div class="cost-banner green" style="margin-top:10px">
-      <div><div class="big mono">${fmt(res.saldoActual)}</div><div class="lbl">Queda en la caja ahora (después de los retiros posteriores al conteo)</div></div>
+      <div><div class="big mono">${fmt(res.saldoActual)}</div><div class="lbl">Queda en la caja ahora (contado menos los retiros)</div></div>
     </div>` : ''}
     ` : `
     <div class="notice show" style="margin-top:10px">Todavía no cargaste "Cierre contado" hoy — la Diferencia se calcula recién cuando contés la caja al cerrar. El "Efectivo esperado" de arriba ya es válido y se va actualizando solo mientras trabajás.</div>
@@ -4133,11 +4146,14 @@ function guardarCampoCaja(campo, v){
   const n = Math.max(0, parseFloat(v)||0);
   if (['point','transferencia','qr'].includes(campo)) r.electronico[campo] = n;
   else r[campo] = n;
-  if (campo==='cierreContado') r.contadoEn = Date.now(); // marca cuándo contaste, para saber qué retiros vinieron después
   save(); renderCajaDia();
 }
 document.getElementById('caja-apertura').onchange = e => guardarCampoCaja('apertura', e.target.value);
 document.getElementById('caja-cierre').onchange = e => guardarCampoCaja('cierreContado', e.target.value);
+document.getElementById('caja-retiros-despues').onchange = e => {
+  registroCajaDe(cajaFechaActiva).retirosDespues = e.target.checked;
+  save(); renderCajaDia();
+};
 document.getElementById('caja-point').onchange = e => guardarCampoCaja('point', e.target.value);
 document.getElementById('caja-transferencia').onchange = e => guardarCampoCaja('transferencia', e.target.value);
 document.getElementById('caja-qr').onchange = e => guardarCampoCaja('qr', e.target.value);
