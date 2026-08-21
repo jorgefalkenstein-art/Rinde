@@ -843,6 +843,7 @@ table.prod-tabla input{padding:6px 5px;font-size:.82rem;width:56px;max-width:100
         <div class="day-tabs" id="caja-periodo-tabs"></div>
         <div id="caja-resumen-socios"></div>
         <div id="caja-resumen-conciliacion" style="margin-top:14px"></div>
+        <div id="caja-billetera-electronica" style="margin-top:14px"></div>
       </div>
     </div>
   </section>
@@ -921,6 +922,13 @@ table.prod-tabla input{padding:6px 5px;font-size:.82rem;width:56px;max-width:100
 
         <div id="prov-mov-bloque-pago" style="display:none">
           <div class="field" style="margin-bottom:8px"><label>Monto $</label><input type="number" inputmode="decimal" id="prov-mov-monto-pago" placeholder="0"></div>
+          <div class="field" style="margin-bottom:8px"><label>¿Con qué pagaste?</label>
+            <select id="prov-mov-medio-pago">
+              <option value="efectivo">Efectivo (de la caja)</option>
+              <option value="transferencia">Transferencia / billetera electrónica</option>
+              <option value="otro">Otro (no afecta caja ni billetera)</option>
+            </select>
+          </div>
           <div class="field" style="margin-bottom:8px"><label>Fecha</label><input type="date" id="prov-mov-fecha-pago"></div>
         </div>
 
@@ -4170,6 +4178,24 @@ function renderCajaResumen(){
       <div><div class="big mono">${fmt(totalRetiros)}</div><div class="lbl">Total retirado</div></div>
       <div><div class="big mono">${diasConCierre}</div><div class="lbl">Días con cierre cargado</div></div>
     </div>`;
+
+  /* Billetera electrónica: lo que entró por Point/Transferencia/QR de las ventas,
+     menos lo que salió pagándole a proveedores por transferencia (u otro medio electrónico). */
+  let pagosElectronicos = 0;
+  state.proveedores.movimientos
+    .filter(m => m.tipo==='pago' && m.medioPago==='transferencia' && m.fecha>=desde && m.fecha<=hasta)
+    .forEach(m => { pagosElectronicos += Number(m.monto)||0; });
+  const saldoBilletera = totalElectronico - pagosElectronicos;
+  document.getElementById('caja-billetera-electronica').innerHTML = `
+    <p class="hint" style="margin-top:0;font-weight:700;color:var(--ink)">Billetera electrónica del período<button type="button" class="help-btn" onclick="toggleAyuda('ayuda-billetera')">?</button></p>
+    <div class="help-text" id="ayuda-billetera">Lo que entró por Point/Transferencia/QR de tus ventas, menos lo que le pagaste a proveedores por transferencia. Es una estimación de cuánto debería quedarte disponible en tu cuenta/billetera — no incluye otros movimientos bancarios que la app no conoce (impuestos, sueldos pagados por transferencia, etc.).</div>
+    <div class="cost-banner">
+      <div><div class="big mono">${fmt(totalElectronico)}</div><div class="lbl">Entró (ventas electrónicas)</div></div>
+      <div><div class="big mono">${fmt(pagosElectronicos)}</div><div class="lbl">Salió (pagos a proveedores)</div></div>
+    </div>
+    <div class="cost-banner ${saldoBilletera>=0?'green':''}" style="margin-top:10px">
+      <div><div class="big mono">${fmt(saldoBilletera)}</div><div class="lbl">Debería quedarte en la billetera</div></div>
+    </div>`;
 }
 window.setCajaPeriodo = p => { cajaPeriodoActivo = p; renderCajaResumen(); };
 
@@ -4261,7 +4287,7 @@ function renderMovimientosProveedores(){
   const movs = [...state.proveedores.movimientos].sort((a,b)=>b.fecha.localeCompare(a.fecha));
   box.innerHTML = movs.length ? movs.slice(0,40).map(m => {
     const p = proveedorById(m.proveedorId);
-    const tipoTxt = m.tipo==='compra' ? (m.formaPago==='contado'?'Compra (contado)':'Compra (cta cte)') : 'Pago';
+    const tipoTxt = m.tipo==='compra' ? (m.formaPago==='contado'?'Compra (contado)':'Compra (cta cte)') : `Pago (${m.medioPago==='efectivo'?'efectivo':m.medioPago==='transferencia'?'transferencia':'otro'})`;
     const nItems = (m.items||[]).length;
     const facturaTxt = m.facturaNumero ? `${m.facturaTipo?('Fact. '+m.facturaTipo+' '):''}${m.facturaNumero}` : '';
     return `<div class="prod-item-row">
@@ -4331,8 +4357,9 @@ document.getElementById('btn-add-mov-proveedor').onclick = () => {
   if (tipo==='pago'){
     const monto = parseFloat(document.getElementById('prov-mov-monto-pago').value)||0;
     const fecha = document.getElementById('prov-mov-fecha-pago').value || isoLocal(new Date());
+    const medioPago = document.getElementById('prov-mov-medio-pago').value;
     if (!monto){ aviso('notice-prov-mov','Cargá un monto.'); return; }
-    state.proveedores.movimientos.push({id:uid(), proveedorId, tipo:'pago', monto, fecha, vencimiento:'', descripcion, items:[], formaPago:''});
+    state.proveedores.movimientos.push({id:uid(), proveedorId, tipo:'pago', monto, fecha, vencimiento:'', descripcion, items:[], formaPago:'', medioPago});
     document.getElementById('prov-mov-monto-pago').value = '';
     document.getElementById('prov-mov-desc').value = '';
     save(); renderProveedores(); renderMovimientosProveedores(); renderVencimientosProveedores();
