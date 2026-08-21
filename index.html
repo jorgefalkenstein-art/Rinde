@@ -945,7 +945,7 @@ table.prod-tabla input{padding:6px 5px;font-size:.82rem;width:56px;max-width:100
     <div id="prov-sub-vencimientos" hidden>
       <div class="card">
         <h3>Vencimientos<button type="button" class="help-btn" onclick="toggleAyuda('ayuda-prov-vencimientos')">?</button></h3>
-        <div class="help-text" id="ayuda-prov-vencimientos">Compras con fecha de vencimiento cargada, ordenadas de la más urgente a la más lejana. En rojo, las vencidas.</div>
+        <div class="help-text" id="ayuda-prov-vencimientos">Compras a cuenta corriente con fecha de vencimiento, ordenadas de la más urgente a la más lejana. En rojo, las vencidas. Tocá "✓ Ya la pagué" en cuanto la saldés — desaparece de acá y de las alertas de Inicio, aunque falten días para la fecha de vencimiento.</div>
         <div id="prov-vencimientos-list"></div>
       </div>
     </div>
@@ -4291,7 +4291,7 @@ function renderMovimientosProveedores(){
     const nItems = (m.items||[]).length;
     const facturaTxt = m.facturaNumero ? `${m.facturaTipo?('Fact. '+m.facturaTipo+' '):''}${m.facturaNumero}` : '';
     return `<div class="prod-item-row">
-      <span>${esc(p?p.nombre:'(eliminado)')} <span class="pin">${m.fecha} · ${tipoTxt}${facturaTxt?' · '+esc(facturaTxt):''}${nItems?' · '+nItems+' producto(s)':''}${m.descripcion?' · '+esc(m.descripcion):''}${m.vencimiento?' · vence '+m.vencimiento:''}</span></span>
+      <span>${esc(p?p.nombre:'(eliminado)')} <span class="pin">${m.fecha} · ${tipoTxt}${facturaTxt?' · '+esc(facturaTxt):''}${nItems?' · '+nItems+' producto(s)':''}${m.descripcion?' · '+esc(m.descripcion):''}${m.vencimiento?(m.pagada?' · <span style="color:var(--green)">✓ pagada</span>':' · vence '+m.vencimiento):''}</span></span>
       <span class="mono" style="color:${m.tipo==='compra'&&m.formaPago!=='contado'?'var(--red)':'var(--ink-soft)'}">${m.tipo==='compra'?'+':'-'}${fmt(m.monto)} <button class="del" onclick="delMovProveedor('${m.id}')" aria-label="Eliminar" style="margin-left:6px">✕</button></span>
     </div>`;
   }).join('') : '<div class="empty">Sin movimientos cargados todavía.</div>';
@@ -4411,7 +4411,7 @@ window.delMovProveedor = id => {
 function vencimientosProveedoresProximos(){
   const hoy = isoLocal(new Date());
   return state.proveedores.movimientos
-    .filter(m => m.tipo==='compra' && m.vencimiento)
+    .filter(m => m.tipo==='compra' && m.vencimiento && !m.pagada)
     .map(m => ({...m, vencido: m.vencimiento < hoy}))
     .sort((a,b)=>a.vencimiento.localeCompare(b.vencimiento));
 }
@@ -4423,10 +4423,16 @@ function renderVencimientosProveedores(){
     const p = proveedorById(m.proveedorId);
     return `<div class="prod-item-row">
       <span style="color:${m.vencido?'var(--red)':'var(--ink)'}">${esc(p?p.nombre:'—')} <span class="pin">${m.vencimiento}${m.vencido?' · VENCIDO':''}${m.descripcion?' · '+esc(m.descripcion):''}</span></span>
-      <span class="mono">${fmt(m.monto)}</span>
+      <span class="mono">${fmt(m.monto)} <button class="btn done sm" style="margin-left:8px;padding:3px 8px;font-size:.68rem" onclick="marcarFacturaPagada('${m.id}')">✓ Ya la pagué</button></span>
     </div>`;
-  }).join('') : '<div class="empty">Sin vencimientos cargados.</div>';
+  }).join('') : '<div class="empty">Sin vencimientos pendientes.</div>';
 }
+window.marcarFacturaPagada = id => {
+  const m = state.proveedores.movimientos.find(x=>x.id===id);
+  if (!m) return;
+  m.pagada = true;
+  save(); renderVencimientosProveedores(); renderMovimientosProveedores(); renderDashboardInicio();
+};
 
 function renderProveedoresAll(){
   renderProveedores();
