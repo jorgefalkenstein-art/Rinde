@@ -2805,6 +2805,11 @@ function procesarAnalisisProduccion(fechasNuevas){
   recalcularTodoDesdeAcumulado();
   const unidadesDescontadas = fechasNuevas ? reconciliarStockPorFechas(fechasNuevas) : 0;
   save(); renderProduccion();
+  /* Si Proyecciones ya estaba en modo "autocompletado", la refrescamos con los promedios
+     recién actualizados — si no, quedaba pegada con los números de la última vez que se
+     tocó el botón, aunque hayas importado ventas nuevas de por medio. */
+  const py = state.proyeccion;
+  if (py.autoDesde && py.autoHasta) autocompletarDesdeProduccion(false);
   return unidadesDescontadas;
 }
 
@@ -3372,15 +3377,12 @@ window.setMesGanancia = mes => { mesGananciaSeleccionado = mes; renderRentabilid
 window.borrarMesHistorico = mes => {
   state.produccion.historico = state.produccion.historico.filter(h=>h.mes!==mes);
   delete state.produccion.mesesReconciliados[mes];
-  /* devolver al stock lo que se había descontado por las fechas de ese mes, y sacarlas del acumulado */
+  /* Sacamos las ventas de ese mes del acumulado (para que el informe no se recree solo),
+     pero NO tocamos el stock ni "stockDescontadoPorFecha" — esas empanadas ya se vendieron
+     en la realidad, borrar el informe de ganancia no debe devolverlas al freezer. Si más
+     adelante volvés a importar ese mismo mes, el sistema va a corregir el stock solo,
+     comparando contra lo que ya tenía descontado antes (sin duplicar ni inflar nada). */
   Object.keys(state.produccion.ventasPorFecha).filter(f=>f.slice(0,7)===mes).forEach(fecha => {
-    const previo = state.produccion.stockDescontadoPorFecha[fecha];
-    if (previo){
-      Object.entries(previo).forEach(([clave,cant]) => {
-        state.produccion.stockActual[clave] = (state.produccion.stockActual[clave]||0) + cant;
-      });
-      delete state.produccion.stockDescontadoPorFecha[fecha];
-    }
     delete state.produccion.ventasPorFecha[fecha];
   });
   recalcularTodoDesdeAcumulado();
@@ -4052,11 +4054,14 @@ function registroCajaDe(fecha){
 /* Sugiere la apertura de hoy = lo que quedó contado el último día hábil anterior con datos,
    recalculado siempre en el momento (no se "congela" la primera vez que se abre la pantalla). */
 function aperturaSugeridaPara(fecha){
-  const fechas = Object.keys(state.caja.registros).filter(f=>f<fecha).sort();
-  if (!fechas.length) return 0;
-  const fechaAnterior = fechas[fechas.length-1];
-  const anterior = state.caja.registros[fechaAnterior];
-  if (!anterior || !anterior.cierreContado) return 0;
+  /* Buscamos el último día ANTERIOR que tenga un cierre contado de verdad — salteando
+     cualquier día vacío (por ejemplo, si solo entraste a mirarlo sin cargar nada, o un
+     día que no trabajás). Así siempre llega hasta el último día real con datos. */
+  const fechasConCierre = Object.keys(state.caja.registros)
+    .filter(f => f<fecha && state.caja.registros[f] && Number(state.caja.registros[f].cierreContado)>0)
+    .sort();
+  if (!fechasConCierre.length) return 0;
+  const anterior = state.caja.registros[fechasConCierre[fechasConCierre.length-1]];
   /* Lo que quedó de verdad en el cajón ese día = lo que se contó, menos los retiros que
      pasaron DESPUÉS de ese conteo (los de antes ya estaban descontados en el número contado). */
   const retirosDespuesDeContar = (anterior.retiros||[])
