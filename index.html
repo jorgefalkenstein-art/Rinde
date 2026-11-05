@@ -760,8 +760,12 @@ table.prod-tabla input{padding:6px 5px;font-size:.82rem;width:56px;max-width:100
     </div>
 
     <div class="card">
-      <h3 style="margin-bottom:8px">Resumen de horas</h3>
+      <h3 style="margin-bottom:8px">Resumen de horas<button type="button" class="help-btn" onclick="toggleAyuda('ayuda-personal-resumen')">?</button></h3>
+      <div class="help-text" id="ayuda-personal-resumen">Para liquidar sueldos usá "Liquidar mes" y elegí el mes cerrado. Como pagás dentro de los 10 días de terminado el mes, al arrancar el mes siguiente tenés que mirar el mes anterior completo. Muestra las horas y el costo de cada empleado por separado, más el total general a pagar.</div>
       <div class="day-tabs" id="personal-periodo-tabs"></div>
+      <div id="personal-mes-box" style="display:none;margin-bottom:12px">
+        <div class="field"><label>Mes a liquidar</label><input type="month" id="personal-mes-input"></div>
+      </div>
       <div id="personal-resumen"></div>
     </div>
 
@@ -2036,24 +2040,52 @@ function calcularManoObraPeriodo(desde, hasta){
 }
 
 let personalPeriodoActivo = 'semana';
+let personalMesLiquidar = null; // 'YYYY-MM'
+function mesAnteriorISO(){
+  const d = new Date(); d.setDate(1); d.setMonth(d.getMonth()-1);
+  return isoLocal(d).slice(0,7);
+}
+function nombreMesLegible(mesStr){
+  const [y,m] = mesStr.split('-').map(Number);
+  return new Date(y, m-1, 1).toLocaleDateString('es-AR', {month:'long', year:'numeric'});
+}
 function renderPersonalResumen(){
   const tabs = document.getElementById('personal-periodo-tabs');
-  tabs.innerHTML = ['hoy','semana','mes'].map(p =>
-    `<button class="${p===personalPeriodoActivo?'active':''}" onclick="setPersonalPeriodo('${p}')">${p==='hoy'?'Hoy':p==='semana'?'Esta semana':'Este mes'}</button>`).join('');
-  const {desde,hasta} = rangoPeriodo(personalPeriodoActivo);
+  const periodos = [['hoy','Hoy'],['semana','Esta semana'],['mes','Este mes'],['liquidar','Liquidar mes']];
+  tabs.innerHTML = periodos.map(([p,l]) =>
+    `<button class="${p===personalPeriodoActivo?'active':''}" onclick="setPersonalPeriodo('${p}')">${l}</button>`).join('');
+
+  const mesBox = document.getElementById('personal-mes-box');
+  let desde, hasta, etiquetaPeriodo = '';
+  if (personalPeriodoActivo === 'liquidar'){
+    if (mesBox) mesBox.style.display = 'block';
+    if (!personalMesLiquidar) personalMesLiquidar = mesAnteriorISO();
+    const inp = document.getElementById('personal-mes-input');
+    if (inp && document.activeElement !== inp) inp.value = personalMesLiquidar;
+    const rango = primerYUltimoDiaMes(personalMesLiquidar);
+    desde = rango.primer; hasta = rango.ultimo;
+    etiquetaPeriodo = nombreMesLegible(personalMesLiquidar);
+  } else {
+    if (mesBox) mesBox.style.display = 'none';
+    const rango = rangoPeriodo(personalPeriodoActivo);
+    desde = rango.desde; hasta = rango.hasta;
+  }
+
   const r = calcularManoObraPeriodo(desde, hasta);
   const box = document.getElementById('personal-resumen');
   const filas = Object.values(r.porEmpleado).sort((a,b)=>b.costo-a.costo);
   box.innerHTML = `
+    ${etiquetaPeriodo ? `<p class="hint" style="margin-top:0;margin-bottom:10px;font-weight:700;color:var(--ink)">Liquidación de ${esc(etiquetaPeriodo)} · ${desde} a ${hasta}</p>` : ''}
     ${filas.length ? filas.map(f => `
       <div class="insumo-row"><span>${esc(f.nombre)}</span><span class="in-cant mono">${f.horas.toFixed(1)} h${ocultarSensible('personal')?'':' · '+fmt(f.costo)}</span></div>
     `).join('') : '<div class="empty">Sin turnos cargados en este período.</div>'}
     <div class="cost-banner" style="margin-top:12px">
       <div><div class="big mono">${r.horasTotal.toFixed(1)} h</div><div class="lbl">Total horas</div></div>
-      ${ocultarSensible('personal') ? '' : `<div><div class="big mono">${fmt(r.costoTotal)}</div><div class="lbl">Costo total</div></div>`}
+      ${ocultarSensible('personal') ? '' : `<div><div class="big mono">${fmt(r.costoTotal)}</div><div class="lbl">Costo total${etiquetaPeriodo?' a pagar':''}</div></div>`}
     </div>`;
 }
 window.setPersonalPeriodo = p => { personalPeriodoActivo = p; renderPersonalResumen(); };
+{ const inp = document.getElementById('personal-mes-input'); if (inp) inp.onchange = e => { personalMesLiquidar = e.target.value || mesAnteriorISO(); renderPersonalResumen(); }; }
 
 function renderPersonal(){
   renderEmpleados();
@@ -2719,11 +2751,17 @@ function recalcularTodoDesdeAcumulado(){
   const fechas = Object.keys(state.produccion.ventasPorFecha).sort();
   if (!fechas.length) return;
   const todasVentas = todasLasVentasAcumuladas();
-  const mesActivo = fechas[fechas.length-1].slice(0,7);
-  const ventasMesActivo = todasVentas.filter(v => v.fechaIso && v.fechaIso.slice(0,7)===mesActivo);
+  /* Ventana móvil de 5 semanas (35 días) anclada en la última fecha con datos, sin importar
+     el mes calendario. Antes se usaba solo el mes en curso: al arrancar un mes nuevo con
+     pocos días cargados, los objetivos se desplomaban ("stock muy bajo"). Con la ventana
+     siguen usando las semanas recientes y quedan estables en el cambio de mes. La ganancia
+     (más abajo) sí se agrupa por mes calendario, como debe ser. */
+  const fechaAncla = fechas[fechas.length-1];
+  const limiteVentana = isoLocal(new Date(new Date(fechaAncla+'T12:00:00').getTime() - 34*86400000));
+  const ventasVentana = todasVentas.filter(v => v.fechaIso && v.fechaIso >= limiteVentana && v.fechaIso <= fechaAncla);
 
   const porFecha = {};
-  ventasMesActivo.forEach(v => {
+  ventasVentana.forEach(v => {
     porFecha[v.fechaIso] = porFecha[v.fechaIso] || {};
     porFecha[v.fechaIso][v.clave] = (porFecha[v.fechaIso][v.clave]||0) + v.cantidad;
   });
