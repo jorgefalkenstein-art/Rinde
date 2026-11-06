@@ -305,8 +305,7 @@ table.prod-tabla input{padding:6px 5px;font-size:.82rem;width:56px;max-width:100
   </div>
   <nav class="nav" id="nav">
     <button data-tab="inicio" class="active"><span class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg></span> Inicio</button>
-    <button data-tab="ingredientes"><span class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 8v13H3V8"/><path d="M1 3h22v5H1z"/><path d="M10 12h4"/></svg></span> Ingredientes</button>
-    <button data-tab="preparaciones"><span class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22V8"/><path d="M9 8c0-2.2 1.3-4 3-4s3 1.8 3 4-1.3 3-3 3-3-1-3-3Z"/><path d="M7 12.5c0-1.4.8-2.8 2-2.8M17 12.5c0-1.4-.8-2.8-2-2.8"/><path d="M6 16.5c0-1.4.8-2.8 2-2.8M18 16.5c0-1.4-.8-2.8-2-2.8"/></svg></span> Preparaciones</button>
+    <button data-tab="cocina"><span class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 11h16v5a4 4 0 0 1-4 4H8a4 4 0 0 1-4-4z"/><path d="M4 11 2.5 8.5M20 11l1.5-2.5"/><path d="M9 7c0-1.2.6-2.5 1.5-3M12.5 7c0-1.5.6-3 1.5-4"/></svg></span> Cocina</button>
     <div class="nav-group">
       <button class="nav-group-toggle" id="toggle-productos" type="button">
         <span class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 2v6a2 2 0 0 0 4 0V2"/><path d="M8 10v12"/><path d="M17 2c-1.7 0-3 2.2-3 5.5S15.3 13 17 13"/><path d="M17 2v20"/></svg></span> Productos <span class="chev">▾</span>
@@ -314,6 +313,7 @@ table.prod-tabla input{padding:6px 5px;font-size:.82rem;width:56px;max-width:100
       <div class="nav-subitems open" id="productos-sub">
         <button data-tab="empanadas"><span class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12h18a9 9 0 0 1-18 0Z"/><path d="M7 12c0-1 .4-1.8.8-2.3M12 12c0-1.3.4-2.3.8-2.8M17 12c0-1-.4-1.8-.8-2.3"/></svg></span> Empanadas</button>
         <button data-tab="pizzas"><span class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 6 12 22 22 6a20 20 0 0 0-20 0Z"/><circle cx="9" cy="10" r=".7" fill="currentColor" stroke="none"/><circle cx="14.5" cy="11.5" r=".7" fill="currentColor" stroke="none"/><circle cx="11" cy="15" r=".7" fill="currentColor" stroke="none"/></svg></span> Pizzas</button>
+        <button data-tab="bebidas"><span class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 2h6v3l1 2v13a2 2 0 0 1-2 2h-4a2 2 0 0 1-2-2V7l1-2z"/><path d="M8 11h8"/></svg></span> Bebidas</button>
       </div>
     </div>
     <button data-tab="rentabilidad"><span class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg></span> Precios sugeridos</button>
@@ -423,9 +423,15 @@ table.prod-tabla input{padding:6px 5px;font-size:.82rem;width:56px;max-width:100
     </div>
   </section>
 
-  <section id="tab-ingredientes" hidden>
-    <div class="page-title">Ingredientes</div>
-    <div class="page-sub">Cargá cada producto como lo comprás. El sistema calcula el costo por gramo, ml o unidad.</div>
+  <section id="tab-cocina" hidden>
+    <div class="page-title">Cocina</div>
+    <div class="page-sub">Los ingredientes que comprás y las preparaciones que hacés en tanda, en un solo lugar.</div>
+    <div class="tipo-toggle" id="cocina-subtabs">
+      <button class="tt-btn active" data-csub="ingredientes">Ingredientes</button>
+      <button class="tt-btn" data-csub="preparaciones">Preparaciones</button>
+    </div>
+
+    <div id="tab-ingredientes">
 
     <div class="ing-actions">
       <button class="btn" id="toggle-add">+ Agregar</button>
@@ -462,12 +468,10 @@ table.prod-tabla input{padding:6px 5px;font-size:.82rem;width:56px;max-width:100
       <div class="count-tag" id="ing-count"></div>
       <div id="ing-list"></div>
     </div>
-  </section>
 
-  <!-- PREPARACIONES -->
-  <section id="tab-preparaciones" hidden>
-    <div class="page-title">Preparaciones</div>
-    <div class="page-sub">Lo que hacés en tanda y después usás en los productos.</div>
+    </div><!-- /tab-ingredientes -->
+
+    <div id="tab-preparaciones" hidden>
     <div class="card info-box" style="margin-bottom:14px">
       <h3>¿Qué es una preparación?<button type="button" class="help-btn" onclick="toggleAyuda('ayuda-prep-que-es')" style="border-color:var(--green);color:var(--green)">?</button></h3>
       <div class="help-text" id="ayuda-prep-que-es" style="background:#fff">Prepizzas, masa de empanadas, salsa, relleno. Cargás la receta de la tanda, indicás cuánto rinde, y el sistema calcula el costo por unidad o por gramo. Después aparece como un ingrediente más (marcado con ★) en las recetas.<br><br><span style="color:var(--green);font-weight:600">Ej: "Prepizza grande" → 1000 g harina + levadura + agua... rinde 4 unidades → costo por prepizza.</span></div>
@@ -475,6 +479,7 @@ table.prod-tabla input{padding:6px 5px;font-size:.82rem;width:56px;max-width:100
     <button class="btn" id="add-prep" style="margin-bottom:14px">+ Nueva preparación</button>
     <div class="notice" id="notice-prep">Primero cargá ingredientes en la sección <b>Ingredientes</b>.</div>
     <div id="prep-list"></div>
+    </div><!-- /tab-preparaciones -->
   </section>
 
   <!-- EMPANADAS -->
@@ -493,6 +498,54 @@ table.prod-tabla input{padding:6px 5px;font-size:.82rem;width:56px;max-width:100
     <button class="btn" id="add-pizza" style="margin-bottom:14px">+ Nueva pizza</button>
     <div class="notice" id="notice-piz">Primero cargá ingredientes en la sección <b>Ingredientes</b>.</div>
     <div id="piz-list"></div>
+  </section>
+
+  <!-- BEBIDAS -->
+  <section id="tab-bebidas" hidden>
+    <div class="page-title">Bebidas</div>
+    <div class="page-sub">Lo que comprás y revendés sin receta: gaseosas, cervezas, agua. Cargás el costo y el stock; la utilidad se calcula sola con el precio de venta de Pedix.</div>
+
+    <div class="ing-actions">
+      <button class="btn" id="beb-toggle-add">+ Agregar</button>
+      <button class="btn ghost" id="beb-toggle-search"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="width:15px;height:15px;vertical-align:-2px;margin-right:4px"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>Buscar</button>
+    </div>
+
+    <div class="card add-panel" id="beb-add-panel">
+      <h3 style="margin-bottom:12px">Nueva bebida</h3>
+      <div class="stack">
+        <div class="field"><label>Nombre</label><input id="beb-nombre" placeholder="Coca-Cola 500ml"></div>
+        <div class="grid2">
+          <div class="field"><label>Costo de compra $</label><input id="beb-precio" type="number" inputmode="decimal" placeholder="800"></div>
+          <div class="field"><label>Cantidad</label><input id="beb-cant" type="number" inputmode="decimal" placeholder="1"></div>
+        </div>
+        <div class="field"><label>Cómo viene</label>
+          <select id="beb-unidad">
+            <option value="u">unidad (u)</option>
+            <option value="l">litro (l)</option>
+            <option value="ml">mililitro (ml)</option>
+            <option value="kg">kilogramo (kg)</option>
+            <option value="g">gramo (g)</option>
+          </select>
+        </div>
+        <div class="grid2">
+          <div class="field"><label>Stock actual</label><input id="beb-stock" type="number" inputmode="decimal" placeholder="Opcional"></div>
+          <div class="field"><label>Alertar si baja de</label><input id="beb-min" type="number" inputmode="decimal" placeholder="Opcional"></div>
+        </div>
+        <button class="btn" id="beb-add">Guardar bebida</button>
+      </div>
+      <div class="notice" id="notice-beb">Completá nombre, costo y cantidad.</div>
+    </div>
+
+    <div class="search-box" id="beb-search-box" style="display:none">
+      <input id="beb-search" placeholder="Buscar bebida..." autocomplete="off">
+    </div>
+
+    <div class="card">
+      <h3 style="margin-bottom:3px">Lista de bebidas<button type="button" class="help-btn" onclick="toggleAyuda('ayuda-beb-lista')">?</button></h3>
+      <div class="help-text" id="ayuda-beb-lista">La utilidad aparece cuando la bebida está vinculada a su venta de Pedix (desde Precios sugeridos o al importar el informe). Si todavía no la vinculaste, vas a ver solo el costo y el stock.</div>
+      <div class="count-tag" id="beb-count"></div>
+      <div id="beb-list"></div>
+    </div>
   </section>
 
   <!-- RENTABILIDAD -->
@@ -1103,7 +1156,20 @@ function estadoBase(datos){
   base.produccion.origenes = Object.assign({}, PRODUCCION_DEFAULT.origenes, (datos && datos.produccion && datos.produccion.origenes) || {});
   base.produccion.historico = (datos && datos.produccion && datos.produccion.historico) || [];
   migrarClavesVinculos(base.produccion);
+  marcarBebidasDesdePedix(base);
   return base;
+}
+/* Los ingredientes vinculados a una venta de origen "bebida" (detectada al importar Pedix)
+   quedan marcados como bebida, así aparecen en Productos › Bebidas y no en Cocina › Ingredientes. */
+function marcarBebidasDesdePedix(base){
+  Object.entries(base.produccion.origenes||{}).forEach(([clave,origen]) => {
+    if (origen !== 'bebida') return;
+    const ref = base.produccion.vinculos[clave];
+    if (ref && ref.startsWith('i:')){
+      const ing = (base.ingredientes||[]).find(i=>i.id===ref.slice(2));
+      if (ing) ing.esBebida = true;
+    }
+  });
 }
 /* Migración: vínculos guardados con una versión vieja (nombre crudo, sin normalizar) pasan a la clave normalizada nueva */
 function migrarClavesVinculos(prod){
@@ -1270,7 +1336,7 @@ function cerrarMenu(){ sidebar.classList.remove('open'); scrim.classList.remove(
 document.getElementById('hamb').onclick = abrirMenu;
 scrim.onclick = cerrarMenu;
 
-const SECCIONES = {inicio:'Inicio', ingredientes:'Ingredientes', preparaciones:'Preparaciones', empanadas:'Empanadas', pizzas:'Pizzas', rentabilidad:'Precios sugeridos', produccion:'Producción', personal:'Personal', caja:'Caja', proveedores:'Proveedores', usuarios:'Usuarios', proyecciones:'Proyecciones'};
+const SECCIONES = {inicio:'Inicio', cocina:'Cocina', empanadas:'Empanadas', pizzas:'Pizzas', bebidas:'Bebidas', rentabilidad:'Precios sugeridos', produccion:'Producción', personal:'Personal', caja:'Caja', proveedores:'Proveedores', usuarios:'Usuarios', proyecciones:'Proyecciones'};
 document.querySelectorAll('#nav button[data-tab]').forEach(t => t.onclick = () => {
   document.querySelectorAll('#nav button[data-tab]').forEach(x=>x.classList.remove('active'));
   t.classList.add('active');
@@ -1284,6 +1350,14 @@ document.getElementById('toggle-productos').onclick = () => {
   document.getElementById('toggle-productos').classList.toggle('open');
   document.getElementById('productos-sub').classList.toggle('open');
 };
+const COCINA_SUBTABS = ['ingredientes','preparaciones'];
+document.querySelectorAll('#cocina-subtabs .tt-btn').forEach(btn => btn.onclick = () => {
+  document.querySelectorAll('#cocina-subtabs .tt-btn').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+  const sub = btn.dataset.csub;
+  COCINA_SUBTABS.forEach(s => document.getElementById('tab-'+s).hidden = (s !== sub));
+  window.scrollTo({top:0, behavior:'instant'});
+});
 
 /* ================= INGREDIENTES ================= */
 let ingFiltro = '';
@@ -1292,17 +1366,18 @@ let ingEditando = null; // id del ingrediente en edición
 function renderIngredientes(){
   const box = document.getElementById('ing-list');
   const cnt = document.getElementById('ing-count');
-  const ordenados = [...state.ingredientes].sort((a,b)=>
+  const soloIngredientes = state.ingredientes.filter(i=>!i.esBebida);
+  const ordenados = [...soloIngredientes].sort((a,b)=>
     a.nombre.localeCompare(b.nombre, 'es', {sensitivity:'base'}));
   const f = ingFiltro.trim().toLowerCase();
   const lista = f ? ordenados.filter(i=>i.nombre.toLowerCase().includes(f)) : ordenados;
 
-  if (!state.ingredientes.length){
+  if (!soloIngredientes.length){
     cnt.textContent = '';
     box.innerHTML = '<div class="empty">Todavía no hay ingredientes. Tocá "+ Agregar" para cargar el primero.</div>';
     return;
   }
-  cnt.textContent = f ? `${lista.length} de ${state.ingredientes.length} ingredientes` : `${state.ingredientes.length} ingredientes`;
+  cnt.textContent = f ? `${lista.length} de ${soloIngredientes.length} ingredientes` : `${soloIngredientes.length} ingredientes`;
   if (!lista.length){ box.innerHTML = '<div class="empty">Ningún ingrediente coincide con la búsqueda.</div>'; return; }
 
   box.innerHTML = lista.map(ing => {
@@ -1327,6 +1402,10 @@ function renderIngredientes(){
           <div class="field"><label>Alertar si baja de</label>
             <input id="edit-min-${ing.id}" type="number" inputmode="decimal" value="${ing.stockMinimo??''}" placeholder="Ej: 2000"></div>
         </div>
+        <label style="display:flex;align-items:center;gap:8px;margin-bottom:12px;font-size:.82rem;color:var(--ink-soft)">
+          <input type="checkbox" id="edit-beb-${ing.id}" style="width:auto" ${ing.esBebida?'checked':''}>
+          Es una bebida (moverla a Productos › Bebidas)
+        </label>
         <div class="act-row">
           <button class="btn done sm" onclick="guardarEdicionIng('${ing.id}')">Listo</button>
           <button class="btn edit sm" onclick="cancelarEdicionIng()">Cancelar</button>
@@ -1364,8 +1443,9 @@ window.guardarEdicionIng = id => {
   if (!nombre || !(precio>0) || !(cantidad>0)){ return; }
   const stockVal = document.getElementById('edit-stock-'+id).value;
   const minVal = document.getElementById('edit-min-'+id).value;
+  const esBebida = document.getElementById('edit-beb-'+id).checked;
   const ing = ingById(id);
-  Object.assign(ing, {nombre, precio, cantidad, unidad,
+  Object.assign(ing, {nombre, precio, cantidad, unidad, esBebida,
     stockActual: stockVal===''? null : parseFloat(stockVal),
     stockMinimo: minVal===''? null : parseFloat(minVal)});
   ingEditando = null; save(); renderAll();
@@ -1408,6 +1488,134 @@ document.getElementById('toggle-search').onclick = () => {
   else { ingFiltro=''; document.getElementById('ing-search').value=''; renderIngredientes(); }
 };
 document.getElementById('ing-search').oninput = e => { ingFiltro = e.target.value; renderIngredientes(); };
+
+/* ================= BEBIDAS (Productos) ================= */
+let bebFiltro = '';
+let bebEditando = null;
+/* Precio de venta (Pedix) y utilidad de una bebida, si está vinculada a una venta */
+function utilidadBebida(ing){
+  const costo = costoBase(ing);
+  const real = precioPromedioRealDeRef('i:'+ing.id);
+  const venta = state.ventas.find(v=>v.ref==='i:'+ing.id);
+  const precioVenta = real ? real.precio : (venta ? ((venta.oferta&&venta.oferta>0)?venta.oferta:venta.precio) : null);
+  if (!precioVenta || precioVenta<=0) return {costo, precioVenta:null, util:null, pct:null};
+  const util = precioVenta - costo;
+  return {costo, precioVenta, util, pct: precioVenta>0 ? util/precioVenta*100 : 0};
+}
+function renderBebidas(){
+  const box = document.getElementById('beb-list');
+  const cnt = document.getElementById('beb-count');
+  const todas = state.ingredientes.filter(i=>i.esBebida)
+    .sort((a,b)=>a.nombre.localeCompare(b.nombre,'es',{sensitivity:'base'}));
+  const f = bebFiltro.trim().toLowerCase();
+  const lista = f ? todas.filter(i=>i.nombre.toLowerCase().includes(f)) : todas;
+  const ocultar = ocultarSensible('bebidas');
+  if (!todas.length){ cnt.textContent=''; box.innerHTML = '<div class="empty">Todavía no cargaste bebidas. Tocá "+ Agregar", o marcá un ingrediente como bebida desde Cocina.</div>'; return; }
+  cnt.textContent = f ? `${lista.length} de ${todas.length} bebidas` : `${todas.length} bebidas`;
+  if (!lista.length){ box.innerHTML = '<div class="empty">Ninguna bebida coincide con la búsqueda.</div>'; return; }
+  box.innerHTML = lista.map(ing => {
+    if (bebEditando === ing.id){
+      return `<div class="ing-item" style="display:block">
+        <div class="field" style="margin-bottom:8px"><label>Nombre</label>
+          <input id="beb-edit-nom-${ing.id}" value="${esc(ing.nombre)}"></div>
+        <div class="grid2" style="margin-bottom:8px">
+          <div class="field"><label>Costo $</label>
+            <input id="beb-edit-pre-${ing.id}" type="number" inputmode="decimal" value="${ing.precio}"></div>
+          <div class="field"><label>Cantidad</label>
+            <input id="beb-edit-can-${ing.id}" type="number" inputmode="decimal" value="${ing.cantidad}"></div>
+        </div>
+        <div class="field" style="margin-bottom:8px"><label>Cómo viene</label>
+          <select id="beb-edit-uni-${ing.id}">
+            ${['u','l','ml','kg','g'].map(u=>`<option value="${u}" ${ing.unidad===u?'selected':''}>${u}</option>`).join('')}
+          </select></div>
+        <div class="grid2" style="margin-bottom:10px">
+          <div class="field"><label>Stock actual</label>
+            <input id="beb-edit-stock-${ing.id}" type="number" inputmode="decimal" value="${ing.stockActual??''}" placeholder="Sin controlar"></div>
+          <div class="field"><label>Alertar si baja de</label>
+            <input id="beb-edit-min-${ing.id}" type="number" inputmode="decimal" value="${ing.stockMinimo??''}" placeholder="Opcional"></div>
+        </div>
+        <label style="display:flex;align-items:center;gap:8px;margin-bottom:12px;font-size:.82rem;color:var(--ink-soft)">
+          <input type="checkbox" id="beb-edit-esbeb-${ing.id}" style="width:auto" checked>
+          Es una bebida (destildá para devolverla a Cocina › Ingredientes)
+        </label>
+        <div class="act-row">
+          <button class="btn done sm" onclick="guardarEdicionBeb('${ing.id}')">Listo</button>
+          <button class="btn edit sm" onclick="cancelarEdicionBeb()">Cancelar</button>
+          <button class="del" onclick="delBeb(this,'${ing.id}')" aria-label="Eliminar" style="margin-left:auto">✕</button>
+        </div>
+      </div>`;
+    }
+    const u = utilidadBebida(ing);
+    const controlaStock = ing.stockActual!=null && ing.stockActual!=='';
+    const stockBajo = controlaStock && ing.stockMinimo!=null && ing.stockMinimo!=='' && Number(ing.stockActual)<=Number(ing.stockMinimo);
+    let lineaUtil = '';
+    if (!ocultar){
+      if (u.precioVenta!==null){
+        lineaUtil = `<div class="ing-detail">venta ${fmt(u.precioVenta)} · <span style="color:${u.util>=0?'var(--green)':'var(--red)'};font-weight:700">utilidad ${fmt(u.util)} (${u.pct.toFixed(0)}%)</span></div>`;
+      } else {
+        lineaUtil = `<div class="ing-detail" style="color:var(--ink-soft)">Vinculala en Precios sugeridos para ver la utilidad</div>`;
+      }
+    }
+    return `<div class="ing-item">
+      <div style="flex:1;min-width:120px">
+        <div class="ing-name">${esc(ing.nombre)}${stockBajo?' <span title="Stock bajo" style="color:var(--red)">⚠</span>':''}</div>
+        <div class="ing-detail">${ocultar ? `${ing.cantidad} ${ing.unidad}` : `costo ${fmt(u.costo)}/${baseDe(ing)} · comprás por ${ing.cantidad} ${ing.unidad}`}${controlaStock?` <span style="color:${stockBajo?'var(--red)':'var(--ink-soft)'};font-weight:${stockBajo?'700':'400'}"> · stock: ${ing.stockActual} ${baseDe(ing)}</span>`:''}</div>
+        ${lineaUtil}
+      </div>
+      <button class="btn ghost sm" onclick="registrarCompraDesdeIngrediente('${ing.id}')" title="Registrar compra a proveedor">💰</button>
+      <button class="btn edit sm" onclick="editarBeb('${ing.id}')">Editar</button>
+    </div>`;
+  }).join('');
+}
+window.editarBeb = id => { bebEditando = id; renderBebidas(); };
+window.cancelarEdicionBeb = () => { bebEditando = null; renderBebidas(); };
+window.guardarEdicionBeb = id => {
+  const nombre = document.getElementById('beb-edit-nom-'+id).value.trim();
+  const precio = parseFloat(document.getElementById('beb-edit-pre-'+id).value);
+  const cantidad = parseFloat(document.getElementById('beb-edit-can-'+id).value);
+  const unidad = document.getElementById('beb-edit-uni-'+id).value;
+  if (!nombre || !(precio>0) || !(cantidad>0)){ return; }
+  const stockVal = document.getElementById('beb-edit-stock-'+id).value;
+  const minVal = document.getElementById('beb-edit-min-'+id).value;
+  const esBebida = document.getElementById('beb-edit-esbeb-'+id).checked;
+  Object.assign(ingById(id), {nombre, precio, cantidad, unidad, esBebida,
+    stockActual: stockVal===''?null:parseFloat(stockVal),
+    stockMinimo: minVal===''?null:parseFloat(minVal)});
+  bebEditando = null; save(); renderAll();
+};
+window.delBeb = (btn,id) => {
+  if (!btn.classList.contains('confirm')){ armarConfirm(btn); return; }
+  state.ingredientes = state.ingredientes.filter(i=>i.id!==id);
+  bebEditando = null; save(); renderAll();
+};
+document.getElementById('beb-add').onclick = () => {
+  const nombre = document.getElementById('beb-nombre').value.trim();
+  const precio = parseFloat(document.getElementById('beb-precio').value);
+  const cantidad = parseFloat(document.getElementById('beb-cant').value);
+  const unidad = document.getElementById('beb-unidad').value;
+  if (!nombre || !(precio>0) || !(cantidad>0)){ aviso('notice-beb'); return; }
+  const stockVal = document.getElementById('beb-stock').value;
+  const minVal = document.getElementById('beb-min').value;
+  state.ingredientes.push({id:uid(), nombre, precio, cantidad, unidad, esBebida:true,
+    stockActual: stockVal===''?null:parseFloat(stockVal),
+    stockMinimo: minVal===''?null:parseFloat(minVal)});
+  ['beb-nombre','beb-precio','beb-cant','beb-stock','beb-min'].forEach(i=>document.getElementById(i).value='');
+  document.getElementById('beb-add-panel').classList.remove('on');
+  save(); renderAll();
+};
+document.getElementById('beb-toggle-add').onclick = () => {
+  const p = document.getElementById('beb-add-panel');
+  p.classList.toggle('on');
+  if (p.classList.contains('on')){ document.getElementById('beb-search-box').style.display='none'; document.getElementById('beb-nombre').focus(); }
+};
+document.getElementById('beb-toggle-search').onclick = () => {
+  const sb2 = document.getElementById('beb-search-box');
+  const vis = sb2.style.display !== 'none';
+  sb2.style.display = vis ? 'none' : 'block';
+  if (!vis){ document.getElementById('beb-add-panel').classList.remove('on'); document.getElementById('beb-search').focus(); }
+  else { bebFiltro=''; document.getElementById('beb-search').value=''; renderBebidas(); }
+};
+document.getElementById('beb-search').oninput = e => { bebFiltro = e.target.value; renderBebidas(); };
 
 /* ================= SELECTOR ================= */
 function selectRef(prodId, idx, tipo, current, soloIngredientes){
@@ -4694,7 +4902,7 @@ document.getElementById('file-logo').onchange = e => {
 
 /* ================= USUARIOS Y PERMISOS (freno de conveniencia, no seguridad real) ================= */
 const SECCIONES_CON_PERMISO = {
-  ingredientes:'Ingredientes', preparaciones:'Preparaciones', empanadas:'Empanadas', pizzas:'Pizzas',
+  ingredientes:'Ingredientes', preparaciones:'Preparaciones', empanadas:'Empanadas', pizzas:'Pizzas', bebidas:'Bebidas',
   rentabilidad:'Precios sugeridos', produccion:'Producción', personal:'Personal', caja:'Caja', proveedores:'Proveedores', proyecciones:'Proyecciones'
 };
 let usuarioEditando = null;
@@ -4880,6 +5088,7 @@ function aplicarPermisos(){
   document.querySelectorAll('#nav button[data-tab]').forEach(btn => {
     const tab = btn.dataset.tab;
     if (tab==='inicio' || tab==='usuarios'){ btn.style.display=''; return; }
+    if (tab==='cocina'){ btn.style.display = (permisoDeSeccion('ingredientes')==='ninguno' && permisoDeSeccion('preparaciones')==='ninguno') ? 'none' : ''; return; }
     btn.style.display = permisoDeSeccion(tab)==='ninguno' ? 'none' : '';
   });
 
@@ -4898,7 +5107,7 @@ function aplicarPermisos(){
   });
 
   const tabActual = document.querySelector('#nav button.active')?.dataset.tab;
-  if (u && tabActual && tabActual!=='inicio' && tabActual!=='usuarios' && permisoDeSeccion(tabActual)==='ninguno'){
+  if (u && tabActual && tabActual!=='inicio' && tabActual!=='usuarios' && tabActual!=='cocina' && permisoDeSeccion(tabActual)==='ninguno'){
     document.querySelector('#nav button[data-tab="inicio"]').click();
   }
 
@@ -4913,7 +5122,7 @@ function aplicarPermisos(){
   }
 }
 
-function renderAll(){ renderIngredientes(); renderPreparaciones(); renderEmpanadas(); renderPizzas(); renderRentabilidad(); renderProduccion(); renderPersonal(); renderCaja(); renderProveedoresAll(); renderProyecciones(); renderPerfil(); mostrarGateSiCorresponde(); renderUsuarios(); renderDashboardInicio(); aplicarPermisos(); }
+function renderAll(){ renderIngredientes(); renderPreparaciones(); renderEmpanadas(); renderPizzas(); renderBebidas(); renderRentabilidad(); renderProduccion(); renderPersonal(); renderCaja(); renderProveedoresAll(); renderProyecciones(); renderPerfil(); mostrarGateSiCorresponde(); renderUsuarios(); renderDashboardInicio(); aplicarPermisos(); }
 /* ================= LOGIN REAL DE SUPABASE (protege los datos, no solo la pantalla) ================= */
 let sesionSupabaseActual = null;
 async function verificarSesionNube(){
