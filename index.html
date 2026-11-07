@@ -1030,8 +1030,17 @@ table.prod-tabla input{padding:6px 5px;font-size:.82rem;width:56px;max-width:100
 
     <div class="card">
       <h3 style="margin-bottom:8px">Gastos cargados<button type="button" class="help-btn" onclick="toggleAyuda('ayuda-gastos-lista')">?</button></h3>
-      <div class="help-text" id="ayuda-gastos-lista">Filtrá por período. Cada gasto suma en la ganancia neta del mes que corresponde a su fecha, tanto en Producción como en Proyecciones. Tocá "Editar" para corregir o borrar uno.</div>
+      <div class="help-text" id="ayuda-gastos-lista">Filtrá rápido (Este mes / Mes anterior / Todos), por un mes y año puntual, o por un rango de fechas. Cada gasto suma en la ganancia neta del mes que corresponde a su fecha, tanto en Producción como en Proyecciones. Tocá "Editar" para corregir la fecha o el importe, o borrarlo.</div>
       <div class="day-tabs" id="gastos-periodo-tabs"></div>
+      <div id="gastos-filtro-mes" style="display:none;margin-bottom:12px">
+        <div class="field"><label>Elegí mes y año</label><input type="month" id="gasto-filtro-mes-input"></div>
+      </div>
+      <div id="gastos-filtro-rango" style="display:none;margin-bottom:12px">
+        <div class="grid2">
+          <div class="field"><label>Desde</label><input type="date" id="gasto-filtro-desde"></div>
+          <div class="field"><label>Hasta</label><input type="date" id="gasto-filtro-hasta"></div>
+        </div>
+      </div>
       <div id="gastos-list"></div>
       <div id="gastos-total" style="margin-top:10px"></div>
     </div>
@@ -2438,18 +2447,39 @@ document.getElementById('btn-autocompletar-proy').onclick = () => autocompletarD
 /* ================= GASTOS (sección propia) ================= */
 let gastoEditando = null;
 let gastosPeriodoActivo = 'mes';
+let gastosFiltroMes = '';   // 'YYYY-MM'
 window.setGastosPeriodo = p => { gastosPeriodoActivo = p; renderGastosSeccion(); };
 function rangoGastos(){
   if (gastosPeriodoActivo === 'todos') return {desde:'', hasta:'', todos:true};
   if (gastosPeriodoActivo === 'anterior'){ const r = primerYUltimoDiaMes(mesAnteriorISO()); return {desde:r.primer, hasta:r.ultimo}; }
+  if (gastosPeriodoActivo === 'mesanio'){
+    if (!gastosFiltroMes) gastosFiltroMes = isoLocal(new Date()).slice(0,7);
+    const r = primerYUltimoDiaMes(gastosFiltroMes); return {desde:r.primer, hasta:r.ultimo};
+  }
+  if (gastosPeriodoActivo === 'rango'){
+    const d = document.getElementById('gasto-filtro-desde').value;
+    const h = document.getElementById('gasto-filtro-hasta').value;
+    if (!d && !h) return {desde:'', hasta:'', todos:true};
+    return {desde: d || '0000-01-01', hasta: h || '9999-12-31'};
+  }
   const r = rangoPeriodo('mes'); return {desde:r.desde, hasta:r.hasta};
 }
 function renderGastosSeccion(){
   const tabs = document.getElementById('gastos-periodo-tabs');
   if (!tabs) return;
   document.getElementById('gasto-fecha').value = document.getElementById('gasto-fecha').value || isoLocal(new Date());
-  tabs.innerHTML = [['mes','Este mes'],['anterior','Mes anterior'],['todos','Todos']].map(([p,l]) =>
+  tabs.innerHTML = [['mes','Este mes'],['anterior','Mes anterior'],['mesanio','Mes y año'],['rango','Rango'],['todos','Todos']].map(([p,l]) =>
     `<button class="${p===gastosPeriodoActivo?'active':''}" onclick="setGastosPeriodo('${p}')">${l}</button>`).join('');
+  /* mostrar los controles extra según el filtro elegido */
+  const boxMes = document.getElementById('gastos-filtro-mes');
+  const boxRango = document.getElementById('gastos-filtro-rango');
+  boxMes.style.display = gastosPeriodoActivo==='mesanio' ? 'block' : 'none';
+  boxRango.style.display = gastosPeriodoActivo==='rango' ? 'block' : 'none';
+  if (gastosPeriodoActivo==='mesanio'){
+    if (!gastosFiltroMes) gastosFiltroMes = isoLocal(new Date()).slice(0,7);
+    const inp = document.getElementById('gasto-filtro-mes-input');
+    if (document.activeElement !== inp) inp.value = gastosFiltroMes;
+  }
   const {desde, hasta, todos} = rangoGastos();
   const lista = [...state.gastos]
     .filter(g => todos || ((g.fecha||'') >= desde && (g.fecha||'') <= hasta))
@@ -2495,6 +2525,14 @@ document.getElementById('btn-add-gasto').onclick = () => {
   save(); renderGastosSeccion(); renderProyecciones(); renderRentabilidadReal();
   aviso('notice-gasto', 'Gasto cargado.');
 };
+{
+  const im = document.getElementById('gasto-filtro-mes-input');
+  if (im) im.onchange = e => { gastosFiltroMes = e.target.value || isoLocal(new Date()).slice(0,7); renderGastosSeccion(); };
+  const fd = document.getElementById('gasto-filtro-desde');
+  const fh = document.getElementById('gasto-filtro-hasta');
+  if (fd) fd.onchange = () => renderGastosSeccion();
+  if (fh) fh.onchange = () => renderGastosSeccion();
+}
 window.editarGasto = id => { gastoEditando = id; renderGastosSeccion(); };
 window.cancelarEdicionGasto = () => { gastoEditando = null; renderGastosSeccion(); };
 window.guardarEdicionGasto = id => {
