@@ -321,6 +321,7 @@ table.prod-tabla input{padding:6px 5px;font-size:.82rem;width:56px;max-width:100
     <button data-tab="personal"><span class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg></span> Personal</button>
     <button data-tab="caja"><span class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="1" y="4" width="22" height="16" rx="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg></span> Caja</button>
     <button data-tab="proveedores"><span class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="1" y="3" width="15" height="13"/><polygon points="16 8 20 8 23 11 23 16 16 16 16 8"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></svg></span> Proveedores</button>
+    <button data-tab="gastos"><span class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 2h12l4 4v16l-2-1.5L16 22l-2-1.5L12 22l-2-1.5L8 22l-2-1.5L4 22z"/><path d="M8 7h8M8 11h8M8 15h5"/></svg></span> Gastos</button>
     <button data-tab="usuarios"><span class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg></span> Usuarios</button>
     <button data-tab="proyecciones"><span class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/></svg></span> Proyecciones</button>
   </nav>
@@ -1008,6 +1009,34 @@ table.prod-tabla input{padding:6px 5px;font-size:.82rem;width:56px;max-width:100
     </div>
   </section>
 
+  <!-- GASTOS -->
+  <section id="tab-gastos" hidden>
+    <div class="page-title">Gastos</div>
+    <div class="page-sub">Luz, gas, alquiler, impuestos, lo que sea. Cargalos rápido y quedan disponibles para la ganancia neta de Producción y Proyecciones.</div>
+
+    <div class="card">
+      <h3 style="margin-bottom:12px">Nuevo gasto</h3>
+      <div class="stack">
+        <div class="grid2">
+          <div class="field"><label>Fecha</label><input type="date" id="gasto-fecha"></div>
+          <div class="field"><label>Importe $</label><input type="number" inputmode="decimal" id="gasto-importe" placeholder="0"></div>
+        </div>
+        <div class="field"><label>Detalle</label><input id="gasto-detalle" placeholder="Ej: Luz, Alquiler, Monotributo"></div>
+        <div class="field"><label>N° de factura (opcional)</label><input id="gasto-factura" placeholder="0001-00012345"></div>
+        <button class="btn" id="btn-add-gasto">Cargar gasto</button>
+      </div>
+      <div class="notice" id="notice-gasto">Completá fecha, detalle e importe.</div>
+    </div>
+
+    <div class="card">
+      <h3 style="margin-bottom:8px">Gastos cargados<button type="button" class="help-btn" onclick="toggleAyuda('ayuda-gastos-lista')">?</button></h3>
+      <div class="help-text" id="ayuda-gastos-lista">Filtrá por período. Cada gasto suma en la ganancia neta del mes que corresponde a su fecha, tanto en Producción como en Proyecciones. Tocá "Editar" para corregir o borrar uno.</div>
+      <div class="day-tabs" id="gastos-periodo-tabs"></div>
+      <div id="gastos-list"></div>
+      <div id="gastos-total" style="margin-top:10px"></div>
+    </div>
+  </section>
+
   <!-- USUARIOS -->
   <section id="tab-usuarios" hidden>
     <div class="page-title">Usuarios</div>
@@ -1042,7 +1071,6 @@ table.prod-tabla input{padding:6px 5px;font-size:.82rem;width:56px;max-width:100
     <div class="tipo-toggle" id="proy-subtabs">
       <button class="tt-btn active" data-sub="resumen">Resumen</button>
       <button class="tt-btn" data-sub="obra">Mano de obra</button>
-      <button class="tt-btn" data-sub="gastos">Gastos</button>
       <button class="tt-btn" data-sub="productos">Productos</button>
     </div>
 
@@ -1054,6 +1082,9 @@ table.prod-tabla input{padding:6px 5px;font-size:.82rem;width:56px;max-width:100
           <div class="field"><label>Desde</label><input type="date" id="proy-desde"></div>
           <div class="field"><label>Hasta</label><input type="date" id="proy-hasta"></div>
         </div>
+        <div class="field" style="margin-top:12px"><label>Ingresos Brutos %<button type="button" class="help-btn" onclick="toggleAyuda('ayuda-iibb')">?</button></label>
+          <input id="proy-iibb" type="number" inputmode="decimal" placeholder="0"></div>
+        <div class="help-text" id="ayuda-iibb">Ingresos Brutos se calcula como % sobre el ingreso proyectado (así se ajusta solo si vendés más o menos). Los gastos fijos (luz, gas, alquiler...) ahora se cargan en la sección <b>Gastos</b> del menú.</div>
       </div>
       <div class="card">
         <h3 style="margin-bottom:10px">Resultado proyectado</h3>
@@ -1066,22 +1097,6 @@ table.prod-tabla input{padding:6px 5px;font-size:.82rem;width:56px;max-width:100
         <h3 style="margin-bottom:8px">Mano de obra<button type="button" class="help-btn" onclick="toggleAyuda('ayuda-mano-obra')">?</button></h3>
         <div class="help-text" id="ayuda-mano-obra">Sale de las horas cargadas en Personal dentro del período elegido en Resumen, multiplicadas por el valor hora de cada empleado.</div>
         <div id="proy-mano-obra-resumen"></div>
-      </div>
-    </div>
-
-    <div id="proy-sub-gastos" hidden>
-      <div class="card">
-        <h3 style="margin-bottom:8px">Gastos fijos e impuestos<button type="button" class="help-btn" onclick="toggleAyuda('ayuda-gastos-fijos')">?</button></h3>
-        <div class="help-text" id="ayuda-gastos-fijos">Agregá cada gasto por separado (Luz, Gas, Monotributo, Alquiler, etc.), con el mes al que corresponde. Solo suma en el período que tenga ese mes incluido — así un gasto de agosto no te afecta el cálculo de julio.</div>
-        <div id="proy-gastos-list"></div>
-        <div class="grid-add" style="margin-top:10px">
-          <input id="gasto-nuevo-nombre" placeholder="Nombre del gasto">
-          <input id="gasto-nuevo-monto" type="number" inputmode="decimal" placeholder="Monto $">
-        </div>
-        <button class="btn ghost sm" id="btn-add-gasto" style="margin-top:8px">+ Gasto</button>
-        <div class="field" style="margin-top:14px"><label>Ingresos Brutos %<button type="button" class="help-btn" onclick="toggleAyuda('ayuda-iibb')">?</button></label>
-          <input id="proy-iibb" type="number" inputmode="decimal" placeholder="0"></div>
-        <div class="help-text" id="ayuda-iibb">Ingresos Brutos se calcula como % sobre el ingreso proyectado (así se ajusta solo si vendés más o menos).</div>
       </div>
     </div>
 
@@ -1121,7 +1136,7 @@ function migrarGastosViejos(proy){
 }
 const PRODUCCION_DEFAULT = {vinculos:{}, objetivos:{}, promedios:{}, extras:{}, historico:[], ultimoImport:null, registro:{}, etiquetas:{}, origenes:{}, stockActual:{}, mesesReconciliados:{}, ventasPorFecha:{}, stockDescontadoPorFecha:{}, stockDesde:null, consumoInterno:[]};
 const PERSONAL_DEFAULT = {empleados:[], turnos:[]};
-const ESTADO_DEFAULT = {ingredientes:[],preparaciones:[],productos:[],ventas:[],margenObj:60,proyeccion:null,produccion:null,personal:null,equipos:null,caja:null,perfil:null,seguridad:null,proveedores:null};
+const ESTADO_DEFAULT = {ingredientes:[],preparaciones:[],productos:[],ventas:[],margenObj:60,proyeccion:null,produccion:null,personal:null,equipos:null,caja:null,perfil:null,seguridad:null,proveedores:null,gastos:null};
 function estadoBase(datos){
   const base = Object.assign({}, ESTADO_DEFAULT, datos);
   base.proyeccion = Object.assign({}, PROYECCION_DEFAULT, datos && datos.proyeccion || {});
@@ -1157,6 +1172,18 @@ function estadoBase(datos){
   base.produccion.historico = (datos && datos.produccion && datos.produccion.historico) || [];
   migrarClavesVinculos(base.produccion);
   marcarBebidasDesdePedix(base);
+  /* Gastos ahora viven en su propia sección (state.gastos) con fecha/detalle/importe/N° factura.
+     Migramos una sola vez lo que estaba en Proyecciones (modelo viejo nombre/monto/mes). */
+  base.gastos = (datos && datos.gastos) || [];
+  if (!base.gastos.length && base.proyeccion.gastos && base.proyeccion.gastos.length){
+    base.gastos = base.proyeccion.gastos.map(g => ({
+      id: g.id || uid(),
+      fecha: g.fecha || (g.mes ? g.mes + '-01' : isoLocal(new Date())),
+      detalle: g.detalle || g.nombre || 'Gasto',
+      importe: Number(g.importe != null ? g.importe : g.monto) || 0,
+      numeroFactura: g.numeroFactura || ''
+    }));
+  }
   return base;
 }
 /* Los ingredientes vinculados a una venta de origen "bebida" (detectada al importar Pedix)
@@ -1336,7 +1363,7 @@ function cerrarMenu(){ sidebar.classList.remove('open'); scrim.classList.remove(
 document.getElementById('hamb').onclick = abrirMenu;
 scrim.onclick = cerrarMenu;
 
-const SECCIONES = {inicio:'Inicio', cocina:'Cocina', empanadas:'Empanadas', pizzas:'Pizzas', bebidas:'Bebidas', rentabilidad:'Precios sugeridos', produccion:'Producción', personal:'Personal', caja:'Caja', proveedores:'Proveedores', usuarios:'Usuarios', proyecciones:'Proyecciones'};
+const SECCIONES = {inicio:'Inicio', cocina:'Cocina', empanadas:'Empanadas', pizzas:'Pizzas', bebidas:'Bebidas', rentabilidad:'Precios sugeridos', produccion:'Producción', personal:'Personal', caja:'Caja', proveedores:'Proveedores', gastos:'Gastos', usuarios:'Usuarios', proyecciones:'Proyecciones'};
 document.querySelectorAll('#nav button[data-tab]').forEach(t => t.onclick = () => {
   document.querySelectorAll('#nav button[data-tab]').forEach(x=>x.classList.remove('active'));
   t.classList.add('active');
@@ -2408,40 +2435,83 @@ function autocompletarDesdeProduccion(mostrarAviso){
 }
 document.getElementById('btn-autocompletar-proy').onclick = () => autocompletarDesdeProduccion(true);
 
-function renderGastos(){
-  const box = document.getElementById('proy-gastos-list');
-  const gastos = state.proyeccion.gastos;
-  if (!gastos.length){ box.innerHTML = '<div class="empty">Sin gastos cargados todavía.</div>'; return; }
-  box.innerHTML = gastos.slice().sort((a,b)=>(b.mes||'').localeCompare(a.mes||'')).map(g => `
-    <div class="ing-item" style="flex-wrap:wrap">
-      <div style="flex:1;min-width:120px">
-        <input value="${esc(g.nombre)}" style="border:none;background:none;font-weight:700;padding:4px 0;width:100%" onchange="setGasto('${g.id}','nombre',this.value)">
-      </div>
-      <input type="month" class="mono" style="width:130px;font-size:.8rem" value="${g.mes||''}" onchange="setGasto('${g.id}','mes',this.value)">
-      <input class="mono" type="number" inputmode="decimal" style="width:110px" value="${g.monto||''}" onchange="setGasto('${g.id}','monto',this.value)">
-      <button class="del" onclick="delGasto(this,'${g.id}')" aria-label="Eliminar">✕</button>
-    </div>`).join('');
+/* ================= GASTOS (sección propia) ================= */
+let gastoEditando = null;
+let gastosPeriodoActivo = 'mes';
+window.setGastosPeriodo = p => { gastosPeriodoActivo = p; renderGastosSeccion(); };
+function rangoGastos(){
+  if (gastosPeriodoActivo === 'todos') return {desde:'', hasta:'', todos:true};
+  if (gastosPeriodoActivo === 'anterior'){ const r = primerYUltimoDiaMes(mesAnteriorISO()); return {desde:r.primer, hasta:r.ultimo}; }
+  const r = rangoPeriodo('mes'); return {desde:r.desde, hasta:r.hasta};
+}
+function renderGastosSeccion(){
+  const tabs = document.getElementById('gastos-periodo-tabs');
+  if (!tabs) return;
+  document.getElementById('gasto-fecha').value = document.getElementById('gasto-fecha').value || isoLocal(new Date());
+  tabs.innerHTML = [['mes','Este mes'],['anterior','Mes anterior'],['todos','Todos']].map(([p,l]) =>
+    `<button class="${p===gastosPeriodoActivo?'active':''}" onclick="setGastosPeriodo('${p}')">${l}</button>`).join('');
+  const {desde, hasta, todos} = rangoGastos();
+  const lista = [...state.gastos]
+    .filter(g => todos || ((g.fecha||'') >= desde && (g.fecha||'') <= hasta))
+    .sort((a,b)=>(b.fecha||'').localeCompare(a.fecha||''));
+  const box = document.getElementById('gastos-list');
+  const totalBox = document.getElementById('gastos-total');
+  if (!state.gastos.length){ box.innerHTML = '<div class="empty">Todavía no cargaste gastos. Completá el formulario de arriba.</div>'; totalBox.innerHTML=''; return; }
+  if (!lista.length){ box.innerHTML = '<div class="empty">Sin gastos en este período.</div>'; totalBox.innerHTML=''; return; }
+  box.innerHTML = lista.map(g => {
+    if (gastoEditando === g.id){
+      return `<div class="ing-item" style="display:block">
+        <div class="grid2" style="margin-bottom:8px">
+          <div class="field"><label>Fecha</label><input type="date" id="gedit-fecha-${g.id}" value="${g.fecha||''}"></div>
+          <div class="field"><label>Importe $</label><input type="number" inputmode="decimal" id="gedit-imp-${g.id}" value="${g.importe||''}"></div>
+        </div>
+        <div class="field" style="margin-bottom:8px"><label>Detalle</label><input id="gedit-det-${g.id}" value="${esc(g.detalle||'')}"></div>
+        <div class="field" style="margin-bottom:10px"><label>N° de factura</label><input id="gedit-fac-${g.id}" value="${esc(g.numeroFactura||'')}"></div>
+        <div class="act-row">
+          <button class="btn done sm" onclick="guardarEdicionGasto('${g.id}')">Listo</button>
+          <button class="btn edit sm" onclick="cancelarEdicionGasto()">Cancelar</button>
+          <button class="del" onclick="delGasto(this,'${g.id}')" aria-label="Eliminar" style="margin-left:auto">✕</button>
+        </div>
+      </div>`;
+    }
+    return `<div class="prod-item-row">
+      <span>${esc(g.detalle||'(sin detalle)')} <span class="pin">${g.fecha||''}${g.numeroFactura?' · Fact. '+esc(g.numeroFactura):''}</span></span>
+      <span class="mono">${fmt(g.importe||0)} <button class="btn edit sm" onclick="editarGasto('${g.id}')" style="margin-left:8px">Editar</button></span>
+    </div>`;
+  }).join('');
+  const total = lista.reduce((a,g)=>a+(Number(g.importe)||0),0);
+  totalBox.innerHTML = `<div class="cost-banner"><div><div class="big mono">${fmt(total)}</div><div class="lbl">Total ${todos?'histórico':'del período'}</div></div></div>`;
 }
 document.getElementById('btn-add-gasto').onclick = () => {
-  const nombre = document.getElementById('gasto-nuevo-nombre').value.trim();
-  const monto = parseFloat(document.getElementById('gasto-nuevo-monto').value)||0;
-  if (!nombre){ return; }
-  const mesActual = isoLocal(new Date()).slice(0,7);
-  state.proyeccion.gastos.push({id:uid(), nombre, monto, mes:mesActual});
-  document.getElementById('gasto-nuevo-nombre').value = '';
-  document.getElementById('gasto-nuevo-monto').value = '';
-  save(); renderProyecciones();
+  const fecha = document.getElementById('gasto-fecha').value || isoLocal(new Date());
+  const importe = parseFloat(document.getElementById('gasto-importe').value)||0;
+  const detalle = document.getElementById('gasto-detalle').value.trim();
+  const numeroFactura = document.getElementById('gasto-factura').value.trim();
+  if (!detalle || !(importe>0)){ aviso('notice-gasto'); return; }
+  state.gastos.push({id:uid(), fecha, detalle, importe, numeroFactura});
+  document.getElementById('gasto-importe').value = '';
+  document.getElementById('gasto-detalle').value = '';
+  document.getElementById('gasto-factura').value = '';
+  save(); renderGastosSeccion(); renderProyecciones(); renderRentabilidadReal();
+  aviso('notice-gasto', 'Gasto cargado.');
 };
-window.setGasto = (id,campo,v) => {
-  const g = state.proyeccion.gastos.find(x=>x.id===id);
+window.editarGasto = id => { gastoEditando = id; renderGastosSeccion(); };
+window.cancelarEdicionGasto = () => { gastoEditando = null; renderGastosSeccion(); };
+window.guardarEdicionGasto = id => {
+  const g = state.gastos.find(x=>x.id===id);
   if (!g) return;
-  g[campo] = campo==='monto' ? (parseFloat(v)||0) : v;
-  save(); renderProyecciones();
+  const fecha = document.getElementById('gedit-fecha-'+id).value || isoLocal(new Date());
+  const importe = parseFloat(document.getElementById('gedit-imp-'+id).value)||0;
+  const detalle = document.getElementById('gedit-det-'+id).value.trim();
+  const numeroFactura = document.getElementById('gedit-fac-'+id).value.trim();
+  if (!detalle || !(importe>0)) return;
+  Object.assign(g, {fecha, importe, detalle, numeroFactura});
+  gastoEditando = null; save(); renderGastosSeccion(); renderProyecciones(); renderRentabilidadReal();
 };
 window.delGasto = (btn,id) => {
   if (!btn.classList.contains('confirm')){ armarConfirm(btn); return; }
-  state.proyeccion.gastos = state.proyeccion.gastos.filter(g=>g.id!==id);
-  save(); renderProyecciones();
+  state.gastos = state.gastos.filter(g=>g.id!==id);
+  gastoEditando = null; save(); renderGastosSeccion(); renderProyecciones(); renderRentabilidadReal();
 };
 
 function renderProyecciones(){
@@ -2466,8 +2536,6 @@ function renderProyecciones(){
     ? filasMO.map(f=>`<div class="insumo-row"><span>${esc(f.nombre)}</span><span class="in-cant mono">${f.horas.toFixed(1)} h · ${fmt(f.costo)}</span></div>`).join('')
       + `<div class="obj-row" style="border-top:2px solid var(--line);margin-top:6px;padding-top:8px"><span><b>Total</b></span><span class="mono"><b>${fmt(mo.costoTotal)}</b></span></div>`
     : '<div class="empty">Sin turnos cargados en Personal para este período.</div>';
-
-  renderGastos();
 
   const box = document.getElementById('proy-items');
   {
@@ -2531,8 +2599,7 @@ function renderProyecciones(){
   });
   const costoManoObra = mo.costoTotal;
   const costoIIBB = ingresoTotal * (Number(py.iibbPct)||0) / 100;
-  const mesesPeriodo = mesesEnRango(desde, hasta);
-  const costoGastos = py.gastos.filter(g => !g.mes || mesesPeriodo.includes(g.mes)).reduce((a,g)=>a+(Number(g.monto)||0), 0);
+  const costoGastos = state.gastos.filter(g => (g.fecha||'') >= desde && (g.fecha||'') <= hasta).reduce((a,g)=>a+(Number(g.importe)||0), 0);
   const costoFijos = costoGastos + costoIIBB;
   const costoTotal = costoIngredientesTotal + costoManoObra + costoFijos;
   const gananciaNeta = ingresoTotal - costoTotal;
@@ -3555,7 +3622,7 @@ function renderRentabilidadReal(){
   /* Ganancia neta real: ingredientes (ya calculado) - mano de obra real de ese mes (Personal) - gastos fijos actuales (Proyecciones) */
   const {primer, ultimo: ultimoDia} = primerYUltimoDiaMes(ultimo.mes);
   const mo = calcularManoObraPeriodo(primer, ultimoDia);
-  const costoGastos = (state.proyeccion.gastos||[]).filter(g => !g.mes || g.mes===ultimo.mes).reduce((a,g)=>a+(Number(g.monto)||0), 0);
+  const costoGastos = (state.gastos||[]).filter(g => (g.fecha||'').slice(0,7)===ultimo.mes).reduce((a,g)=>a+(Number(g.importe)||0), 0);
   const costoIIBB = ultimo.ingresoTotal * (Number(state.proyeccion.iibbPct)||0) / 100;
   const costoFijos = costoGastos + costoIIBB;
   const gananciaNeta = ultimo.gananciaTotal - mo.costoTotal - costoFijos;
@@ -4225,7 +4292,7 @@ document.querySelectorAll('#hoja-subtabs .tt-btn').forEach(btn => btn.onclick = 
   renderStockActual(); renderMovimientoSemanal(); renderResumenSemanal(); renderHojaProduccion();
   window.scrollTo({top:0, behavior:'instant'});
 });
-const PROY_SUBTABS = ['resumen','obra','gastos','productos'];
+const PROY_SUBTABS = ['resumen','obra','productos'];
 document.querySelectorAll('#proy-subtabs .tt-btn').forEach(btn => btn.onclick = () => {
   document.querySelectorAll('#proy-subtabs .tt-btn').forEach(b=>b.classList.remove('active'));
   btn.classList.add('active');
@@ -4903,7 +4970,7 @@ document.getElementById('file-logo').onchange = e => {
 /* ================= USUARIOS Y PERMISOS (freno de conveniencia, no seguridad real) ================= */
 const SECCIONES_CON_PERMISO = {
   ingredientes:'Ingredientes', preparaciones:'Preparaciones', empanadas:'Empanadas', pizzas:'Pizzas', bebidas:'Bebidas',
-  rentabilidad:'Precios sugeridos', produccion:'Producción', personal:'Personal', caja:'Caja', proveedores:'Proveedores', proyecciones:'Proyecciones'
+  rentabilidad:'Precios sugeridos', produccion:'Producción', personal:'Personal', caja:'Caja', proveedores:'Proveedores', gastos:'Gastos', proyecciones:'Proyecciones'
 };
 let usuarioEditando = null;
 let sesionActual = null; // {tipo:'admin'} | {tipo:'usuario', usuarioId} — NO se guarda, se pide de nuevo cada vez que abrís la app
@@ -5122,7 +5189,7 @@ function aplicarPermisos(){
   }
 }
 
-function renderAll(){ renderIngredientes(); renderPreparaciones(); renderEmpanadas(); renderPizzas(); renderBebidas(); renderRentabilidad(); renderProduccion(); renderPersonal(); renderCaja(); renderProveedoresAll(); renderProyecciones(); renderPerfil(); mostrarGateSiCorresponde(); renderUsuarios(); renderDashboardInicio(); aplicarPermisos(); }
+function renderAll(){ renderIngredientes(); renderPreparaciones(); renderEmpanadas(); renderPizzas(); renderBebidas(); renderRentabilidad(); renderProduccion(); renderPersonal(); renderCaja(); renderProveedoresAll(); renderGastosSeccion(); renderProyecciones(); renderPerfil(); mostrarGateSiCorresponde(); renderUsuarios(); renderDashboardInicio(); aplicarPermisos(); }
 /* ================= LOGIN REAL DE SUPABASE (protege los datos, no solo la pantalla) ================= */
 let sesionSupabaseActual = null;
 async function verificarSesionNube(){
