@@ -1022,6 +1022,13 @@ table.prod-tabla input{padding:6px 5px;font-size:.82rem;width:56px;max-width:100
           <div class="field"><label>Importe $</label><input type="number" inputmode="decimal" id="gasto-importe" placeholder="0"></div>
         </div>
         <div class="field"><label>Detalle</label><input id="gasto-detalle" placeholder="Ej: Luz, Alquiler, Monotributo"></div>
+        <div class="field"><label>Tipo<button type="button" class="help-btn" onclick="toggleAyuda('ayuda-gasto-tipo')">?</button></label>
+          <select id="gasto-tipo">
+            <option value="operativo">Operativo (gasto del mes)</option>
+            <option value="inversion">Inversión / Compra de equipo</option>
+          </select>
+        </div>
+        <div class="help-text" id="ayuda-gasto-tipo"><b>Operativo</b>: luz, gas, condimentos, sueldos, impuestos — lo que se consume ese mes. Afecta la ganancia operativa del negocio.<br><br><b>Inversión / Compra</b>: horno, herramientas, cuotas de equipamiento. Es plata que sale, pero no es un gasto del negocio: se resta aparte, en "Plata para socios", no en la ganancia operativa.</div>
         <div class="field"><label>N° de factura (opcional)</label><input id="gasto-factura" placeholder="0001-00012345"></div>
         <button class="btn" id="btn-add-gasto">Cargar gasto</button>
       </div>
@@ -2496,6 +2503,12 @@ function renderGastosSeccion(){
           <div class="field"><label>Importe $</label><input type="number" inputmode="decimal" id="gedit-imp-${g.id}" value="${g.importe||''}"></div>
         </div>
         <div class="field" style="margin-bottom:8px"><label>Detalle</label><input id="gedit-det-${g.id}" value="${esc(g.detalle||'')}"></div>
+        <div class="field" style="margin-bottom:8px"><label>Tipo</label>
+          <select id="gedit-tipo-${g.id}">
+            <option value="operativo" ${(g.tipo||'operativo')==='operativo'?'selected':''}>Operativo (gasto del mes)</option>
+            <option value="inversion" ${g.tipo==='inversion'?'selected':''}>Inversión / Compra de equipo</option>
+          </select>
+        </div>
         <div class="field" style="margin-bottom:10px"><label>N° de factura</label><input id="gedit-fac-${g.id}" value="${esc(g.numeroFactura||'')}"></div>
         <div class="act-row">
           <button class="btn done sm" onclick="guardarEdicionGasto('${g.id}')">Listo</button>
@@ -2504,24 +2517,32 @@ function renderGastosSeccion(){
         </div>
       </div>`;
     }
+    const esInv = g.tipo==='inversion';
     return `<div class="prod-item-row">
-      <span>${esc(g.detalle||'(sin detalle)')} <span class="pin">${g.fecha||''}${g.numeroFactura?' · Fact. '+esc(g.numeroFactura):''}</span></span>
+      <span>${esInv?'<span title="Inversión" style="color:var(--amber)">◆</span> ':''}${esc(g.detalle||'(sin detalle)')} <span class="pin">${g.fecha||''}${esInv?' · inversión':''}${g.numeroFactura?' · Fact. '+esc(g.numeroFactura):''}</span></span>
       <span class="mono">${fmt(g.importe||0)} <button class="btn edit sm" onclick="editarGasto('${g.id}')" style="margin-left:8px">Editar</button></span>
     </div>`;
   }).join('');
-  const total = lista.reduce((a,g)=>a+(Number(g.importe)||0),0);
-  totalBox.innerHTML = `<div class="cost-banner"><div><div class="big mono">${fmt(total)}</div><div class="lbl">Total ${todos?'histórico':'del período'}</div></div></div>`;
+  const totalOper = lista.filter(g=>g.tipo!=='inversion').reduce((a,g)=>a+(Number(g.importe)||0),0);
+  const totalInv = lista.filter(g=>g.tipo==='inversion').reduce((a,g)=>a+(Number(g.importe)||0),0);
+  totalBox.innerHTML = `<div class="resumen-mes-banner" style="margin-bottom:0">
+    <div class="stat"><div class="cost-banner" style="margin:0"><div><div class="big mono">${fmt(totalOper)}</div><div class="lbl">Operativos</div></div></div></div>
+    ${totalInv>0?`<div class="stat"><div class="cost-banner" style="margin:0;background:var(--amber)"><div><div class="big mono">${fmt(totalInv)}</div><div class="lbl">Inversiones / compras</div></div></div></div>`:''}
+    <div class="stat"><div class="cost-banner" style="margin:0;background:var(--ink-soft)"><div><div class="big mono">${fmt(totalOper+totalInv)}</div><div class="lbl">Total salió ${todos?'(histórico)':'del período'}</div></div></div></div>
+  </div>`;
 }
 document.getElementById('btn-add-gasto').onclick = () => {
   const fecha = document.getElementById('gasto-fecha').value || isoLocal(new Date());
   const importe = parseFloat(document.getElementById('gasto-importe').value)||0;
   const detalle = document.getElementById('gasto-detalle').value.trim();
+  const tipo = document.getElementById('gasto-tipo').value;
   const numeroFactura = document.getElementById('gasto-factura').value.trim();
   if (!detalle || !(importe>0)){ aviso('notice-gasto'); return; }
-  state.gastos.push({id:uid(), fecha, detalle, importe, numeroFactura});
+  state.gastos.push({id:uid(), fecha, detalle, importe, tipo, numeroFactura});
   document.getElementById('gasto-importe').value = '';
   document.getElementById('gasto-detalle').value = '';
   document.getElementById('gasto-factura').value = '';
+  document.getElementById('gasto-tipo').value = 'operativo';
   save(); renderGastosSeccion(); renderProyecciones(); renderRentabilidadReal();
   aviso('notice-gasto', 'Gasto cargado.');
 };
@@ -2541,9 +2562,10 @@ window.guardarEdicionGasto = id => {
   const fecha = document.getElementById('gedit-fecha-'+id).value || isoLocal(new Date());
   const importe = parseFloat(document.getElementById('gedit-imp-'+id).value)||0;
   const detalle = document.getElementById('gedit-det-'+id).value.trim();
+  const tipo = document.getElementById('gedit-tipo-'+id).value;
   const numeroFactura = document.getElementById('gedit-fac-'+id).value.trim();
   if (!detalle || !(importe>0)) return;
-  Object.assign(g, {fecha, importe, detalle, numeroFactura});
+  Object.assign(g, {fecha, importe, detalle, tipo, numeroFactura});
   gastoEditando = null; save(); renderGastosSeccion(); renderProyecciones(); renderRentabilidadReal();
 };
 window.delGasto = (btn,id) => {
@@ -3657,14 +3679,20 @@ function renderRentabilidadReal(){
     </div>
   `;
 
-  /* Ganancia neta real: ingredientes (ya calculado) - mano de obra real de ese mes (Personal) - gastos fijos actuales (Proyecciones) */
+  /* Dos miradas distintas:
+     1) Ganancia OPERATIVA del negocio = ingredientes - mano de obra - gastos OPERATIVOS - IIBB.
+        (las inversiones/compras NO entran acá: no son parte de vender empanadas)
+     2) Plata para socios = ganancia operativa - inversiones/compras pagadas ese mes.
+        (lo que realmente quedó después de pagar TODO, incluido el horno nuevo) */
   const {primer, ultimo: ultimoDia} = primerYUltimoDiaMes(ultimo.mes);
   const mo = calcularManoObraPeriodo(primer, ultimoDia);
-  const costoGastos = (state.gastos||[]).filter(g => (g.fecha||'').slice(0,7)===ultimo.mes).reduce((a,g)=>a+(Number(g.importe)||0), 0);
+  const gastosMes = (state.gastos||[]).filter(g => (g.fecha||'').slice(0,7)===ultimo.mes);
+  const costoGastosOper = gastosMes.filter(g=>g.tipo!=='inversion').reduce((a,g)=>a+(Number(g.importe)||0), 0);
+  const costoInversiones = gastosMes.filter(g=>g.tipo==='inversion').reduce((a,g)=>a+(Number(g.importe)||0), 0);
   const costoIIBB = ultimo.ingresoTotal * (Number(state.proyeccion.iibbPct)||0) / 100;
-  const costoFijos = costoGastos + costoIIBB;
-  const gananciaNeta = ultimo.gananciaTotal - mo.costoTotal - costoFijos;
-  const margenNeto = ultimo.ingresoTotal>0 ? (gananciaNeta/ultimo.ingresoTotal*100) : 0;
+  const gananciaOperativa = ultimo.gananciaTotal - mo.costoTotal - costoGastosOper - costoIIBB;
+  const margenOper = ultimo.ingresoTotal>0 ? (gananciaOperativa/ultimo.ingresoTotal*100) : 0;
+  const plataSocios = gananciaOperativa - costoInversiones;
   const boxNeta = document.getElementById('prod-ganancia-neta');
   boxNeta.innerHTML = `
     <div class="cost-banner">
@@ -3672,13 +3700,22 @@ function renderRentabilidadReal(){
       <div><div class="big mono">${fmt(mo.costoTotal)}</div><div class="lbl">Mano de obra (${mo.horasTotal.toFixed(0)} h)</div></div>
     </div>
     <div class="cost-banner" style="margin-top:10px">
-      <div><div class="big mono">${fmt(costoGastos)}</div><div class="lbl">Gastos fijos</div></div>
+      <div><div class="big mono">${fmt(costoGastosOper)}</div><div class="lbl">Gastos operativos</div></div>
       <div><div class="big mono">${fmt(costoIIBB)}</div><div class="lbl">Ingresos Brutos (${state.proyeccion.iibbPct||0}%)</div></div>
     </div>
-    <div class="cost-banner ${gananciaNeta>=0?'green':''}" style="margin-top:10px">
-      <div><div class="big mono">${fmt(gananciaNeta)}</div><div class="lbl">Ganancia neta real</div></div>
-      <div><div class="big mono">${margenNeto.toFixed(1)}%</div><div class="lbl">Margen neto real</div></div>
+    <div class="cost-banner ${gananciaOperativa>=0?'green':''}" style="margin-top:10px">
+      <div><div class="big mono">${fmt(gananciaOperativa)}</div><div class="lbl">Ganancia operativa (¿el negocio da?)</div></div>
+      <div><div class="big mono">${margenOper.toFixed(1)}%</div><div class="lbl">Margen operativo</div></div>
     </div>
+    <div style="border-top:2px dashed var(--line);margin:16px 0 10px"></div>
+    <p class="hint" style="margin-top:0;margin-bottom:10px;font-weight:700;color:var(--ink)">¿Cuánta plata quedó de verdad para repartir?</p>
+    <div class="cost-banner" style="background:var(--amber)">
+      <div><div class="big mono">${fmt(costoInversiones)}</div><div class="lbl">Inversiones / compras pagadas este mes (horno, herramientas...)</div></div>
+    </div>
+    <div class="cost-banner ${plataSocios>=0?'green':''}" style="margin-top:10px">
+      <div><div class="big mono">${fmt(plataSocios)}</div><div class="lbl">Plata disponible para socios (operativa − inversiones)</div></div>
+    </div>
+    <p class="hint" style="margin-top:10px">La <b>ganancia operativa</b> dice si el negocio de vender es rentable (no la tocan las compras de equipos). La <b>plata para socios</b> es lo que realmente quedó después de pagar también el horno y las cuotas — eso es lo que se reparte, no la ganancia operativa.</p>
     ${mo.horasTotal===0 ? '<div class="notice show" style="margin-top:10px">No hay turnos cargados en Personal para ese mes — la mano de obra está en $0, revisalo si corresponde.</div>' : ''}
   `;
 
