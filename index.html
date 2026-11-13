@@ -3726,7 +3726,7 @@ function renderRentabilidadReal(){
   const valorStock = valorStockActual();
   const costoReposicion = Math.max(0, costoReposicionBruto - valorStock);
   const reservaEquipos = totalReservaEquipos();
-  const gananciaDisponible = gananciaNeta - costoReposicion - reservaEquipos;
+  const gananciaDisponible = plataSocios - costoReposicion - reservaEquipos;
   const [ry,rm] = rangoProx.desde.split('-');
   const nombreMesProx = new Date(Number(ry), Number(rm)-1, 1).toLocaleDateString('es-AR', {month:'long', year:'numeric'});
   const boxReserva = document.getElementById('prod-reserva-reposicion');
